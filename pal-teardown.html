@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 2 — Two Product Teardowns: MindPal &amp; PAM | Giang Thanh Cong</title>
+  <meta name="description" content="Two unrelated products, reverse-engineered from the outside: MindPal (multi-agent automation) and PAM (brand creative generation). Core objects, roles, flows and the design reasoning behind each — no source access. Day 2 of a 30-day build challenge." />
+  <meta property="og:title" content="Day 2 — Two outside-in product teardowns: MindPal &amp; PAM" />
+  <meta property="og:description" content="Entities, roles, flows and the design decisions behind two unrelated AI products — reconstructed purely from the outside." />
+  <meta property="og:type" content="article" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗺️</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --orange:#f9660e; --orange-soft:#ffe7d6;
+      --navy:#111a3e; --navy-soft:#5a6488;
+      --peach:#fdece1; --lav:#efe6fb; --purple:#8b5cf6;
+      --bg:#f6f7fb; --card:#fff; --border:#e7e9f2;
+      --shadow:0 18px 50px rgba(17,26,62,.12);
+      --shadow-sm:0 6px 20px rgba(17,26,62,.08);
+      --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+      background:var(--bg);color:var(--navy);line-height:1.6;-webkit-font-smoothing:antialiased}
+    a{text-decoration:none;color:inherit}
+    .wrap{max-width:980px;margin:0 auto;padding:0 24px}
+    h1,h2,h3{line-height:1.2;letter-spacing:-.01em}
+    .accent{color:var(--orange)}
+    code,.mono{font-family:var(--mono)}
+
+    /* top bar */
+    header.top{background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+    .bar{display:flex;align-items:center;justify-content:space-between;gap:16px;height:64px;max-width:980px;margin:0 auto;padding:0 24px}
+    .back{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:.92rem}
+    .back:hover{color:var(--orange)}
+    .meta{text-align:center;flex:1;min-width:0}
+    .meta .tag{display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:.68rem;
+      font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:20px}
+    .meta h1{font-size:1rem;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;
+      text-overflow:ellipsis;margin-top:2px}
+    .src{display:inline-flex;align-items:center;gap:7px;background:var(--navy);color:#fff;font-weight:700;
+      font-size:.85rem;padding:9px 16px;border-radius:24px;white-space:nowrap}
+    .src:hover{background:var(--orange)}
+    @media(max-width:720px){ .meta h1{font-size:.8rem} .src span{display:none} }
+
+    /* hero */
+    .hero{padding:56px 0 40px}
+    .eyebrow{color:var(--orange);font-weight:700;text-transform:uppercase;letter-spacing:.14em;font-size:.76rem;margin-bottom:12px}
+    .hero h2{font-size:clamp(1.9rem,4.4vw,2.7rem);font-weight:800;max-width:20ch}
+    .hero p{color:var(--navy-soft);max-width:62ch;margin-top:16px;font-size:1.02rem}
+    .method{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+    .method span{background:#fff;border:1px solid var(--border);border-radius:20px;padding:7px 14px;
+      font-size:.8rem;font-weight:700;color:var(--navy-soft);box-shadow:var(--shadow-sm)}
+    .method span b{color:var(--navy)}
+
+    .casenav{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+    .casenav a{display:inline-flex;align-items:center;gap:9px;background:#fff;border:1px solid var(--border);
+      border-radius:30px;padding:11px 20px;font-weight:700;font-size:.88rem;box-shadow:var(--shadow-sm);
+      transition:transform .15s ease}
+    .casenav a:hover{transform:translateY(-2px);color:var(--orange)}
+    .casenav .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+
+    .divider{padding:30px 0 6px}
+    .divider .dnum{font-family:var(--mono);font-weight:800;font-size:.76rem;color:#fff;background:var(--dc,var(--purple));
+      padding:5px 12px;border-radius:20px;display:inline-block;letter-spacing:.06em}
+    .divider h2{font-size:clamp(1.6rem,3.4vw,2.15rem);font-weight:800;margin-top:14px}
+    .divider p{color:var(--navy-soft);max-width:66ch;margin-top:10px;font-size:.96rem}
+    .divider hr{border:0;border-top:1px solid var(--border);margin-top:26px}
+
+    section{padding:44px 0}
+    h3.title{font-size:clamp(1.3rem,2.6vw,1.65rem);font-weight:800;margin-bottom:8px}
+    .lede{color:var(--navy-soft);max-width:68ch;margin-bottom:28px;font-size:.98rem}
+
+    /* ---------- DIAGRAM ---------- */
+    .dwrap{overflow-x:auto;margin-bottom:30px;border-radius:20px}
+    .diagram{width:100%;height:auto;display:block;min-width:640px}
+    .wsbox{fill:rgba(139,92,246,.05);stroke:var(--purple);stroke-width:1.5;stroke-dasharray:6 5}
+    .pill{fill:#fff;stroke:var(--border);stroke-width:1.5}
+    .pill.credit{fill:var(--orange-soft);stroke:var(--orange)}
+    .pill.tag{fill:var(--lav);stroke:var(--purple)}
+    .plabel{font:700 13px "Plus Jakarta Sans",sans-serif;fill:var(--navy);text-anchor:middle}
+    .gtitle{font:800 11px "JetBrains Mono",monospace;fill:var(--orange);letter-spacing:.08em}
+    .gcap{font:600 10.5px "Plus Jakarta Sans",sans-serif;fill:var(--navy-soft)}
+    .conn{stroke:#b9c0dd;stroke-width:1.75;fill:none}
+    .conn.dashed{stroke-dasharray:5 4}
+    .clabel{font:800 10px "JetBrains Mono",monospace;fill:var(--navy-soft);letter-spacing:.05em;text-transform:uppercase;text-anchor:middle}
+    .agentbox{fill:#fff;stroke:var(--purple);stroke-width:2}
+    .flowbox{fill:#fff;stroke:var(--navy);stroke-width:2}
+    .boxtitle{font:800 15px "Plus Jakarta Sans",sans-serif;fill:var(--navy);text-anchor:middle}
+    .boxsub{font:600 10.5px "Plus Jakarta Sans",sans-serif;fill:var(--navy-soft);text-anchor:middle}
+    .mindiechip{fill:var(--navy)}
+    .mindielabel{font:800 11px "Plus Jakarta Sans",sans-serif;fill:#fff;text-anchor:middle}
+    .boundarybg{fill:#0f1730}
+    .chatbotbox,.formbox{fill:#182350;stroke:#3a4784;stroke-width:1.5}
+    .triggerchip{fill:#182350;stroke:#3a4784;stroke-width:1.25}
+    .boxtitle.light{fill:#fff}
+    .boxsub.light{fill:#a9b3d6}
+    .triggerlabel{font:700 10px "Plus Jakarta Sans",sans-serif;fill:#d6deff;text-anchor:middle}
+    .enduserbox{fill:#eafaf1;stroke:#3fb950;stroke-width:2}
+    .hostbox{fill:#fff;stroke:var(--border);stroke-width:1.5}
+    .briefbox{fill:#fff;stroke:#3fb950;stroke-width:2}
+    .voidbox{fill:rgba(90,100,136,.05);stroke:#b9c0dd;stroke-width:1.5;stroke-dasharray:7 6}
+    .voidtitle{font:800 15px "Plus Jakarta Sans",sans-serif;fill:var(--navy-soft);text-anchor:middle}
+    .voidsub{font:600 11px "Plus Jakarta Sans",sans-serif;fill:#8891ac;text-anchor:middle}
+
+    /* ---------- SYSTEM MAP ---------- */
+    .map{display:flex;flex-direction:column;gap:0}
+    .layer{border-radius:22px;padding:26px 26px 22px}
+    .layer .lhead{display:flex;align-items:baseline;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+    .layer .lhead .ln{font-family:var(--mono);font-weight:700;font-size:.72rem;color:var(--orange);
+      background:rgba(249,102,14,.1);padding:3px 9px;border-radius:6px}
+    .layer .lhead h4{font-size:1.05rem;font-weight:800}
+    .layer .lhead .lsub{color:var(--navy-soft);font-size:.82rem;font-weight:600}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+    .obj{background:#fff;border-radius:14px;padding:14px 16px;box-shadow:var(--shadow-sm)}
+    .obj h5{font-size:.92rem;font-weight:800;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+    .obj p{font-size:.79rem;color:var(--navy-soft);line-height:1.5}
+    .obj .sub{margin-top:8px;display:flex;flex-wrap:wrap;gap:5px}
+    .obj .sub span{font-size:.66rem;font-weight:700;background:var(--bg);color:var(--navy-soft);
+      padding:2px 7px;border-radius:5px}
+
+    .l-workspace{background:linear-gradient(160deg,var(--lav),#f3edfb)}
+    .l-build{background:linear-gradient(160deg,var(--peach),#fdf3ec)}
+    .l-boundary{background:linear-gradient(160deg,#0f1730,#182350)}
+    .l-boundary .lhead h4,.l-boundary .lhead .lsub{color:#fff}
+    .l-boundary .lhead .ln{background:rgba(255,255,255,.14);color:#ffb27d}
+    .l-boundary .obj{background:#182350;box-shadow:none;border:1px solid #2a3765}
+    .l-boundary .obj h5{color:#fff}
+    .l-boundary .obj p{color:#a9b3d6}
+    .l-boundary .obj .sub span{background:#0f1730;color:#a9b3d6}
+    .l-consume{background:linear-gradient(160deg,#eef4f2,#f3f7fb)}
+    .l-none{background:linear-gradient(160deg,#f3f4f8,#eef0f6);border:2px dashed #c7cce0}
+    .l-none .lhead .ln{background:rgba(90,100,136,.14);color:var(--navy-soft)}
+    .l-none .nonemsg{font-size:.87rem;color:var(--navy-soft);line-height:1.7;max-width:74ch}
+
+    .arrow{display:flex;align-items:center;gap:14px;padding:14px 26px;max-width:640px;margin:0 auto}
+    .arrow .line{flex:1;height:0;border-top:2px dashed #cfd4e8}
+    .arrow .lbl{font-size:.74rem;font-weight:800;color:var(--navy-soft);text-transform:uppercase;
+      letter-spacing:.06em;white-space:nowrap;font-family:var(--mono)}
+    .arrow .lbl b{color:var(--orange)}
+
+    /* ---------- ROLE LADDER ---------- */
+    .roles{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+    .role{background:#fff;border-radius:16px;padding:18px 20px;box-shadow:var(--shadow-sm);border-top:4px solid var(--r)}
+    .role h5{font-size:.95rem;font-weight:800;margin-bottom:6px}
+    .role p{font-size:.8rem;color:var(--navy-soft);line-height:1.55}
+    .role .r1{--r:#111a3e}.role .r2{--r:#5a6488}
+    .r-owner{--r:#111a3e}.r-admin{--r:#5a6488}.r-editor{--r:var(--purple)}.r-user{--r:var(--orange)}.r-anon{--r:#3fb950}
+    .r-viewer{--r:#9aa1bb}
+    .role.r-none{background:transparent;box-shadow:none;border:2px dashed #c7cce0;display:flex;align-items:center;justify-content:center;text-align:center}
+    .role.r-none p{color:#9aa1bb;font-weight:700;font-size:.86rem}
+
+    /* ---------- FLOWS (terminal cards) ---------- */
+    .flows{display:flex;flex-direction:column;gap:14px}
+    .flow{background:#0f1730;border-radius:16px;overflow:hidden;box-shadow:0 20px 44px rgba(17,26,62,.22)}
+    .flow .fbar{display:flex;align-items:center;gap:10px;padding:11px 18px;background:#0b1226;border-bottom:1px solid #1e2a4d}
+    .flow .fbar .num{font-family:var(--mono);color:var(--orange);font-weight:700;font-size:.78rem}
+    .flow .fbar .title{color:#fff;font-weight:700;font-size:.86rem}
+    .flow .fbody{padding:16px 18px;font-family:var(--mono);font-size:.8rem;line-height:2;color:#d6deff}
+    .flow .fbody .step{color:#8b949e}
+    .flow .fbody .step:before{content:"→ ";color:#3fb950}
+    .flow .fbody .who{color:#79c0ff}
+
+    /* ---------- DESIGN DECISIONS ---------- */
+    .dd{display:flex;flex-direction:column;gap:16px}
+    .ddrow{background:#fff;border-radius:18px;box-shadow:var(--shadow-sm);padding:20px 22px;
+      display:grid;grid-template-columns:40px 1fr;gap:16px}
+    .ddrow .num{width:40px;height:40px;border-radius:11px;background:var(--orange-soft);color:var(--orange);
+      display:grid;place-items:center;font-weight:800;font-size:1rem;flex-shrink:0}
+    .ddrow h5{font-size:.98rem;font-weight:800;margin-bottom:6px}
+    .ddrow p{font-size:.86rem;color:var(--navy-soft);line-height:1.6}
+    .ddrow p.why{margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)}
+    .ddrow p.why b{color:var(--navy)}
+    @media(max-width:640px){.ddrow{grid-template-columns:1fr}}
+
+    /* table */
+    table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;box-shadow:var(--shadow-sm)}
+    th,td{text-align:left;padding:11px 14px;font-size:.82rem;border-bottom:1px solid var(--border)}
+    th{background:var(--bg);color:var(--navy-soft);text-transform:uppercase;font-size:.68rem;letter-spacing:.06em;font-weight:800}
+    tr:last-child td{border-bottom:none}
+    td b{font-weight:700}
+    .tablewrap{overflow-x:auto;border-radius:14px}
+
+    footer{padding:44px 0 60px;border-top:1px solid var(--border);margin-top:20px}
+    footer p{color:var(--navy-soft);font-size:.84rem;text-align:center}
+    footer a{color:var(--orange);font-weight:700}
+  </style>
+</head>
+<body>
+
+  <header class="top">
+    <div class="bar">
+      <a class="back" href="index.html">← Portfolio</a>
+      <div class="meta">
+        <span class="tag">Day 2 · 30 Day Challenge</span>
+        <h1>Two teardowns: MindPal &amp; PAM</h1>
+      </div>
+      <a class="src" href="#case-pal">🧭 <span>Jump to a case</span></a>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap hero">
+      <div class="eyebrow">Two product teardowns</div>
+      <h2>Reconstructing <span class="accent">two unrelated products</span>, from the outside in</h2>
+      <p>Two exercises in outside-in product archaeology, done back to back: no source code, no internal docs,
+        nothing but public documentation and the live app for each. They don't integrate, don't compete and don't
+        share a customer — <b>MindPal</b> is a general-purpose multi-agent automation platform, <b>PAM</b> is a
+        brand creative-generation tool. Read as two independent case studies of the same method, not as one story.</p>
+      <div class="casenav">
+        <a href="#case-pal"><span class="dot" style="background:var(--purple)"></span>Case 1 — MindPal</a>
+        <a href="#case-pam"><span class="dot" style="background:#3fb950"></span>Case 2 — PAM</a>
+      </div>
+    </div>
+
+    <!-- CASE 1 DIVIDER -->
+    <div class="wrap divider" id="case-pal">
+      <span class="dnum" style="--dc:var(--purple)">CASE 1 OF 2</span>
+      <h2>MindPal — general-purpose multi-agent automation</h2>
+      <p>A platform for building AI agents and multi-agent workflows, then handing them either to a team or to
+        the public internet. Its architecture is built around one deliberate seam: everything that needs a login
+        sits above it, everything a stranger on the internet touches sits below it.</p>
+      <hr>
+    </div>
+
+    <!-- SYSTEM MAP -->
+    <section class="wrap" id="map">
+      <h3 class="title">The system map</h3>
+      <p class="lede">MindPal isn't two products glued together — it's <b>one product with a hard seam</b> running
+        through the middle. Everything above the seam needs a MindPal account; everything below it deliberately doesn't.
+        Drawn as a diagram first, then broken down layer by layer below.</p>
+
+      <div class="dwrap">
+        <svg class="diagram" viewBox="0 0 860 600" xmlns="http://www.w3.org/2000/svg" role="img"
+             aria-label="MindPal architecture diagram: Workspace governs Agent and Workflow builders, which publish as Chatbot and Form, which anonymous end users reach without an account.">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#8891b8"/>
+            </marker>
+          </defs>
+
+          <!-- 01 WORKSPACE -->
+          <rect class="wsbox" x="20" y="20" width="820" height="150" rx="22"/>
+          <text class="gtitle" x="40" y="44">01 · WORKSPACE — GOVERNANCE &amp; METERING</text>
+
+          <rect class="pill" x="40" y="60" width="86" height="42" rx="10"/>
+          <text class="plabel" x="83" y="86">Owner</text>
+          <rect class="pill" x="146" y="60" width="86" height="42" rx="10"/>
+          <text class="plabel" x="189" y="86">Admin</text>
+          <rect class="pill" x="252" y="60" width="86" height="42" rx="10"/>
+          <text class="plabel" x="295" y="86">Editor</text>
+          <rect class="pill" x="358" y="60" width="86" height="42" rx="10"/>
+          <text class="plabel" x="401" y="86">User</text>
+          <line class="conn" x1="126" y1="81" x2="146" y2="81" marker-end="url(#arrow)"/>
+          <line class="conn" x1="232" y1="81" x2="252" y2="81" marker-end="url(#arrow)"/>
+          <line class="conn" x1="338" y1="81" x2="358" y2="81" marker-end="url(#arrow)"/>
+
+          <rect class="pill credit" x="500" y="60" width="130" height="42" rx="10"/>
+          <text class="plabel" x="565" y="86">⚡ AI Credit</text>
+          <rect class="pill tag" x="650" y="60" width="170" height="42" rx="10"/>
+          <text class="plabel" x="735" y="86">🏷️ Access Tag</text>
+
+          <text class="gcap" x="40" y="122">more control</text>
+          <text class="gcap" x="358" y="122" text-anchor="end">less access →</text>
+          <text class="gcap" x="500" y="122">meters usage · scopes Editor / User</text>
+
+          <!-- connector 01 -> 02 -->
+          <line class="conn" x1="430" y1="170" x2="430" y2="211" marker-end="url(#arrow)"/>
+          <text class="clabel" x="650" y="190">build</text>
+
+          <!-- Mindie -->
+          <rect class="mindiechip" x="375" y="172" width="110" height="28" rx="14"/>
+          <text class="mindielabel" x="430" y="190">✨ Mindie</text>
+
+          <!-- 02 BUILD -->
+          <text class="gtitle" x="40" y="203">02 · BUILD — CREATOR SURFACE</text>
+          <rect class="agentbox" x="70" y="212" width="300" height="86" rx="18"/>
+          <text class="boxtitle" x="220" y="247">🤖 Agent</text>
+          <text class="boxsub" x="220" y="271">instructions · model · tools</text>
+
+          <rect class="flowbox" x="490" y="212" width="300" height="86" rx="18"/>
+          <text class="boxtitle" x="640" y="247">🕸️ Workflow</text>
+          <text class="boxsub" x="640" y="271">15 node types, one canvas</text>
+
+          <!-- connector 02 -> 03 -->
+          <line class="conn" x1="220" y1="298" x2="220" y2="350" marker-end="url(#arrow)"/>
+          <line class="conn" x1="640" y1="298" x2="640" y2="350" marker-end="url(#arrow)"/>
+          <text class="clabel" x="430" y="328">publish — the seam</text>
+
+          <!-- 03 BOUNDARY -->
+          <rect class="boundarybg" x="20" y="350" width="820" height="120" rx="22"/>
+          <text class="gtitle" x="40" y="373" fill="#ffb27d">03 · PUBLISH / BOUNDARY — NOT NEW OBJECTS</text>
+
+          <rect class="chatbotbox" x="70" y="382" width="300" height="70" rx="16"/>
+          <text class="boxtitle light" x="220" y="412">💬 Chatbot</text>
+          <text class="boxsub light" x="220" y="434">the published Agent</text>
+
+          <rect class="formbox" x="490" y="382" width="180" height="70" rx="16"/>
+          <text class="boxtitle light" x="580" y="412">📝 Form</text>
+          <text class="boxsub light" x="580" y="434">published Workflow</text>
+
+          <rect class="triggerchip" x="690" y="382" width="150" height="32" rx="10"/>
+          <text class="triggerlabel" x="765" y="403">⏰ Schedule</text>
+          <rect class="triggerchip" x="690" y="420" width="150" height="32" rx="10"/>
+          <text class="triggerlabel" x="765" y="441">🔌 Public API</text>
+          <line class="conn dashed" x1="670" y1="398" x2="690" y2="398"/>
+          <line class="conn dashed" x1="670" y1="436" x2="690" y2="436"/>
+
+          <!-- connector 03 -> 04 -->
+          <line class="conn" x1="220" y1="452" x2="390" y2="497" marker-end="url(#arrow)"/>
+          <line class="conn" x1="580" y1="452" x2="470" y2="497" marker-end="url(#arrow)"/>
+          <text class="clabel" x="430" y="480">zero login</text>
+
+          <!-- 04 CONSUMPTION -->
+          <text class="gtitle" x="40" y="497">04 · CONSUMPTION — THE PUBLIC</text>
+          <rect class="enduserbox" x="270" y="500" width="320" height="76" rx="18"/>
+          <text class="boxtitle" x="430" y="533">🧍 End user (anonymous)</text>
+          <text class="boxsub" x="430" y="557">outside the role ladder above</text>
+
+          <rect class="hostbox" x="650" y="492" width="180" height="54" rx="14"/>
+          <text class="boxtitle" x="740" y="514" style="font-size:13px">🆔 Custom User ID</text>
+          <text class="boxsub" x="740" y="534">passed in by host site</text>
+          <line class="conn dashed" x1="650" y1="519" x2="595" y2="536" marker-end="url(#arrow)"/>
+        </svg>
+      </div>
+
+      <div class="map">
+        <div class="layer l-workspace">
+          <div class="lhead"><span class="ln">01</span><h4>Workspace — governance &amp; metering</h4>
+            <span class="lsub">who's allowed to do what, and who pays</span></div>
+          <div class="cards">
+            <div class="obj"><h5>🏢 Workspace</h5><p>The root container. Owns every Agent, Workflow, Knowledge
+              Source and bill. A person can belong to several.</p></div>
+            <div class="obj"><h5>🪜 Role ladder</h5><p>Owner → Admin → Editor → User. Editor can create/edit;
+              User can only run what already exists.</p>
+              <div class="sub"><span>Owner</span><span>Admin</span><span>Editor</span><span>User</span></div></div>
+            <div class="obj"><h5>⚡ AI Credit</h5><p>One metering unit for every LLM call, priced per model
+              (0.5 → 40 credits/request). The only currency in the system.</p></div>
+            <div class="obj"><h5>🏷️ Access Control Tag</h5><p>Scopes an Editor/User to specific agents or
+              workflows, plus a monthly credit cap per person.</p></div>
+          </div>
+        </div>
+
+        <div class="arrow"><span class="line"></span><span class="lbl">members <b>build</b> inside the workspace</span><span class="line"></span></div>
+
+        <div class="layer l-build">
+          <div class="lhead"><span class="ln">02</span><h4>Build — the creator surface</h4>
+            <span class="lsub">requires login · Editor/Owner/Admin only</span></div>
+          <div class="cards">
+            <div class="obj"><h5>🤖 Agent</h5><p>System Instructions + Model + Knowledge/Notes + Brand Voice +
+              Tools/Integrations + Memory. The unit of "one trained AI".</p></div>
+            <div class="obj"><h5>🕸️ Workflow</h5><p>A canvas of 15 node types chaining agents together — input,
+              routing, evaluation loops, code, payments.</p>
+              <div class="sub"><span>Agent</span><span>Router</span><span>Loop</span><span>Gate</span><span>Payment</span></div></div>
+            <div class="obj"><h5>🪄 Mindie</h5><p>An agent that builds workflows/agents from a sentence. Lives on
+              Home, in the Agent editor, and inside the Canvas.</p></div>
+            <div class="obj"><h5>🔗 Sub-agent</h5><p>A <em>static</em> delegation link configured once in an
+              Agent's settings — different from an Agent Node, which is assembled per-workflow.</p></div>
+          </div>
+        </div>
+
+        <div class="arrow"><span class="line"></span><span class="lbl"><b>publish</b> — the seam</span><span class="line"></span></div>
+
+        <div class="layer l-boundary">
+          <div class="lhead"><span class="ln">03</span><h4>Publish / boundary — not new objects</h4>
+            <span class="lsub">deployment modes of what's above, nothing more</span></div>
+          <div class="cards">
+            <div class="obj"><h5>💬 Chatbot</h5><p>"The publishable version of an Agent." Same brain, any number
+              of branded, differently-configured front doors.</p></div>
+            <div class="obj"><h5>📝 Form</h5><p>The publishable version of a Workflow — a hosted web form standing
+              in for the canvas.</p></div>
+            <div class="obj"><h5>⏰ Schedule Trigger</h5><p>Runs a workflow on a timer instead of a human opening it.</p></div>
+            <div class="obj"><h5>🔌 Public API Trigger</h5><p>Runs a workflow from another system's server, not a person at all.</p></div>
+          </div>
+        </div>
+
+        <div class="arrow"><span class="line"></span><span class="lbl">anonymous access, <b>zero login</b></span><span class="line"></span></div>
+
+        <div class="layer l-consume">
+          <div class="lhead"><span class="ln">04</span><h4>Consumption — the public</h4>
+            <span class="lsub">no MindPal account, ever</span></div>
+          <div class="cards">
+            <div class="obj"><h5>🧍 End user</h5><p>Anonymous by default. Never touches the Owner/Admin/Editor/User
+              ladder — a completely separate identity system.</p></div>
+            <div class="obj"><h5>🆔 Custom User ID</h5><p>An identifier the <em>host site</em> supplies at runtime
+              (None / Optional / Required) — identity is pushed in, not created inside MindPal.</p></div>
+            <div class="obj"><h5>🧠 Audience Memory</h5><p>Only turns on when Custom User ID <em>and</em> Audience
+              Memory are both enabled — two independent switches, one feature.</p></div>
+            <div class="obj"><h5>🌐 External systems</h5><p>Webhook receivers, CRMs, Stripe — where results and
+              payments land outside MindPal entirely.</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ROLES -->
+    <section class="wrap" id="roles">
+      <h3 class="title">Five roles, two identity systems</h3>
+      <p class="lede">Only four of these five roles ever log in. The fifth — the actual end user — is handled by a
+        parallel, account-less identity mechanism that never touches the other four.</p>
+      <div class="roles">
+        <div class="role r-owner"><h5>Owner</h5><p>Full control, unrestricted. Created the workspace; can never be
+          demoted or removed — even by an Admin.</p></div>
+        <div class="role r-admin"><h5>Admin</h5><p>Near-identical to Owner (billing, members, settings) but cannot
+          touch the Owner's role or remove them.</p></div>
+        <div class="role r-editor"><h5>Editor</h5><p>Creates and edits everything; can only delete what they
+          personally made. No workspace-settings access.</p></div>
+        <div class="role r-user"><h5>User</h5><p>Run-only. No create, edit or delete. Scoped further by Access
+          Control Tags and a personal credit cap.</p></div>
+        <div class="role r-anon"><h5>End user (anonymous)</h5><p>Outside the workspace entirely. Identified, if at
+          all, by a Custom User ID the host site supplies — not a MindPal login.</p></div>
+      </div>
+    </section>
+
+    <!-- FLOWS -->
+    <section class="wrap" id="flows">
+      <h3 class="title">The jobs this architecture is built to do</h3>
+      <p class="lede">Five flows that touch every layer above, in the order a real user hits them.</p>
+      <div class="flows">
+        <div class="flow">
+          <div class="fbar"><span class="num">01</span><span class="title">Ship one brain, many storefronts</span></div>
+          <div class="fbody"><span class="who">Editor</span> configures an Agent once<br>
+            <span class="step">publish it as Chatbot A, branded for Support</span><br>
+            <span class="step">publish the same Agent as Chatbot B, branded for Sales</span><br>
+            <span class="step">both draw on identical Knowledge Sources — zero duplication</span></div>
+        </div>
+        <div class="flow">
+          <div class="fbar"><span class="num">02</span><span class="title">Orchestrate, then hand to the public</span></div>
+          <div class="fbody"><span class="who">Editor</span> wires Human Input → Agent → Router → Payment on the Canvas<br>
+            <span class="step">tests it In-App, Supervised mode, step by step</span><br>
+            <span class="step">publishes as a Form — a public link, no login wall</span><br>
+            <span class="step"><span class="who">Anonymous end user</span> fills the form; Stripe collects payment mid-run</span></div>
+        </div>
+        <div class="flow">
+          <div class="fbar"><span class="num">03</span><span class="title">Serve a client without letting them touch the build</span></div>
+          <div class="fbody"><span class="who">Owner</span> invites a client as <span class="who">User</span> role<br>
+            <span class="step">scopes them with an Access Control Tag to one workflow only</span><br>
+            <span class="step">caps their monthly AI Credit spend</span><br>
+            <span class="step">client runs it, can never edit it — the agency keeps the IP</span></div>
+        </div>
+        <div class="flow">
+          <div class="fbar"><span class="num">04</span><span class="title">Personalize a public bot without accounts</span></div>
+          <div class="fbody">Host website embeds a Chatbot with an iframe<br>
+            <span class="step">passes <span class="who">Custom User ID</span> + Session Context on load</span><br>
+            <span class="step">MindPal loads/creates that person's Audience record silently</span><br>
+            <span class="step">returning visitor: no re-explaining, no MindPal login ever shown</span></div>
+        </div>
+        <div class="flow">
+          <div class="fbar"><span class="num">05</span><span class="title">Run unattended, on someone else's clock</span></div>
+          <div class="fbody">Workflow gets a Schedule Trigger — daily 9am<br>
+            <span class="step">or an external system calls the Public API Trigger</span><br>
+            <span class="step">a Webhook Node ships the result out — CRM, Slack, anywhere</span><br>
+            <span class="step">no human ever opens the MindPal UI for this run</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DESIGN DECISIONS -->
+    <section class="wrap" id="decisions">
+      <h3 class="title">The design decisions behind the architecture</h3>
+      <p class="lede">None of this is stated outright anywhere in the docs — it's inferred from what's built, what's
+        priced, and what's kept strictly apart.</p>
+      <div class="dd">
+        <div class="ddrow"><div class="num">1</div><div>
+          <h5>Chatbot is a deployment mode, not an object</h5>
+          <p>The Agent stays singular and centrally governed; the Chatbot is disposable, brandable, and cheap to
+            multiply. One Knowledge base, unlimited storefronts.</p>
+          <p class="why"><b>Why it matters:</b> it lets a non-technical team spin up a differently-branded bot per
+            channel without ever retraining or re-uploading anything.</p>
+        </div></div>
+        <div class="ddrow"><div class="num">2</div><div>
+          <h5>AI Credit is the only currency, on purpose</h5>
+          <p>Every action — a chat reply, a workflow node, a scheduled run — draws from the same pool, priced by
+            actual model cost (0.5 to 40 credits).</p>
+          <p class="why"><b>Why it matters:</b> LLM cost really is fungible across task types, so one unit serves
+            two masters at once — MindPal's own billing, and a workspace owner's internal cost control via
+            per-member credit caps.</p>
+        </div></div>
+        <div class="ddrow"><div class="num">3</div><div>
+          <h5>The role ladder is shaped like an agency, not a company</h5>
+          <p>Editor seats cost $29/mo, User seats cost $5/mo — roughly 6×. Advanced plan explicitly bundles
+            5 Editor + 20 User seats.</p>
+          <p class="why"><b>Why it matters:</b> the pricing only makes sense if you assume a small team of builders
+            serving many clients who only ever press "run" — this is agency software wearing a general-purpose skin.</p>
+        </div></div>
+        <div class="ddrow"><div class="num">4</div><div>
+          <h5>Two identity systems that never merge</h5>
+          <p>Workspace membership (Owner…User) and Custom User ID are completely separate mechanisms, and the
+            second is caller-supplied, not self-registered.</p>
+          <p class="why"><b>Why it matters:</b> a public chat widget needs zero-friction anonymous access, yet still
+            wants personalization — pushing identity ownership to the host site (like Intercom, not like a
+            login-walled SaaS app) resolves that tension without a signup flow.</p>
+        </div></div>
+        <div class="ddrow"><div class="num">5</div><div>
+          <h5>Payment and Webhook nodes sit next to Router and Loop</h5>
+          <p>A workflow canvas that can take money (Stripe, no platform fee as of the current docs) and call
+            arbitrary endpoints is doing more than "chatbot with steps."</p>
+          <p class="why"><b>Why it matters:</b> it signals the ambition is business-process automation and
+            monetization infrastructure, not just content generation — MindPal is competing with Zapier-shaped
+            tools as much as with chatbot builders.</p>
+        </div></div>
+        <div class="ddrow"><div class="num">6</div><div>
+          <h5>Mindie is the product, eating its own UI</h5>
+          <p>The same assistant that builds workflows also lives on the Home screen and inside the Agent editor —
+            it's the default way to start, not a power-user shortcut.</p>
+          <p class="why"><b>Why it matters:</b> the node-canvas is a genuinely technical surface; routing
+            first-time users through natural language first is a deliberate onboarding-friction reducer, not a
+            bolted-on gimmick.</p>
+        </div></div>
+        <div class="ddrow"><div class="num">7</div><div>
+          <h5>Public sharing trades relationship-depth for reach, on purpose</h5>
+          <p>Docs state public links get only "limited user history differentiation," while workspace invites get
+            full individual history tracking.</p>
+          <p class="why"><b>Why it matters:</b> it's a conscious tier, not a limitation — the public path optimizes
+            for anonymous scale, the private path for depth. Audience Memory is the bridge that lets a team have
+            some of both without forcing a login.</p>
+        </div></div>
+      </div>
+    </section>
+
+
+    <!-- CASE 2 DIVIDER -->
+    <div class="wrap divider" id="case-pam">
+      <span class="dnum" style="--dc:#3fb950">CASE 2 OF 2</span>
+      <h2>PAM — brand creative generation</h2>
+      <p>An AI agent that produces on-brand images and video for a marketing team, inside a closed, logged-in
+        workspace. No workflow builder, no public deployment — every screen requires a login and stays there.</p>
+      <hr>
+    </div>
+
+    <!-- PAM SYSTEM MAP -->
+    <section class="wrap" id="pam-map">
+      <h3 class="title">The system map</h3>
+      <p class="lede">PAM's architecture is <b>two layers, then a hard stop</b>. Everything happens inside a
+        logged-in Brand — there's no third layer where work gets handed to the public, because that layer doesn't
+        exist. The empty space at the bottom of this diagram is the point.</p>
+
+      <div class="dwrap">
+        <svg class="diagram" viewBox="0 0 860 470" xmlns="http://www.w3.org/2000/svg" role="img"
+             aria-label="PAM architecture diagram: Brand governs a Session to Design Brief to Artifact pipeline. There is no publish or public-consumption layer.">
+          <defs>
+            <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#8891b8"/>
+            </marker>
+          </defs>
+
+          <!-- 01 BRAND -->
+          <rect class="wsbox" x="20" y="20" width="820" height="150" rx="22"/>
+          <text class="gtitle" x="40" y="44">01 · BRAND — IDENTITY &amp; GOVERNANCE</text>
+
+          <rect class="pill" x="40" y="60" width="86" height="42" rx="10"/>
+          <text class="plabel" x="83" y="86">Owner</text>
+          <rect class="pill" x="146" y="60" width="86" height="42" rx="10"/>
+          <text class="plabel" x="189" y="86">Admin</text>
+          <rect class="pill" x="252" y="60" width="86" height="42" rx="10"/>
+          <text class="plabel" x="295" y="86">Editor</text>
+          <rect class="pill" x="358" y="60" width="86" height="42" rx="10"/>
+          <text class="plabel" x="401" y="86">Viewer</text>
+          <line class="conn" x1="126" y1="81" x2="146" y2="81" marker-end="url(#arrow2)"/>
+          <line class="conn" x1="232" y1="81" x2="252" y2="81" marker-end="url(#arrow2)"/>
+          <line class="conn" x1="338" y1="81" x2="358" y2="81" marker-end="url(#arrow2)"/>
+
+          <rect class="pill credit" x="500" y="60" width="130" height="42" rx="10"/>
+          <text class="plabel" x="565" y="86">🎨 Brand Kit</text>
+          <rect class="pill tag" x="650" y="60" width="170" height="42" rx="10"/>
+          <text class="plabel" x="735" y="86">🔌 Connectors</text>
+
+          <text class="gcap" x="40" y="122">more control</text>
+          <text class="gcap" x="358" y="122" text-anchor="end">read-only →</text>
+          <text class="gcap" x="500" y="122">folds into every render · allow / ask first / off</text>
+
+          <!-- connector 01 -> 02 -->
+          <line class="conn" x1="430" y1="170" x2="430" y2="211" marker-end="url(#arrow2)"/>
+          <text class="clabel" x="650" y="190">brief</text>
+
+          <!-- Playbook -->
+          <rect class="mindiechip" x="375" y="172" width="110" height="28" rx="14"/>
+          <text class="mindielabel" x="430" y="190">📓 Playbook</text>
+
+          <!-- 02 WORK -->
+          <text class="gtitle" x="40" y="203">02 · WORK — SESSION → BRIEF → ARTIFACT</text>
+          <rect class="agentbox" x="40" y="212" width="200" height="86" rx="18"/>
+          <text class="boxtitle" x="140" y="250" style="font-size:14px">💬 Session</text>
+          <text class="boxsub" x="140" y="273">one brief, many artifacts</text>
+          <line class="conn" x1="240" y1="255" x2="268" y2="255" marker-end="url(#arrow2)"/>
+
+          <rect class="briefbox" x="270" y="212" width="200" height="86" rx="16"/>
+          <text class="boxtitle" x="370" y="250" style="font-size:14px">📋 Design Brief</text>
+          <text class="boxsub" x="370" y="273">confirmed before render</text>
+          <line class="conn" x1="470" y1="255" x2="498" y2="255" marker-end="url(#arrow2)"/>
+
+          <rect class="flowbox" x="500" y="212" width="200" height="86" rx="18"/>
+          <text class="boxtitle" x="600" y="250" style="font-size:14px">🖼️ Artifact</text>
+          <text class="boxsub" x="600" y="273">image / video · versions stack</text>
+
+          <!-- connector 02 -> void -->
+          <line class="conn" x1="430" y1="298" x2="430" y2="336" marker-end="url(#arrow2)"/>
+          <text class="clabel" x="650" y="321">and that's it</text>
+
+          <!-- 03 VOID -->
+          <text class="gtitle" x="40" y="333" fill="#9aa1bb">03 · IT STOPS HERE</text>
+          <rect class="voidbox" x="60" y="340" width="740" height="110" rx="20"/>
+          <text class="voidtitle" x="430" y="386">🚫 no Chatbot · no Form · no anonymous access</text>
+          <text class="voidsub" x="430" y="410">every screen sits behind V-ID single sign-on — there is no publish step at all</text>
+        </svg>
+      </div>
+
+      <div class="map">
+        <div class="layer l-workspace">
+          <div class="lhead"><span class="ln">01</span><h4>Brand — identity &amp; governance</h4>
+            <span class="lsub">the root container for identity, assets and work</span></div>
+          <div class="cards">
+            <div class="obj"><h5>🎨 Brand Kit</h5><p>Logo, colour palette, typography, guidelines. Folded into
+              every render automatically — no re-stating the rules each time.</p></div>
+            <div class="obj"><h5>🪜 Role ladder</h5><p>Owner → Admin → Editor → Viewer. Viewer is read-only —
+              there's no "run-only" public tier, because there's nothing to publicly run.</p>
+              <div class="sub"><span>Owner</span><span>Admin</span><span>Editor</span><span>Viewer</span></div></div>
+            <div class="obj"><h5>🔌 Connectors</h5><p>Bridges to campaign data, CRM audiences, file storage,
+              publishing channels. Reads run automatically; writes need allow / ask first / off approval.</p></div>
+            <div class="obj"><h5>📓 Playbooks</h5><p>A saved creative recipe a team reuses. "Guides a run; it
+              doesn't freeze it" — the agent still adapts it to each new brief.</p></div>
+          </div>
+        </div>
+
+        <div class="arrow"><span class="line"></span><span class="lbl">members <b>brief</b> the agent inside the brand</span><span class="line"></span></div>
+
+        <div class="layer l-build">
+          <div class="lhead"><span class="ln">02</span><h4>Work — session → brief → artifact</h4>
+            <span class="lsub">requires login · Editor/Owner/Admin only</span></div>
+          <div class="cards">
+            <div class="obj"><h5>💬 Session</h5><p>One conversation with the brand agent. One brief can fan out
+              into several artifacts; a new session starts context-clean.</p></div>
+            <div class="obj"><h5>📋 Design Brief</h5><p>The agent's structured plan — goal, exact copy, target
+              sizes, tagged references. The user must confirm it before anything renders.</p></div>
+            <div class="obj"><h5>🖼️ Artifact</h5><p>The finished image or video. Editing or regenerating never
+              creates a new tile — it appends a version to the same one.</p></div>
+            <div class="obj"><h5>🕐 Version</h5><p>Linear history, images only — step back, compare, or restore.
+              Video artifacts don't carry versions; regenerating or animating again is the only way to redo one.</p></div>
+          </div>
+        </div>
+
+        <div class="arrow"><span class="line"></span><span class="lbl">and <b>that's the whole system</b></span><span class="line"></span></div>
+
+        <div class="layer l-none">
+          <div class="lhead"><span class="ln">03</span><h4>It stops here</h4>
+            <span class="lsub">there is no third layer</span></div>
+          <p class="nonemsg">No Chatbot, no Form, no API Trigger, no Schedule Trigger, no anonymous end user —
+            nothing in PAM ever leaves the logged-in workspace. The gallery is the end of the line: a human
+            downloads the finished artifact and posts it themselves, wherever it needs to go.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAM ROLES -->
+    <section class="wrap" id="pam-roles">
+      <h3 class="title">Four roles, no public tier</h3>
+      <p class="lede">Every one of these four logs in with V-ID. There's no fifth, account-less role —
+        PAM stops at Viewer.</p>
+      <div class="roles">
+        <div class="role r-owner"><h5>Owner</h5><p>Full control, including billing, deleting the brand, and
+          granting ownership to someone else.</p></div>
+        <div class="role r-admin"><h5>Admin</h5><p>Manages members, connectors, and brand guidelines &amp;
+          content. One step below Owner.</p></div>
+        <div class="role r-editor"><h5>Editor</h5><p>Creates and edits artifacts, runs the AI agent. The
+          production role — where most work happens.</p></div>
+        <div class="role r-viewer"><h5>Viewer</h5><p>Read-only access to the workspace. Can look, can't touch —
+          the closest thing to an outsider, and still fully logged in.</p></div>
+        <div class="role r-none"><p>— no public role —<br><span style="font-weight:600;font-size:.78rem">nothing
+          outside the login wall</span></p></div>
+      </div>
+    </section>
+
+    <!-- PAM FLOWS -->
+    <section class="wrap" id="pam-flows">
+      <h3 class="title">The jobs this architecture is built to do</h3>
+      <p class="lede">Four flows that touch every layer above.</p>
+      <div class="flows">
+        <div class="flow">
+          <div class="fbar"><span class="num">01</span><span class="title">Brief once, compare variants before committing</span></div>
+          <div class="fbody"><span class="who">Editor</span> types a brief in the composer<br>
+            <span class="step">agent drafts a Design Brief — goal, copy, sizes; Editor confirms it</span><br>
+            <span class="step">4 Directions render, then several Concepts per chosen direction</span><br>
+            <span class="step">picked concept lands in the gallery as an Artifact — final touches from there</span></div>
+        </div>
+        <div class="flow">
+          <div class="fbar"><span class="num">02</span><span class="title">Iterate without losing anything</span></div>
+          <div class="fbody">open an Artifact in the lightbox<br>
+            <span class="step">Edit, Resize, Animate or Regenerate — each appends a new Version</span><br>
+            <span class="step">step back to any earlier version to compare or restore</span><br>
+            <span class="step">nothing is ever deleted by trying a bolder edit</span></div>
+        </div>
+        <div class="flow">
+          <div class="fbar"><span class="num">03</span><span class="title">Reuse a house style across a whole team</span></div>
+          <div class="fbody">someone writes a Playbook once — style, structure, constraints<br>
+            <span class="step">any Editor picks it when starting a new run</span><br>
+            <span class="step">agent adapts the saved recipe to that day's brief</span><br>
+            <span class="step">consistent output without re-explaining the house style each time</span></div>
+        </div>
+        <div class="flow">
+          <div class="fbar"><span class="num">04</span><span class="title">Audit what happened, without redoing it</span></div>
+          <div class="fbody"><span class="who">Admin / Owner</span> opens the Sessions rail<br>
+            <span class="step">picks a past session, hits Replay</span><br>
+            <span class="step">walks back through the agent's reasoning, step by step</span><br>
+            <span class="step">read-only — nothing re-runs or changes</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAM DESIGN DECISIONS -->
+    <section class="wrap" id="pam-decisions">
+      <h3 class="title">The design decisions behind the architecture</h3>
+      <p class="lede">Inferred from what's built, gated, and left out — not stated outright anywhere in the docs.</p>
+      <div class="dd">
+        <div class="ddrow"><div class="num">1</div><div>
+          <h5>The Design Brief is a mandatory gate before anything renders</h5>
+          <p>The agent must draft goal, exact copy, sizes and references — and the user must confirm that plan —
+            before a single pixel gets generated.</p>
+          <p class="why"><b>Why it matters:</b> catching a wrong direction at the cheap text stage is far
+            less costly than catching it after four rendered concepts. It front-loads correction to where it's cheapest.</p>
+        </div></div>
+        <div class="ddrow"><div class="num">2</div><div>
+          <h5>"Workflow" means a fixed route, not a canvas</h5>
+          <p>Create / Adapt / Animate / Sandbox / Auto are five pinned pipelines the agent selects — there's no
+            node-by-node builder anywhere in the product.</p>
+          <p class="why"><b>Why it matters:</b> PAM's audience is brand and creative teams who want a result, not
+            engineers assembling a pipeline. Presets trade flexibility for zero setup cost, keeping the tool
+            approachable for people who've never built an automation in their life.</p>
+        </div></div>
+        <div class="ddrow"><div class="num">3</div><div>
+          <h5>Versions are linear, never branching</h5>
+          <p>Edit, Resize and Regenerate all append to one timeline per image artifact — there's no fork/branch
+            concept anywhere. Video is the one exception: once rendered, a video doesn't carry further versions
+            of its own.</p>
+          <p class="why"><b>Why it matters:</b> creative iteration is usually one lineage getting refined
+            ("make it warmer," then "now resize it"), not parallel experiments. Linear history matches how a
+            person actually works, and "nothing is lost" removes the fear of trying a bolder edit.</p>
+        </div></div>
+        <div class="ddrow"><div class="num">4</div><div>
+          <h5>There is no publish layer, anywhere, on purpose</h5>
+          <p>Every single screen sits behind V-ID login. No public link, no embeddable widget, no anonymous
+            visitor of any kind exists in this product.</p>
+          <p class="why"><b>Why it matters:</b> the finished asset <em>is</em> the brand's IP. A creative-ops tool's
+            output is meant to leave through export and get posted deliberately — not through a hosted public
+            surface where an on-brand asset could be generated in an uncontrolled context.</p>
+        </div></div>
+        <div class="ddrow"><div class="num">5</div><div>
+          <h5>Connectors gate writes but not reads</h5>
+          <p>Look-ups (checking campaign performance) run automatically; anything that publishes or sends
+            somewhere needs allow / ask first / off approval per action.</p>
+          <p class="why"><b>Why it matters:</b> a deliberately asymmetric trust model — low-risk information
+            retrieval stays frictionless, while anything that could leak brand content externally keeps a human
+            in the loop by default.</p>
+        </div></div>
+        <div class="ddrow"><div class="num">6</div><div>
+          <h5>Replay is restricted to Admin and Owner, not Editor</h5>
+          <p>Any Editor can create; only Admin/Owner can walk back through <em>how</em> the agent reasoned on a
+            past session.</p>
+          <p class="why"><b>Why it matters:</b> Replay is an oversight feature, not a creative one. Gating it to
+            the roles accountable for brand governance keeps it aligned with what it's actually for — accountability,
+            not reuse.</p>
+        </div></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>Day 2 of a 30-day build challenge — two unrelated teardowns, same method ·
+        <a href="index.html">← back to the portfolio</a> · <a href="pitch.html">Day 1: the pitch deck →</a></p>
+    </div>
+  </footer>
+
+</body>
+</html>
