@@ -1,0 +1,16 @@
+# Vercel
+.vercel
+
+# Personal — contains phone number, DOB, home address. Kept off the public repo.
+Giang-Thanh-Cong-CV.pdf
+
+# OS / editor junk
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Temp export folders
+_shots/
+_slides_raw/
+_raw/
+_tmp/

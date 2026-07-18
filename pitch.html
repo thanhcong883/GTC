@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 1 — MindPal for Revenue | Giang Thanh Cong</title>
+  <meta name="description" content="An investor-grade pitch deck selling MindPal's multi-agent AI workforce to a VP Sales / CRO. Day 1 of a 30-day build challenge." />
+  <meta property="og:title" content="Day 1 — MindPal for Revenue: an AI pitch deck" />
+  <meta property="og:description" content="Turning an SDR org into an AI-augmented growth engine — 15 slides." />
+  <meta property="og:type" content="article" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --orange:#f9660e; --orange-soft:#ffe7d6;
+      --navy:#111a3e; --navy-soft:#5a6488;
+      --bg:#f6f7fb; --card:#fff; --border:#e7e9f2;
+      --shadow:0 18px 50px rgba(17,26,62,.12);
+      --shadow-sm:0 6px 20px rgba(17,26,62,.08);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+      background:var(--bg);color:var(--navy);line-height:1.6;-webkit-font-smoothing:antialiased}
+    a{text-decoration:none;color:inherit}
+    .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+
+    /* top bar */
+    header{background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+    .bar{display:flex;align-items:center;justify-content:space-between;gap:16px;height:64px}
+    .back{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:.92rem}
+    .back:hover{color:var(--orange)}
+    .meta{text-align:center;flex:1;min-width:0}
+    .meta .tag{display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:.68rem;
+      font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:20px}
+    .meta h1{font-size:1rem;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;
+      text-overflow:ellipsis;margin-top:2px}
+    .dl{display:inline-flex;align-items:center;gap:7px;background:var(--navy);color:#fff;font-weight:700;
+      font-size:.85rem;padding:9px 16px;border-radius:24px;white-space:nowrap}
+    .dl:hover{background:var(--orange)}
+    @media(max-width:720px){ .meta h1{font-size:.82rem} .dl span{display:none} }
+
+    /* stage */
+    main{padding:26px 0 40px}
+    .stage{position:relative;background:var(--card);border:1px solid var(--border);border-radius:16px;
+      box-shadow:var(--shadow);overflow:hidden;aspect-ratio:16/9}
+    .stage img{width:100%;height:100%;object-fit:contain;display:block;background:#fff}
+    /* click zones */
+    .zone{position:absolute;top:0;bottom:0;width:32%;cursor:pointer;border:0;background:transparent;z-index:2}
+    .zone.prev{left:0} .zone.next{right:0}
+    .nav{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:44px;height:44px;border-radius:50%;
+      border:0;background:rgba(255,255,255,.92);box-shadow:var(--shadow-sm);cursor:pointer;font-size:18px;
+      color:var(--navy);display:grid;place-items:center;transition:opacity .2s,background .2s}
+    .nav:hover{background:#fff;color:var(--orange)}
+    .nav:disabled{opacity:.25;cursor:default}
+    .nav.l{left:14px} .nav.r{right:14px}
+
+    /* progress + counter */
+    .under{display:flex;align-items:center;gap:18px;margin-top:16px}
+    .track{flex:1;height:5px;background:var(--border);border-radius:4px;overflow:hidden}
+    .fill{height:100%;background:var(--orange);width:7%;transition:width .25s ease;border-radius:4px}
+    .count{font-weight:800;font-size:.9rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .count b{color:var(--orange)}
+    .caption{color:var(--navy-soft);font-size:.9rem;font-weight:600;text-align:center;margin-top:10px;min-height:1.4em}
+
+    /* thumbnails */
+    .thumbs{display:flex;gap:9px;overflow-x:auto;padding:18px 2px 6px;scrollbar-width:thin}
+    .thumbs button{flex:0 0 108px;border:2px solid transparent;border-radius:8px;overflow:hidden;padding:0;
+      cursor:pointer;background:#fff;box-shadow:var(--shadow-sm);opacity:.55;transition:opacity .18s,border-color .18s,transform .18s}
+    .thumbs button img{width:100%;display:block;aspect-ratio:16/9;object-fit:cover}
+    .thumbs button:hover{opacity:1;transform:translateY(-2px)}
+    .thumbs button[aria-current="true"]{opacity:1;border-color:var(--orange)}
+
+    .hint{text-align:center;color:var(--navy-soft);font-size:.8rem;margin-top:16px}
+    kbd{background:#fff;border:1px solid var(--border);border-bottom-width:2px;border-radius:5px;
+      padding:1px 6px;font-family:inherit;font-size:.76rem;font-weight:700}
+    @media(max-width:720px){ .nav{display:none} .hint{display:none} }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="wrap bar">
+      <a class="back" href="index.html">← Portfolio</a>
+      <div class="meta">
+        <span class="tag">Day 1 · 30 Day Challenge</span>
+        <h1>MindPal for Revenue — Pitch Deck</h1>
+      </div>
+      <a class="dl" href="MindPal_for_Revenue_v5.pdf" target="_blank" rel="noopener">⬇ <span>PDF</span></a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="stage">
+      <img id="slide" src="slides/01.png" alt="Slide 1" fetchpriority="high">
+      <button class="zone prev" id="zprev" aria-label="Previous slide"></button>
+      <button class="zone next" id="znext" aria-label="Next slide"></button>
+      <button class="nav l" id="prev" aria-label="Previous slide">‹</button>
+      <button class="nav r" id="next" aria-label="Next slide">›</button>
+    </div>
+
+    <div class="under">
+      <span class="count"><b id="cur">1</b> / <span id="tot">15</span></span>
+      <div class="track"><div class="fill" id="fill"></div></div>
+    </div>
+    <div class="caption" id="cap"></div>
+
+    <div class="thumbs" id="thumbs"></div>
+
+    <p class="hint">Use <kbd>←</kbd> <kbd>→</kbd> to move · <kbd>Home</kbd> / <kbd>End</kbd> to jump · click the sides of the slide</p>
+  </main>
+
+  <script>
+  (function () {
+    var TITLES = [
+      "Title — Turn your SDR org into an AI-augmented growth engine",
+      "The Problem — Your reps aren't selling, they're doing data entry",
+      "The Cost — What that's costing a 50-rep SDR org",
+      "The Solution — A coordinated team of AI agents",
+      "The Product — This is the whole build surface",
+      "Use Case 1 — Research & Qualification Agent",
+      "Use Case 2 — Speed-to-Lead Response Agent",
+      "Use Case 3 — Quote-to-Proposal Agent",
+      "The Value, Quantified — Capacity, revenue, speed",
+      "ROI & Payback — The platform fee isn't the decision driver",
+      "How It Works — A human always holds the send button",
+      "Why MindPal — Why not just use what you already have?",
+      "Rollout Plan — Pilot to full deployment in one quarter",
+      "The Ask — One pod. 90 days.",
+      "In One Breath — The elevator pitch"
+    ];
+    var N = TITLES.length, i = 0;
+    var img = document.getElementById('slide'), cap = document.getElementById('cap'),
+        cur = document.getElementById('cur'), fill = document.getElementById('fill'),
+        prev = document.getElementById('prev'), next = document.getElementById('next'),
+        thumbs = document.getElementById('thumbs');
+    document.getElementById('tot').textContent = N;
+
+    function src(n) { return 'slides/' + String(n + 1).padStart(2, '0') + '.png'; }
+
+    // thumbnail strip
+    var tbtns = [];
+    TITLES.forEach(function (t, n) {
+      var b = document.createElement('button');
+      b.innerHTML = '<img src="' + src(n) + '" alt="Slide ' + (n + 1) + '" loading="lazy">';
+      b.title = 'Slide ' + (n + 1) + ' — ' + t;
+      b.addEventListener('click', function () { go(n); });
+      thumbs.appendChild(b);
+      tbtns.push(b);
+    });
+
+    function preload(n) { if (n >= 0 && n < N) { var p = new Image(); p.src = src(n); } }
+
+    function go(n) {
+      i = Math.max(0, Math.min(N - 1, n));
+      img.src = src(i);
+      img.alt = 'Slide ' + (i + 1) + ' — ' + TITLES[i];
+      cur.textContent = i + 1;
+      cap.textContent = TITLES[i];
+      fill.style.width = ((i + 1) / N * 100) + '%';
+      prev.disabled = (i === 0);
+      next.disabled = (i === N - 1);
+      tbtns.forEach(function (b, k) { b.setAttribute('aria-current', k === i ? 'true' : 'false'); });
+      tbtns[i].scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+      if (location.hash !== '#' + (i + 1)) history.replaceState(null, '', '#' + (i + 1));
+      preload(i + 1); preload(i - 1);
+    }
+
+    prev.addEventListener('click', function () { go(i - 1); });
+    next.addEventListener('click', function () { go(i + 1); });
+    document.getElementById('zprev').addEventListener('click', function () { go(i - 1); });
+    document.getElementById('znext').addEventListener('click', function () { go(i + 1); });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { go(i + 1); e.preventDefault(); }
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { go(i - 1); e.preventDefault(); }
+      else if (e.key === 'Home') { go(0); e.preventDefault(); }
+      else if (e.key === 'End') { go(N - 1); e.preventDefault(); }
+    });
+
+    // swipe on touch devices
+    var x0 = null;
+    img.addEventListener('touchstart', function (e) { x0 = e.changedTouches[0].clientX; }, { passive: true });
+    img.addEventListener('touchend', function (e) {
+      if (x0 === null) return;
+      var dx = e.changedTouches[0].clientX - x0;
+      if (Math.abs(dx) > 45) go(dx < 0 ? i + 1 : i - 1);
+      x0 = null;
+    }, { passive: true });
+
+    var start = parseInt((location.hash || '#1').slice(1), 10);
+    go(isNaN(start) ? 0 : start - 1);
+  })();
+  </script>
+
+</body>
+</html>
