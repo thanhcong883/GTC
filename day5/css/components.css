@@ -1,0 +1,98 @@
+/* components.css
+   Reusable pieces: stat tiles, panels, tables, status dots, chips,
+   tooltips and the segmented control. Used by more than one view. */
+
+/* ── shared: tiles, panels, tables, charts ── */
+.ph{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.ph h2.pt-t{font-size:clamp(1.15rem,2.2vw,1.4rem);font-weight:700;letter-spacing:-.015em}
+.ph .sub{font-size:.81rem;color:var(--muted);margin-top:3px}
+.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--line-soft);border-radius:9px;padding:3px}
+.seg button{padding:6px 13px;border-radius:7px;font-size:.78rem;font-weight:500;
+  color:var(--muted);font-family:var(--mono)}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--brand-deep);
+  box-shadow:var(--shadow-seg)}
+.ghost{display:inline-flex;align-items:center;gap:6px;font-size:.81rem;font-weight:500;color:var(--muted);padding:6px 2px}
+.ghost:hover{color:var(--brand)}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(230px,100%),1fr));gap:clamp(10px,1vw,16px)}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px}
+.tile .k{font-size:.67rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.tile .v{font-size:clamp(1.55rem,3.4vw,2rem);font-weight:600;letter-spacing:-.025em;margin-top:5px;line-height:1.1}
+.tile .s{font-size:.77rem;color:var(--muted);margin-top:5px}
+.tile .s b{color:var(--ink-2);font-weight:500}
+
+.zone{margin-top:26px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.pt{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:15px 18px 11px;flex-wrap:wrap}
+.pt h2{font-size:.72rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2)}
+.pt .hint{font-size:.76rem;color:var(--faint)}
+.pt .hint a{color:var(--muted);font-weight:500;margin-left:12px}
+.pt .hint a:hover{color:var(--brand)}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:660px}
+thead th{font-size:.65rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+  text-align:left;padding:8px 18px;border-top:1px solid var(--line-soft);
+  border-bottom:1px solid var(--line);white-space:nowrap}
+th.num,td.num{text-align:right}
+tbody td{padding:0 18px;height:50px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--hover)}
+.rn{font-weight:500}.rn small{color:var(--muted);font-weight:400}
+td.mono,.mono{font-family:var(--mono);font-size:.79rem;font-variant-numeric:tabular-nums}
+.dim{color:var(--faint)}
+.st{display:inline-flex;align-items:center;gap:7px;font-size:.79rem;font-weight:500;white-space:nowrap}
+.st i{width:8px;height:8px;border-radius:50%;flex:none}
+.st.ok{color:var(--good)}.st.ok i{background:var(--good)}
+.st.sp{color:var(--warn)}.st.sp i{background:var(--warn)}
+.st.bd{color:var(--bad)}.st.bd i{background:var(--bad)}
+.verr{font-size:.73rem;color:var(--bad);font-weight:500;margin-left:9px;opacity:0;transition:opacity .12s}
+tr:hover .verr,.verr:focus-visible{opacity:1}
+
+.tip{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
+  background:var(--tip-bg);color:var(--tip-fg);font-size:.73rem;line-height:1.5;font-weight:400;
+  padding:9px 12px;border-radius:9px;width:min(240px,60vw);text-align:left;z-index:40;
+  opacity:0;visibility:hidden;transition:opacity .12s;pointer-events:none;font-family:var(--sans)}
+.tip::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);
+  border:5px solid transparent;border-top-color:var(--tip-bg)}
+.cc{position:relative}
+.bd-tip{position:absolute;right:14px;bottom:calc(50% + 17px);z-index:30;background:var(--tip-bg);
+  color:var(--tip-fg);font-family:var(--mono);font-size:.7rem;padding:7px 11px;border-radius:8px;
+  white-space:nowrap;opacity:0;visibility:hidden;transition:opacity .12s;pointer-events:none}
+.bd-tip::after{content:"";position:absolute;top:100%;right:16px;border:5px solid transparent;border-top-color:var(--tip-bg)}
+tr:hover .bd-tip,tr:focus-within .bd-tip{opacity:1;visibility:visible}
+
+/* date range — native inputs, so the browser's own calendar and its
+   min/max clamping come for free and stay accessible */
+.daterange{display:inline-flex;align-items:center;gap:8px;background:var(--surface);
+  border:1px solid var(--line);border-radius:9px;padding:4px 10px}
+.daterange input{font:inherit;font-family:var(--mono);font-size:.78rem;color:var(--ink);
+  border:0;background:transparent;padding:3px 2px;border-radius:5px}
+.daterange input:hover{background:var(--line-soft)}
+.daterange .dash{color:var(--faint);font-size:.8rem}
+
+.pick{font:inherit;font-size:.79rem;font-weight:500;color:var(--ink-2);background:var(--surface);
+  border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer}
+.pick:hover{border-color:var(--brand-track);background:var(--brand-soft);color:var(--brand-deep)}
+
+.qq{font-size:.76rem;color:var(--faint);margin-right:8px}
+
+/* reliability summary strip above its table */
+.relhead{display:flex;gap:clamp(18px,3vw,44px);flex-wrap:wrap;padding:2px 18px 14px}
+.relhead .k{display:block;font-size:.68rem;font-weight:600;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.relhead b{font-family:var(--mono);font-size:1.25rem;font-weight:600;font-variant-numeric:tabular-nums}
+.relhead .sub{font-size:.73rem;color:var(--faint);margin-left:7px}
+td.strong{font-weight:600}
+.relnote{padding:0 18px 16px;margin-top:2px}
+
+/* a table row that opens a detail view says so */
+tr.clickable{cursor:pointer}
+tr.clickable .chev{color:var(--faint);margin-left:7px;font-weight:600;opacity:0;transition:opacity .12s}
+tr.clickable:hover .chev,tr.clickable:focus-visible .chev{opacity:1;color:var(--brand)}
+tr.clickable:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
+
+/* a failure's message sits under its run name rather than in a tooltip */
+.errline{display:block;margin-top:2px;font-family:var(--mono);font-size:.72rem}
+.emptyrow{text-align:center;color:var(--muted);font-size:.83rem;padding:26px 0}

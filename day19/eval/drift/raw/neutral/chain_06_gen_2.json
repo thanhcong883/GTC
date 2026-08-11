@@ -1,0 +1,16 @@
+{
+  "chain": 6,
+  "generation": 2,
+  "model": "gpt-4o-mini-2024-07-18",
+  "temperature": 1.0,
+  "prompt": "Summarize the following meeting notes in 2-3 sentences for the project record.",
+  "input_text": "The kickoff meeting for the Northwind Logistics project outlined a three-phase rollout plan, beginning with a discovery phase in April, followed by a pilot at the Hai Phong depot in early May. Mai confirmed site availability for the pilot and offered part-time support from her operations team, while Duc indicated that the finance committee has yet to approve a budget of up to $50,000 pending pilot results in June. Key action items include revising the pilot schedule to accommodate seasonal staffing and documenting on-premise connector requirements.",
+  "output_text": "The kickoff meeting for the Northwind Logistics project established a three-phase rollout plan, starting with a discovery phase in April, followed by a pilot at the Hai Phong depot in early May. Mai confirmed site availability and part-time support from her operations team, while Duc noted that budget approval from the finance committee is pending until pilot results in June. Action items include revising the pilot schedule based on seasonal staffing and documenting on-premise connector requirements.",
+  "classification": "DROPPED",
+  "usage": {
+    "input_tokens": 127,
+    "output_tokens": 89,
+    "total_tokens": 216
+  },
+  "recorded_at": "2026-08-10T07:53:46.118706+00:00"
+}

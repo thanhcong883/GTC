@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Custody — data rights as the control plane | Giang Thanh Cong</title>
+<meta name="description" content="Custody: thiết kế people-data platform quy mô một tỷ hồ sơ, lấy quyền dữ liệu làm control plane thay vì crawler." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔐</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --orange:#f9660e; --orange-soft:#ffe7d6; --navy:#111a3e; --navy-soft:#5a6488;
+  --navy-faint:#8b95b5; --border:#e7e9f2; --border-soft:#f0f2f8;
+  --bg:#f6f7fb; --card:#fff;
+  --green:#1e9257; --green-soft:#e4f3ea; --red:#c64b3e; --red-soft:#f8e6e3;
+  --amber:#b0771a; --amber-soft:#f7edda; --blue:#2f6fed; --blue-soft:#e2ecfd;
+  --shadow:0 18px 50px rgba(17,26,62,.12); --shadow-sm:0 6px 20px rgba(17,26,62,.08);
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --ok:#1e9257; --ok-bg:#e4f3ea;
+  --stop:#c64b3e; --stop-bg:#f8e6e3;
+  --warn:#b0771a; --warn-bg:#f7edda;
+  --accent:#f9660e; --accent-bg:#ffe7d6;
+  --line:#e7e9f2; --ink:#111a3e; --paper:#fff;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+body{font-family:"Plus Jakarta Sans",system-ui,sans-serif;background:var(--bg);color:var(--navy);line-height:1.62;-webkit-font-smoothing:antialiased}
+a{color:var(--orange);text-decoration:none}
+a:hover{text-decoration:underline}
+a:focus-visible{outline:2px solid var(--orange);outline-offset:2px;border-radius:3px}
+
+header.top{position:sticky;top:0;z-index:40;background:rgba(246,247,251,.93);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.bar{max-width:1600px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:16px}
+.back{font-family:var(--mono);font-size:12.5px;color:var(--navy-soft);white-space:nowrap}
+.back:hover{color:var(--orange);text-decoration:none}
+.bar .meta{flex:1;min-width:0}
+.bar .meta .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--orange);background:none;padding:0}
+.bar .meta h1{font-size:15px;font-weight:700;margin-top:1px;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.src{font-family:var(--mono);font-size:12px;color:var(--navy-soft);white-space:nowrap;border:1px solid var(--border);border-radius:20px;padding:6px 13px;background:var(--card)}
+.src:hover{color:var(--orange);border-color:var(--orange);text-decoration:none}
+
+.shell{display:grid;grid-template-columns:250px minmax(0,1fr);max-width:1600px;margin:0 auto}
+.main{min-width:0;padding:0 clamp(1.1rem,3vw,3rem) 6rem}
+.toc{position:sticky;top:57px;align-self:start;height:calc(100vh - 57px);overflow-y:auto;border-right:1px solid var(--border);padding:1.5rem 1rem 3rem 1.4rem}
+.toc-brand{display:block;margin-bottom:1.4rem;color:inherit}
+.toc-brand:hover{text-decoration:none}
+.toc-brand .day{font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--orange);display:block}
+.toc-brand .ttl{font-size:1rem;font-weight:800;letter-spacing:-.015em;display:block;color:var(--navy)}
+.toc h4{font-family:var(--mono);font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:var(--navy-faint);margin:0 0 .5rem;font-weight:700}
+.toc ol{list-style:none;margin:0}
+.toc a{display:flex;gap:.6rem;color:var(--navy-soft);font-size:.82rem;line-height:1.35;padding:.34rem .5rem;border-radius:7px;border-left:2px solid transparent;margin-left:-.5rem}
+.toc a .tn{font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--navy-faint);flex:none;width:14px}
+.toc a:hover{background:var(--border-soft);color:var(--navy);text-decoration:none}
+.toc a.on{color:var(--orange);border-left-color:var(--orange);background:var(--orange-soft);font-weight:700}
+.toc a.on .tn{color:var(--orange)}
+.toc-mobile{display:none}
+@media(max-width:960px){
+  .shell{grid-template-columns:1fr}
+  .toc{display:none}
+  .toc-mobile{display:block;position:sticky;top:57px;z-index:30;background:var(--bg);border-bottom:1px solid var(--border);padding:.5rem 0;margin-bottom:1rem}
+  .toc-mobile summary{cursor:pointer;font-weight:700;font-size:.85rem;list-style:none;padding:.35rem 0}
+  .toc-mobile summary::-webkit-details-marker{display:none}
+  .toc-mobile .inner{max-height:56vh;overflow-y:auto}
+  .toc-mobile ol{list-style:none;margin:0}
+  .toc-mobile a{display:flex;gap:.5rem;color:var(--navy-soft);font-size:.83rem;padding:.3rem 0}
+  .toc-mobile a .tn{font-family:var(--mono);font-size:.7rem;color:var(--navy-faint)}
+}
+
+header.doc{padding:clamp(2.2rem,6vw,4rem) 0 1.8rem;border-bottom:2px solid var(--navy);margin-bottom:.5rem}
+.kicker{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--navy-faint);margin-bottom:1rem}
+.kicker b{color:var(--orange);font-weight:700}
+header.doc h2{font-size:clamp(1.9rem,4.6vw,2.9rem);font-weight:800;letter-spacing:-.026em;line-height:1.08;text-wrap:balance;margin-bottom:.9rem;max-width:20ch;border:0;padding:0}
+.lede{font-size:1.1rem;color:var(--navy-soft);max-width:58ch;margin-bottom:1.3rem}
+.dmeta{display:flex;flex-wrap:wrap;gap:.35rem 1.4rem;font-family:var(--mono);font-size:.72rem;color:var(--navy-faint)}
+
+h2{font-size:clamp(1.35rem,2.9vw,1.72rem);font-weight:800;letter-spacing:-.02em;line-height:1.18;text-wrap:balance;margin:3rem 0 .8rem;padding-top:.9rem;border-top:1px solid var(--border);scroll-margin-top:75px}
+h2 .n{display:block;font-family:var(--mono);font-size:.68rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--orange);margin-bottom:.45rem}
+h3{font-size:1.05rem;font-weight:700;letter-spacing:-.008em;margin:2rem 0 .5rem}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem 1.3rem;max-width:70ch}
+li{margin-bottom:.3rem}
+strong{font-weight:700}
+sup{font-size:.7em;color:var(--navy-faint)}
+hr{border:0;border-top:1px solid var(--border);margin:3rem 0 0}
+.foot{margin-top:1.3rem;font-family:var(--mono);font-size:.73rem;color:var(--navy-faint)}
+code,.mono{font-family:var(--mono);font-size:.86em}
+:not(pre)>code{background:var(--border-soft);padding:.12em .38em;border-radius:4px;color:var(--navy)}
+pre{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;margin:1.1rem 0 1.6rem;overflow-x:auto;box-shadow:var(--shadow-sm)}
+pre code{font-size:.78rem;line-height:1.65;color:var(--navy-soft);background:none;padding:0}
+
+.tw{overflow-x:auto;margin:1.1rem 0 1.7rem;background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-sm)}
+table{border-collapse:collapse;width:100%;min-width:32rem;font-size:.87rem;line-height:1.45}
+caption{caption-side:top;text-align:left;font-size:.8rem;color:var(--navy-soft);padding:.85rem 1.1rem .55rem}
+th,td{text-align:left;padding:.6rem 1.1rem;border-bottom:1px solid var(--border-soft);vertical-align:top}
+th{font-family:var(--mono);font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--navy-faint);border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+.num,td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.tag{display:inline-block;font-family:var(--mono);font-size:.64rem;font-weight:700;letter-spacing:.05em;padding:.14em .5em;border-radius:5px;white-space:nowrap;background:var(--border-soft);color:var(--navy-soft)}
+.t-no{background:var(--stop-bg);color:var(--stop)}
+.t-mid{background:var(--amber-soft);color:var(--amber)}
+.t-n{background:var(--blue-soft);color:var(--blue)}
+
+.box{border:1px solid var(--border);border-left:3px solid var(--navy-faint);border-radius:10px;background:var(--card);padding:.95rem 1.1rem;margin:1.2rem 0;max-width:74ch;box-shadow:var(--shadow-sm)}
+.box .lbl{display:block;font-family:var(--mono);font-size:.66rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--navy-faint);margin-bottom:.35rem}
+.box p{margin:0;color:var(--navy-soft)}
+.box.stop{border-left-color:var(--stop)}
+.box.stop .lbl{color:var(--stop)}
+.box.warn{border-left-color:var(--warn)}
+.box.warn .lbl{color:var(--warn)}
+
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px;margin:1.2rem 0 1.7rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem 1.1rem;box-shadow:var(--shadow-sm)}
+.card .h{font-family:var(--mono);font-size:.66rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;margin-bottom:.45rem}
+.card p{margin:0;font-size:.87rem;color:var(--navy-soft)}
+
+figure{margin:1.3rem 0 1.8rem}
+.fb{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.2rem 1rem;overflow-x:auto;box-shadow:var(--shadow-sm)}
+.fb pre.mermaid{background:none;border:0;box-shadow:none;padding:0;margin:0;text-align:center}
+figcaption{font-family:var(--mono);font-size:.71rem;color:var(--navy-faint);margin-top:.6rem}
+
+.formula{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.9rem 1.1rem;margin:1.1rem 0 1.6rem;font-family:var(--mono);font-size:.82rem;line-height:1.9;overflow-x:auto;box-shadow:var(--shadow-sm)}
+.fn{color:var(--navy-faint);font-family:var(--mono);font-size:.75rem}
+
+.gate{background:var(--card);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin:1.6rem 0 2rem;box-shadow:var(--shadow)}
+.gh{padding:1.1rem 1.3rem;border-bottom:1px solid var(--border);background:var(--bg)}
+.gh .lbl{font-family:var(--mono);font-size:.66rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--orange);display:block;margin-bottom:.35rem}
+.gh p{margin:0;font-size:.9rem;color:var(--navy-soft);max-width:none}
+.gb{padding:1.1rem 1.3rem}
+.btns{display:flex;flex-wrap:wrap;gap:.45rem;margin-bottom:1rem}
+.btns button{font-family:"Plus Jakarta Sans",sans-serif;font-size:.8rem;font-weight:600;border:1px solid var(--border);background:var(--bg);color:var(--navy-soft);border-radius:20px;padding:.42rem .9rem;cursor:pointer;transition:.15s}
+.btns button:hover{border-color:var(--orange);color:var(--orange)}
+.btns button[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.btns button:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+.out{border:1px solid var(--border);border-radius:12px;padding:.9rem 1.05rem;background:var(--bg)}
+.out .st{font-family:var(--mono);font-size:.82rem;font-weight:700;letter-spacing:.06em;margin-bottom:.4rem}
+.out .bd{margin:0 0 .55rem;font-size:.88rem;color:var(--navy-soft);max-width:none}
+.out .rule{font-family:var(--mono);font-size:.72rem;color:var(--navy-faint);border-top:1px dashed var(--border);padding-top:.5rem}
+
+.qd{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.1rem 1.25rem;margin:1.2rem 0;box-shadow:var(--shadow-sm)}
+.qd>header{display:flex;flex-wrap:wrap;align-items:baseline;gap:.7rem;margin-bottom:.7rem;background:none;border:0;padding:0;position:static}
+.qd .id{font-family:var(--mono);font-size:.7rem;font-weight:700;letter-spacing:.1em;color:var(--orange)}
+.qd .ttl{font-size:1rem;font-weight:700;letter-spacing:-.01em}
+.qd dl{display:grid;grid-template-columns:9rem 1fr;gap:.5rem 1rem;margin:0}
+.qd dt{font-family:var(--mono);font-size:.66rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--navy-faint);padding-top:.2rem}
+.qd dd{margin:0;font-size:.93rem;color:var(--navy-soft)}
+@media(max-width:34rem){
+  .qd dl{grid-template-columns:1fr;gap:.1rem}
+  .qd dt{margin-top:.6rem}
+}
+
+.srcs{list-style:none;margin-left:0}
+.srcs li{padding:.45rem 0;border-bottom:1px solid var(--border-soft);font-size:.87rem}
+.srcs li:last-child{border-bottom:0}
+  .fb pre.mermaid svg,.diagram pre.mermaid svg{display:block;margin:0 auto}
+
+  .mmimg{display:block;text-align:center}
+  .mmimg svg{display:block;margin:0 auto;max-width:100%}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="bar">
+    <a class="back" href="../index.html">← Portfolio</a>
+    <div class="meta">
+      <span class="tag">Day 13 · 30 Day Challenge</span>
+      <h1>Custody — data rights as the control plane</h1>
+    </div>
+    <a class="src" href="#gate">🔐 Policy gate</a>
+  </div>
+</header>
+
+<div class="shell">
+<nav class="toc" aria-label="Contents">
+  <a class="toc-brand" href="#top"><span class="day">Day 13</span><span class="ttl">Custody</span></a>
+  <h4>Contents</h4>
+  <ol>
+    <li><a href="#s1"><span class="tn">1</span><span>Not a scraper</span></a></li>
+    <li><a href="#s2"><span class="tn">2</span><span>Data rights as control plane</span></a></li>
+    <li><a href="#s3"><span class="tn">3</span><span>Architecture</span></a></li>
+    <li><a href="#s4"><span class="tn">4</span><span>Entity resolution</span></a></li>
+    <li><a href="#s5"><span class="tn">5</span><span>Freshness &amp; deletion</span></a></li>
+    <li><a href="#s6"><span class="tn">6</span><span>Capacity &amp; cost</span></a></li>
+    <li><a href="#s7"><span class="tn">7</span><span>API contract</span></a></li>
+    <li><a href="#s8"><span class="tn">8</span><span>Decision records</span></a></li>
+    <li><a href="#s9"><span class="tn">9</span><span>Risks &amp; limits</span></a></li>
+    <li><a href="#src"><span class="tn">·</span><span>References</span></a></li>
+  </ol>
+</nav>
+
+<main class="main" id="top">
+<details class="toc-mobile"><summary>Contents</summary><div class="inner"><ol>
+      <li><a href="#s1"><span class="tn">1</span>Not a scraper</a></li>
+      <li><a href="#s2"><span class="tn">2</span>Data rights as control plane</a></li>
+      <li><a href="#s3"><span class="tn">3</span>Architecture</a></li>
+      <li><a href="#s4"><span class="tn">4</span>Entity resolution</a></li>
+      <li><a href="#s5"><span class="tn">5</span>Freshness &amp; deletion</a></li>
+      <li><a href="#s6"><span class="tn">6</span>Capacity &amp; cost</a></li>
+      <li><a href="#s7"><span class="tn">7</span>API contract</a></li>
+      <li><a href="#s8"><span class="tn">8</span>Decision records</a></li>
+      <li><a href="#s9"><span class="tn">9</span>Risks &amp; limits</a></li>
+      <li><a href="#src"><span class="tn">·</span>References</a></li>
+</ol></div></details>
+
+<header class="doc">
+  <p class="kicker"><b>Day 13</b> · Custody</p>
+  <h2>Quyền dữ liệu là kiến trúc</h2>
+  <p class="lede">Một hệ thống dữ liệu con người ở quy mô một tỷ hồ sơ không bắt đầu bằng crawler. Nó bắt đầu bằng câu hỏi: field này đến từ đâu, được dùng vào việc gì, hết hạn khi nào, và biến mất ra sao.</p>
+  <div class="dmeta"><span>Architecture · Capacity · API contract</span><span>7 decision records</span><span>Mọi ràng buộc có nguồn</span></div>
+</header>
+
+<section id="gate">
+<div class="gate">
+  <div class="gh">
+    <span class="lbl">Policy gate</span>
+    <p>Cùng một «profile», ba đường vào, ba bộ quyền khác nhau. Hệ thống hỏi <em>được dùng vào việc gì</em> trước khi hỏi <em>fetch được không</em>.</p>
+  </div>
+  <div class="gb">
+    <div class="btns" role="group" aria-label="Chọn đường dữ liệu">
+      <button data-mode="licensed" aria-pressed="true">Licensed data partner</button>
+      <button data-mode="oauth" aria-pressed="false">Member OAuth workspace</button>
+      <button data-mode="public" aria-pressed="false">Permitted public source</button>
+      <button data-mode="crawl" aria-pressed="false">Unapproved LinkedIn crawl</button>
+    </div>
+    <div class="out" id="out" aria-live="polite">
+      <div class="st" style="color:var(--ok)">ALLOW WITH POLICY</div>
+      <p class="bd">Vào canonical corpus nếu hợp đồng cấp đủ purpose, retention, refresh và redistribution. Mọi assertion mang policy envelope riêng và hết hạn độc lập.</p>
+      <div class="rule">enforce → source registry · field entitlement · retention clock</div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ===== 1 ===== -->
+<h2 id="s1"><span class="n">Part 1</span>Not a scraper</h2>
+
+<p>
+LinkedIn cấm automated crawling khi không có express permission. Crawler được cấp phép bị giới hạn ở
+authorized paths, phải dùng true IP và true user-agent, không được circumvent bất kỳ biện pháp nào,
+và <strong>chỉ được dùng dữ liệu cho search indexing hiển thị trong một public search engine</strong>.
+Bán dữ liệu thu được, chuyển giao dạng bulk, và dùng để cạnh tranh đều bị cấm riêng.
+<a href="https://www.linkedin.com/legal/crawling-terms">Crawling Terms</a> ·
+<a href="https://www.linkedin.com/legal/user-agreement">User Agreement §8.2</a>
+</p>
+
+<div class="tw">
+<table>
+  <caption>Không có tier crawling nào của LinkedIn dẫn tới một commercial enrich API.</caption>
+  <thead><tr><th>Đường</th><th>Trạng thái</th><th>Chặn ở đâu</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Crawl không xin phép</td>
+      <td><span class="tag t-no">Excluded</span></td>
+      <td>«Automated Crawling &amp; Indexing without the express permission… is strictly prohibited»</td>
+    </tr>
+    <tr>
+      <td>Crawl có express permission</td>
+      <td><span class="tag t-no">Không dùng được</span></td>
+      <td>Permitted use giới hạn ở public search engine indexing; cấm selling và bulk transfer</td>
+    </tr>
+    <tr>
+      <td>Official Profile API</td>
+      <td><span class="tag t-mid">Siloed</span></td>
+      <td>Chỉ lưu profile data của authenticated member khi có permission; không lưu của người khác — <a href="https://learn.microsoft.com/en-us/linkedin/shared/integrations/people/profile-api">Profile API</a></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="box stop">
+  <span class="lbl">Ràng buộc số một</span>
+  <p>
+  «Public», «logged-out», «không gặp CAPTCHA» không phải quyền thu thập ở quy mô công nghiệp.
+  Sự vắng mặt của một robots rule không phải consent — <code>robots.txt</code> là quy ước kỹ thuật,
+  Crawling Terms là văn bản pháp lý, và chúng trả lời hai câu hỏi khác nhau.
+  </p>
+</div>
+
+<p>
+Phiên bản triển khai được của bài toán: <strong>một licensed, consented people-data platform
+canonicalize khoảng một tỷ người</strong>. LinkedIn là một integration có hợp đồng hoặc OAuth riêng,
+sống trong silo của nó, không phải đầu vào cho global directory.
+</p>
+
+<div class="grid3">
+  <div class="card"><div class="h" style="color:var(--stop)">Không làm</div><p>Proxy rotation, cookie rotation, fingerprint evasion, account pool, CAPTCHA solving, và mọi phép «đo thử» dựa trên crawl không được phê duyệt.</p></div>
+  <div class="card"><div class="h" style="color:var(--ok)">Làm</div><p>Vendor feed có hợp đồng, customer-provided data, OAuth consent, permitted public source. Mỗi nguồn một connector với quota riêng.</p></div>
+  <div class="card"><div class="h" style="color:var(--accent)">Trả về</div><p>Search/enrich API giới hạn bởi purpose, entitlement, jurisdiction, freshness và source restriction.</p></div>
+</div>
+
+<h3>A billion artifacts is not a billion people</h3>
+
+<p>
+LinkedIn có hơn 1,2 tỷ registered member; khoảng 310 triệu monthly active, tức <strong>74% không đăng
+nhập hàng tháng</strong>. Transparency report kỳ 7–12/2025 ghi automated defense chặn <strong>97,8%</strong>
+fake account và <strong>99,7%</strong> bị chặn proactive trước khi có member report.
+<a href="https://about.linkedin.com/transparency/community-report">LinkedIn transparency</a>
+Dữ liệu B2B contact decay khoảng 25–30% mỗi năm.
+</p>
+
+<div class="tw">
+<table>
+  <caption>Bốn cách đếm, bốn con số. Chỉ con số cuối là thứ sản phẩm bán được.</caption>
+  <thead><tr><th>Đếm theo</th><th class="num">Lượng</th><th>Ghi chú</th></tr></thead>
+  <tbody>
+    <tr><td>Registered account</td><td class="num">1,2 tỷ</td><td>Gồm bot chưa bắt, duplicate, dormant <span class="tag t-mid">verified</span></td></tr>
+    <tr><td>Người thật, distinct</td><td class="num">~1,05–1,12 tỷ</td><td>Sau khi trừ fake, duplicate, deceased <span class="tag t-n">ước lượng</span></td></tr>
+    <tr><td>Có data đang đúng</td><td class="num">~500–590 triệu</td><td>Chịu decay 25–30%/năm <span class="tag t-n">ngoại suy</span></td></tr>
+    <tr><td>Monthly active</td><td class="num">~310 triệu</td><td>Data gần như chắc còn tươi <span class="tag t-mid">verified</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+Vendor bán theo <em>unique person</em> đã resolve, không theo account. People Data Labs công bố
+hơn <strong>1,5 tỷ unique person profile</strong> tổng hợp từ nhiều nguồn — con số này và con số
+1,2 tỷ của LinkedIn khác đơn vị, không so trực tiếp được.
+</p>
+
+<!-- ===== 2 ===== -->
+<h2 id="s2"><span class="n">Part 2</span>Data rights as the control plane</h2>
+
+<p>
+Không có cột boolean <code>is_legal</code>. Mỗi assertion mang một policy envelope, và envelope đó
+là thứ được enforce ở ingest, ở query time, và ở expiry.
+</p>
+
+<pre><code>{
+  "field":              "current_employment.title",
+  "value":              "Staff Engineer",
+
+  "source_id":          "vendor_a",
+  "source_record_id":   "vnd_8f3a1c",
+  "lawful_basis":       "legitimate_interest",
+
+  "permitted_purposes": ["internal_recruiting", "crm_enrichment"],
+  "redistribution":     "prohibited",
+  "jurisdiction_scope": ["US", "SG"],
+  "retention_until":    "2026-10-01T00:00:00Z",
+  "refresh_rights":     { "allowed": true, "min_interval_days": 30 },
+
+  "observed_at":        "2026-07-20T00:00:00Z",
+  "confidence":         0.94,
+  "corroborated_by":    2
+}</code></pre>
+
+<p>
+<code>source_id</code> và <code>lawful_basis</code> nhìn về quá khứ — data từ đâu, dựa trên cơ sở nào.
+<code>permitted_purposes</code>, <code>redistribution</code>, <code>retention_until</code> nhìn về
+tương lai — được làm gì với nó. Thiếu nửa sau thì không gate được request; thiếu nửa đầu thì không
+xoá chọn lọc được khi một nguồn bị thu hồi.
+</p>
+
+<div class="tw">
+<table>
+  <caption>Bốn điểm enforce. Fail behavior phải im lặng ở tầng ngoài, chi tiết ở audit log.</caption>
+  <thead><tr><th>Kiểm tra</th><th>Vị trí</th><th>Khi fail</th></tr></thead>
+  <tbody>
+    <tr><td>Source rights</td><td>Trước ingest</td><td>Quarantine record, không index, ghi audit</td></tr>
+    <tr><td>Field / purpose entitlement</td><td>Trước mỗi API response</td><td>Redact field, trả policy state chung, không nêu source</td></tr>
+    <tr><td>Retention &amp; deletion</td><td>Liên tục</td><td>Expire assertion, xoá projection và cache</td></tr>
+    <tr><td>Jurisdiction &amp; tenant policy</td><td>Trước search / enrich</td><td>Reject request hoặc rút về safe subset</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>GDPR as a design constraint, not an appendix</h3>
+
+<div class="tw">
+<table>
+  <caption>Nguyên tắc GDPR ánh xạ thẳng vào thành phần hệ thống — <a href="https://commission.europa.eu/law/law-topic/data-protection/information-business-and-organisations/principles-gdpr_en">GDPR principles</a></caption>
+  <thead><tr><th>Nguyên tắc</th><th>Hiện diện ở</th></tr></thead>
+  <tbody>
+    <tr><td>Lawfulness</td><td><code>lawful_basis</code> bắt buộc trên mọi assertion; ingest gate reject nếu thiếu</td></tr>
+    <tr><td>Purpose limitation</td><td><code>permitted_purposes</code> × <code>purpose</code> trong mỗi request</td></tr>
+    <tr><td>Data minimisation</td><td><code>return_fields</code> bắt buộc; không có endpoint trả toàn bộ record</td></tr>
+    <tr><td>Storage limitation</td><td><code>retention_until</code> theo assertion, không theo record</td></tr>
+    <tr><td>Accuracy</td><td><code>observed_at</code> + <code>confidence</code> lộ ra API; freshness tier §5</td></tr>
+    <tr><td>Integrity &amp; confidentiality</td><td>Encryption at rest, field-level authz, không trả raw payload</td></tr>
+    <tr><td>Accountability</td><td><code>actor_id</code> + <code>trace_id</code> trên mọi call; provenance graph</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ===== 3 ===== -->
+<h2 id="s3"><span class="n">Part 3</span>Architecture</h2>
+
+<figure>
+  <div class="fb">
+<div class="mmimg"><svg width="100%" style="max-width:2010px;height:auto" aria-roledescription="flowchart-v2" role="graphics-document document" viewBox="0 0 2009.9912109375 538.310302734375" class="flowchart" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" id="mermaid-1785591321288"><style>#mermaid-1785591321288{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:13px;fill:#111a3e;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#mermaid-1785591321288 .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#mermaid-1785591321288 .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#mermaid-1785591321288 .error-icon{fill:#f6f7fb;}#mermaid-1785591321288 .error-text{fill:#090804;stroke:#090804;}#mermaid-1785591321288 .edge-thickness-normal{stroke-width:1px;}#mermaid-1785591321288 .edge-thickness-thick{stroke-width:3.5px;}#mermaid-1785591321288 .edge-pattern-solid{stroke-dasharray:0;}#mermaid-1785591321288 .edge-thickness-invisible{stroke-width:0;fill:none;}#mermaid-1785591321288 .edge-pattern-dashed{stroke-dasharray:3;}#mermaid-1785591321288 .edge-pattern-dotted{stroke-dasharray:2;}#mermaid-1785591321288 .marker{fill:#8b95b5;stroke:#8b95b5;}#mermaid-1785591321288 .marker.cross{stroke:#8b95b5;}#mermaid-1785591321288 svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:13px;}#mermaid-1785591321288 p{margin:0;}#mermaid-1785591321288 .label{font-family:"trebuchet ms",verdana,arial,sans-serif;color:#111a3e;}#mermaid-1785591321288 .cluster-label text{fill:#090804;}#mermaid-1785591321288 .cluster-label span{color:#090804;}#mermaid-1785591321288 .cluster-label span p{background-color:transparent;}#mermaid-1785591321288 .label text,#mermaid-1785591321288 span{fill:#111a3e;color:#111a3e;}#mermaid-1785591321288 .node rect,#mermaid-1785591321288 .node circle,#mermaid-1785591321288 .node ellipse,#mermaid-1785591321288 .node polygon,#mermaid-1785591321288 .node path{fill:#ffffff;stroke:#f9660e;stroke-width:1px;}#mermaid-1785591321288 .rough-node .label text,#mermaid-1785591321288 .node .label text,#mermaid-1785591321288 .image-shape .label,#mermaid-1785591321288 .icon-shape .label{text-anchor:middle;}#mermaid-1785591321288 .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#mermaid-1785591321288 .rough-node .label,#mermaid-1785591321288 .node .label,#mermaid-1785591321288 .image-shape .label,#mermaid-1785591321288 .icon-shape .label{text-align:center;}#mermaid-1785591321288 .node.clickable{cursor:pointer;}#mermaid-1785591321288 .root .anchor path{fill:#8b95b5!important;stroke-width:0;stroke:#8b95b5;}#mermaid-1785591321288 .arrowheadPath{fill:#0b0b0b;}#mermaid-1785591321288 .edgePath .path{stroke:#8b95b5;stroke-width:2.0px;}#mermaid-1785591321288 .flowchart-link{stroke:#8b95b5;fill:none;}#mermaid-1785591321288 .edgeLabel{background-color:#ffffff;text-align:center;}#mermaid-1785591321288 .edgeLabel p{background-color:#ffffff;}#mermaid-1785591321288 .edgeLabel rect{opacity:0.5;background-color:#ffffff;fill:#ffffff;}#mermaid-1785591321288 .labelBkg{background-color:rgba(255, 255, 255, 0.5);}#mermaid-1785591321288 .cluster rect{fill:#f6f7fb;stroke:#e7e9f2;stroke-width:1px;}#mermaid-1785591321288 .cluster text{fill:#090804;}#mermaid-1785591321288 .cluster span{color:#090804;}#mermaid-1785591321288 div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:12px;background:#f6f7fb;border:1px solid hsl(228, 0%, 87.4509803922%);border-radius:2px;pointer-events:none;z-index:100;}#mermaid-1785591321288 .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#111a3e;}#mermaid-1785591321288 rect.text{fill:none;stroke-width:0;}#mermaid-1785591321288 .icon-shape,#mermaid-1785591321288 .image-shape{background-color:#ffffff;text-align:center;}#mermaid-1785591321288 .icon-shape p,#mermaid-1785591321288 .image-shape p{background-color:#ffffff;padding:2px;}#mermaid-1785591321288 .icon-shape rect,#mermaid-1785591321288 .image-shape rect{opacity:0.5;background-color:#ffffff;fill:#ffffff;}#mermaid-1785591321288 :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}</style><g><marker orient="auto" markerHeight="8" markerWidth="8" markerUnits="userSpaceOnUse" refY="5" refX="5" viewBox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1785591321288_flowchart-v2-pointEnd"><path style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 0 0 L 10 5 L 0 10 z"></path></marker><marker orient="auto" markerHeight="8" markerWidth="8" markerUnits="userSpaceOnUse" refY="5" refX="4.5" viewBox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1785591321288_flowchart-v2-pointStart"><path style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 0 5 L 10 10 L 10 0 z"></path></marker><marker orient="auto" markerHeight="11" markerWidth="11" markerUnits="userSpaceOnUse" refY="5" refX="11" viewBox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1785591321288_flowchart-v2-circleEnd"><circle style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" r="5" cy="5" cx="5"></circle></marker><marker orient="auto" markerHeight="11" markerWidth="11" markerUnits="userSpaceOnUse" refY="5" refX="-1" viewBox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1785591321288_flowchart-v2-circleStart"><circle style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" r="5" cy="5" cx="5"></circle></marker><marker orient="auto" markerHeight="11" markerWidth="11" markerUnits="userSpaceOnUse" refY="5.2" refX="12" viewBox="0 0 11 11" class="marker cross flowchart-v2" id="mermaid-1785591321288_flowchart-v2-crossEnd"><path style="stroke-width: 2; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 1,1 l 9,9 M 10,1 l -9,9"></path></marker><marker orient="auto" markerHeight="11" markerWidth="11" markerUnits="userSpaceOnUse" refY="5.2" refX="-1" viewBox="0 0 11 11" class="marker cross flowchart-v2" id="mermaid-1785591321288_flowchart-v2-crossStart"><path style="stroke-width: 2; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 1,1 l 9,9 M 10,1 l -9,9"></path></marker><g class="root"><g class="clusters"><g data-look="classic" id="SRV" class="cluster"><rect width="1011.6875" y="8" x="832.3974609375" style=""></rect><g transform="translate(1309.1787109375, 8)" class="cluster-label"><g><rect style="stroke: none" class="background"></rect><text style="" y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"><tspan font-weight="normal" class="text-inner-tspan" font-style="normal">03</tspan><tspan font-weight="normal" class="text-inner-tspan" font-style="normal"> ·</tspan><tspan font-weight="normal" class="text-inner-tspan" font-style="normal"> Serve</tspan></tspan></text></g></g></g><g data-look="classic" id="DEC" class="cluster"><rect height="312.75" width="784.6162109375" y="182.81028747558594" x="280.984375" style=""></rect><g transform="translate(640.38623046875, 182.81028747558594)" class="cluster-label"><g><rect style="stroke: none" class="background"></rect><text style="" y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"><tspan font-weight="normal" class="text-inner-tspan" font-style="normal">02</tspan><tspan font-weight="normal" class="text-inner-tspan" font-style="normal"> ·</tspan><tspan font-weight="normal" class="text-inner-tspan" font-style="normal"> Decide</tspan></tspan></text></g></g></g><g data-look="classic" id="ACQ" class="cluster"><rect height="377" width="222.984375" y="153.31028747558594" x="8" style=""></rect><g transform="translate(84.5703125, 153.31028747558594)" class="cluster-label"><g><rect style="stroke: none" class="background"></rect><text style="" y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"><tspan font-weight="normal" class="text-inner-tspan" font-style="normal">01</tspan><tspan font-weight="normal" class="text-inner-tspan" font-style="normal"> ·</tspan><tspan font-weight="normal" class="text-inner-tspan" font-style="normal"> Acquire</tspan></tspan></text></g></g></g></g><g class="edgePaths"><path marker-end="url(#mermaid-1785591321288_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_V_SR_0" d="M205.984,222.81L210.151,222.81C214.318,222.81,222.651,222.81,230.984,222.81C239.318,222.81,247.651,222.81,255.984,222.81C264.318,222.81,272.651,222.81,291.156,236.434C309.66,250.059,338.336,277.307,352.674,290.931L367.012,304.555"></path><path marker-end="url(#mermaid-1785591321288_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_O_SR_0" d="M201.234,341.81L206.193,341.81C211.151,341.81,221.068,341.81,230.193,341.81C239.318,341.81,247.651,341.81,255.984,341.81C264.318,341.81,272.651,341.81,280.318,341.81C287.984,341.81,294.984,341.81,298.484,341.81L301.984,341.81"></path><path marker-end="url(#mermaid-1785591321288_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_P_SR_0" d="M188.195,460.81L195.327,460.81C202.458,460.81,216.721,460.81,228.02,460.81C239.318,460.81,247.651,460.81,255.984,460.81C264.318,460.81,272.651,460.81,291.156,447.186C309.66,433.562,338.336,406.314,352.674,392.69L367.012,379.066"></path><path marker-end="url(#mermaid-1785591321288_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_SR_CG_0" d="M506.453,341.81L510.62,341.81C514.786,341.81,523.12,341.81,530.786,341.81C538.453,341.81,545.453,341.81,548.953,341.81L552.453,341.81"></path><path marker-end="url(#mermaid-1785591321288_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_CG_Q_0" d="M688.401,366.56L705.789,379.352C723.178,392.144,757.954,417.727,781.953,430.519C805.952,443.31,819.175,443.31,837.187,443.31C855.2,443.31,878.002,443.31,889.403,443.31L900.804,443.31"></path><path marker-end="url(#mermaid-1785591321288_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_CG_NM_0" d="M685.943,317.06L703.741,302.935C721.539,288.81,757.134,260.56,781.543,246.435C805.952,232.31,819.175,232.31,840.241,214.098C861.308,195.886,890.218,159.462,904.674,141.25L919.129,123.038"></path><path marker-end="url(#mermaid-1785591321288_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_NM_ER_0" d="M1040.601,85.405L1044.767,85.405C1048.934,85.405,1057.267,85.405,1065.601,85.405C1073.934,85.405,1082.267,85.405,1089.934,85.405C1097.601,85.405,1104.601,85.405,1108.101,85.405L1111.601,85.405"></path><path marker-end="url(#mermaid-1785591321288_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_ER_CS_0" d="M1272.272,85.405L1276.439,85.405C1280.606,85.405,1288.939,85.405,1296.606,85.405C1304.272,85.405,1311.272,85.405,1314.772,85.405L1318.272,85.405"></path><path marker-end="url(#mermaid-1785591321288_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_CS_IX_0" d="M1409.46,85.405L1413.627,85.405C1417.793,85.405,1426.127,85.405,1433.793,85.405C1441.46,85.405,1448.46,85.405,1451.96,85.405L1455.46,85.405"></path><path marker-end="url(#mermaid-1785591321288_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_IX_GW_0" d="M1622.647,85.405L1626.814,85.405C1630.981,85.405,1639.314,85.405,1646.981,85.405C1654.647,85.405,1661.647,85.405,1665.147,85.405L1668.647,85.405"></path><path marker-end="url(#mermaid-1785591321288_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_GW_AG_0" d="M1819.085,85.405L1823.252,85.405C1827.418,85.405,1835.752,85.405,1844.085,85.405C1852.418,85.405,1860.752,85.405,1868.418,85.405C1876.085,85.405,1883.085,85.405,1886.585,85.405L1890.085,85.405"></path></g><g class="edgeLabels"><g><rect style="stroke: none" class="background"></rect></g><g><rect style="stroke: none" class="background"></rect></g><g><rect style="stroke: none" class="background"></rect></g><g><rect style="stroke: none" class="background"></rect></g><g><rect style="stroke: none" class="background"></rect></g><g><rect style="stroke: none" class="background"></rect></g><g><rect style="stroke: none" class="background"></rect></g><g><rect style="stroke: none" class="background"></rect></g><g><rect style="stroke: none" class="background"></rect></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><text y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"></tspan></text></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><text y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"></tspan></text></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><text y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"></tspan></text></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><text y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"></tspan></text></g></g><g transform="translate(792.72998046875, 443.31028747558594)" class="edgeLabel"><g transform="translate(-11.671142578125, -9.5)" class="label"><g><rect height="19" width="23.34228515625" y="-1" x="-2" style="" class="background"></rect><text style="" y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"><tspan font-weight="normal" class="text-inner-tspan" font-style="normal">fail</tspan></tspan></text></g></g></g><g transform="translate(792.72998046875, 232.31028747558594)" class="edgeLabel"><g transform="translate(-14.66748046875, -9.5)" class="label"><g><rect height="19" width="29.3349609375" y="-1" x="-2" style="" class="background"></rect><text style="" y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"><tspan font-weight="normal" class="text-inner-tspan" font-style="normal">pass</tspan></tspan></text></g></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><text y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"></tspan></text></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><text y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"></tspan></text></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><text y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"></tspan></text></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><text y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"></tspan></text></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><text y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"></tspan></text></g></g></g><g class="nodes"><g transform="translate(119.4921875, 222.81028747558594)" id="flowchart-V-0" class="node default"><rect height="69" width="172.984375" y="-34.5" x="-86.4921875" style="" class="basic label-container"></rect><g transform="translate(-56.4921875, -19.5)" style="" class="label"><rect></rect><foreignObject height="39" width="112.984375"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Licensed vendor<br>export / delta feed</p></span></div></foreignObject></g></g><g transform="translate(119.4921875, 341.81028747558594)" id="flowchart-O-1" class="node default"><rect height="69" width="163.484375" y="-34.5" x="-81.7421875" style="" class="basic label-container"></rect><g transform="translate(-51.7421875, -19.5)" style="" class="label"><rect></rect><foreignObject height="39" width="103.484375"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Member OAuth<br>tenant workspace</p></span></div></foreignObject></g></g><g transform="translate(119.4921875, 460.81028747558594)" id="flowchart-P-2" class="node default"><rect height="69" width="137.40625" y="-34.5" x="-68.703125" style="" class="basic label-container"></rect><g transform="translate(-38.703125, -19.5)" style="" class="label"><rect></rect><foreignObject height="39" width="77.40625"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Permitted<br>public source</p></span></div></foreignObject></g></g><g transform="translate(406.21875, 341.81028747558594)" id="flowchart-SR-3" class="node default"><rect height="69" width="200.46875" y="-34.5" x="-100.234375" style="" class="basic label-container"></rect><g transform="translate(-70.234375, -19.5)" style="" class="label"><rect></rect><foreignObject height="39" width="140.46875"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Source registry<br>contract · quota · rights</p></span></div></foreignObject></g></g><g transform="translate(654.7578125, 341.81028747558594)" id="flowchart-CG-4" class="node default"><rect height="49.5" width="196.609375" y="-24.75" x="-98.3046875" style="" class="basic label-container"></rect><g transform="translate(-68.3046875, -9.75)" style="" class="label"><rect></rect><foreignObject height="19.5" width="136.609375"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Consent / purpose gate</p></span></div></foreignObject></g></g><g transform="translate(948.9990234375, 443.31028747558594)" id="flowchart-Q-5" class="node default"><rect height="34.5" width="88.390625" y="-17.25" x="-44.1953125" ry="17.25" rx="17.25" style="" class="basic label-container"></rect><g transform="translate(-32.3828125, -9.75)" style="" class="label"><rect></rect><foreignObject height="19.5" width="64.765625"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Quarantine</p></span></div></foreignObject></g></g><g transform="translate(948.9990234375, 85.40514373779297)" id="flowchart-NM-6" class="node default"><rect height="69" width="183.203125" y="-34.5" x="-91.6015625" style="" class="basic label-container"></rect><g transform="translate(-61.6015625, -19.5)" style="" class="label"><rect></rect><foreignObject height="39" width="123.203125"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Normalize<br>+ company taxonomy</p></span></div></foreignObject></g></g><g transform="translate(1193.9365234375, 85.40514373779297)" id="flowchart-ER-7" class="node default"><rect height="49.5" width="156.671875" y="-24.75" x="-78.3359375" style="" class="basic label-container"></rect><g transform="translate(-48.3359375, -9.75)" style="" class="label"><rect></rect><foreignObject height="19.5" width="96.671875"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Entity resolution</p></span></div></foreignObject></g></g><g transform="translate(1365.8662109375, 85.40514373779297)" id="flowchart-CS-8" class="node default"><path transform="translate(-43.59375, -42.40868924889543)" style="" class="basic label-container" d="M0,10.272459499263622 a43.59375,10.272459499263622 0,0,0 87.1875,0 a43.59375,10.272459499263622 0,0,0 -87.1875,0 l0,64.27245949926362 a43.59375,10.272459499263622 0,0,0 87.1875,0 l0,-64.27245949926362"></path><g transform="translate(-36.09375, -9.5)" style="" class="label"><rect></rect><foreignObject height="39" width="72.1875"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Canonical<br>person store</p></span></div></foreignObject></g></g><g transform="translate(1541.0537109375, 85.40514373779297)" id="flowchart-IX-9" class="node default"><rect height="49.5" width="163.1875" y="-24.75" x="-81.59375" style="" class="basic label-container"></rect><g transform="translate(-51.59375, -9.75)" style="" class="label"><rect></rect><foreignObject height="19.5" width="103.1875"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Search projection</p></span></div></foreignObject></g></g><g transform="translate(1745.8662109375, 85.40514373779297)" id="flowchart-GW-10" class="node default"><rect height="49.5" width="146.4375" y="-24.75" x="-73.21875" style="" class="basic label-container"></rect><g transform="translate(-43.21875, -9.75)" style="" class="label"><rect></rect><foreignObject height="19.5" width="86.4375"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Policy gateway</p></span></div></foreignObject></g></g><g transform="translate(1948.0380859375, 85.40514373779297)" id="flowchart-AG-29" class="node default"><rect height="49.5" width="107.90625" y="-24.75" x="-53.953125" style="" class="basic label-container"></rect><g transform="translate(-23.953125, -9.75)" style="" class="label"><rect></rect><foreignObject height="19.5" width="47.90625"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>AI agent</p></span></div></foreignObject></g></g></g></g></g></svg></div>
+  </div>
+  <figcaption>Hình 3.1 — Policy plane (02) đứng giữa acquire và serve. Không đường nào đi vòng qua nó.</figcaption>
+</figure>
+
+<h3>A connector fleet, not a global crawler</h3>
+
+<p>
+Mỗi source là một connector độc lập với schema, contract, quota, permitted fields và kill switch
+riêng. Không có shared crawler pool, vì không có shared quyền.
+</p>
+
+<div class="formula">source contract → per-source rate limiter → backoff on 429/403 → escalate → kill switch</div>
+
+<div class="tw">
+<table>
+  <thead><tr><th>Tình huống</th><th>Hành vi connector</th></tr></thead>
+  <tbody>
+    <tr><td>429 / 403</td><td>Exponential backoff trong quota đã cấp; không rotate identity, không đổi egress</td></tr>
+    <tr><td>Quota exhausted</td><td>Dừng tới cửa sổ kế; job vào queue chờ, không degrade sang đường khác</td></tr>
+    <tr><td>Schema drift</td><td>Field-fill-rate monitor cảnh báo khi tỷ lệ non-null tụt bất thường; ingest tiếp nhưng đánh dấu <code>schema_suspect</code></td></tr>
+    <tr><td>Rights revoked</td><td>Kill switch; provenance graph liệt kê mọi assertion cần suppress hoặc xoá</td></tr>
+    <tr><td>Contract expired</td><td>Ingest dừng, assertion hiện có chạy tới <code>retention_until</code> rồi expire</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>A replayable event log</h3>
+
+<pre><code>licensed feed / OAuth / permitted public source
+  → validation + PII classification
+  → durable event log          ← checkpoint, idempotent, replayable
+  → normalization + company taxonomy
+  → entity resolution
+  → canonical person store
+  → search projection + vector index
+  → policy gateway</code></pre>
+
+<p>
+Khi normalization rule hay matching model đổi, hệ thống replay từ event log thay vì quay lại nguồn.
+Checkpoint và replay là cơ chế khôi phục consistent state chuẩn cho stateful stream processing —
+<a href="https://nightlies.apache.org/flink/flink-docs-release-1.16/docs/concepts/stateful-stream-processing/">Flink stateful processing</a>.
+Giữ raw source payload chỉ khi license cho phép, có encryption và TTL riêng theo source policy.
+</p>
+
+<div class="tw">
+<table>
+  <caption>Storage tier.</caption>
+  <thead><tr><th>Tầng</th><th>Công nghệ</th><th>Vai trò</th></tr></thead>
+  <tbody>
+    <tr><td>Event log</td><td>Kafka + object storage</td><td>Nguồn sự thật để replay; TTL theo source contract</td></tr>
+    <tr><td>Canonical store</td><td>ScyllaDB / Cassandra</td><td>Key = <code>person_id</code>; write-heavy</td></tr>
+    <tr><td>Assertion ledger</td><td>Append-only</td><td>Không <code>UPDATE</code>; supersede bằng assertion mới</td></tr>
+    <tr><td>Search projection</td><td>OpenSearch</td><td>Rebuild được hoàn toàn từ canonical store</td></tr>
+    <tr><td>Vector index</td><td>Milvus / Vespa</td><td>int8 quantization; rebuild được</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+Projection và index đều <strong>derived</strong> và rebuild được. Đây là điều kiện để deletion §5
+chạy đúng: xoá ở canonical store rồi rebuild, thay vì đuổi theo từng bản sao.
+</p>
+
+<!-- ===== 4 ===== -->
+<h2 id="s4"><span class="n">Part 4</span>Entity resolution</h2>
+
+<div class="tw">
+<table>
+  <caption>Hai tầng, hai bài toán, chi phí sai lệch một bậc độ lớn.</caption>
+  <thead><tr><th></th><th>Ingestion dedup</th><th>Entity resolution</th></tr></thead>
+  <tbody>
+    <tr><td>Câu hỏi</td><td>Đã xử lý source object này chưa?</td><td>Hai object có phải cùng một <em>người</em>?</td></tr>
+    <tr><td>Đơn vị</td><td>source record / event</td><td>person candidate pair</td></tr>
+    <tr><td>Kỹ thuật</td><td>idempotency key, source ID, content hash</td><td>blocking → feature comparison → calibrated score</td></tr>
+    <tr><td>Khi sai</td><td>Thừa compute và storage</td><td><strong>Gán lịch sử nghề nghiệp của A cho B</strong></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Blocking</h3>
+
+<p>
+So sánh toàn cặp trên 1,2 tỷ record là bậc 10<sup>18</sup>. Blocking chia record thành khối và chỉ so
+sánh trong khối:
+</p>
+
+<pre><code>K1: stable_licensed_id                      → deterministic, chạy trước
+K2: normalize(name) + current_company
+K3: normalize(name) + school
+K4: normalize(name) + metro_area
+K5: soundex(surname) + previous_company
+
+candidates = K1 ∪ K2 ∪ K3 ∪ K4 ∪ K5</code></pre>
+
+<p>
+Union nhiều khoá bắt được trường hợp một khoá hỏng — người vừa đổi công ty vẫn match qua K3.
+Quy mô so sánh xuống bậc 10<sup>10</sup>.
+</p>
+
+<div class="tw">
+<table>
+  <thead><tr><th>Bước</th><th>Cơ chế</th></tr></thead>
+  <tbody>
+    <tr><td>1 · Deterministic</td><td>Stable identifier do vendor cấp. Match là match, không cần score</td></tr>
+    <tr><td>2 · Blocking</td><td>K2–K5 sinh candidate set</td></tr>
+    <tr><td>3 · Comparison</td><td>Feature vector: name similarity, company overlap, tenure consistency, education, geography</td></tr>
+    <tr><td>4 · Scoring</td><td>Fellegi–Sunter probabilistic linkage, weight per field — <a href="https://arxiv.org/abs/1603.07816">Murray 2016</a></td></tr>
+    <tr><td>5 · Decision</td><td>Auto-merge trên ngưỡng precision cao; vùng giữa giữ candidate set</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+Splink đánh giá hơn <strong>1 tỷ pairwise comparison trên dataset 7 triệu dòng</strong>, và được Cục
+Thống kê Úc dùng xây National Linkage Spine 2024 — <a href="https://moj-analytical-services.github.io/splink/index.html">Splink</a>.
+Mô hình Fellegi–Sunter cho biết <em>vì sao</em> hai record được ghép, với trọng số từng field. Với
+một API phải trả <code>match_confidence</code> có nghĩa, tính giải thích được là điều kiện bắt buộc.
+</p>
+
+<div class="box">
+  <span class="lbl">Merge policy</span>
+  <p>
+  Auto-merge chỉ tại ngưỡng đã benchmark riêng theo từng source và locale. Vùng mơ hồ không được tự
+  chọn top-1 — trả candidate set hoặc yêu cầu thêm identifier. Ngưỡng đặt theo cost function của use
+  case: false merge và false split có chi phí khác nhau, và không có giá trị mặc định đúng.
+  </p>
+</div>
+
+<!-- ===== 5 ===== -->
+<h2 id="s5"><span class="n">Part 5</span>Freshness and deletion</h2>
+
+<p>
+Refresh frequency bị chặn trên bởi <code>refresh_rights</code> của source. «Có thể refresh» là một
+quyền hợp đồng, không phải kết quả tối ưu của scheduler.
+</p>
+
+<div class="formula">priority = P(changed | history) × demand(30d) ,  bounded by refresh_rights</div>
+
+<div class="tw">
+<table>
+  <thead><tr><th>Tier</th><th>Trigger</th><th>Hành vi</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">A · hot</td><td>Demand cao + source delta trong quyền</td><td>Ingest delta sớm; đánh dấu field cũ <code>superseded</code></td></tr>
+    <tr><td class="mono">B · warm</td><td>Scheduled review trong rights window</td><td>Refresh khi <code>min_interval_days</code> cho phép</td></tr>
+    <tr><td class="mono">C · cold</td><td>Enrich request có entitlement</td><td><code>refresh_if_permitted</code> async, hoặc trả cached kèm tuổi</td></tr>
+    <tr><td class="mono">D · expired</td><td>Retention hết / opt-out / source withdrawal</td><td>Xoá projection, suppress re-ingest</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+Với 74% tài khoản dormant và decay 25–30%/năm, ngân sách refresh dồn vào tier A và B. Tier C biến
+chi phí freshness thành chi phí biến đổi gắn với request thật.
+</p>
+
+<h3>Deletion is an event, not a DELETE</h3>
+
+<figure>
+  <div class="fb">
+<div class="mmimg"><svg width="100%" style="max-width:1347px;height:auto" aria-roledescription="flowchart-v2" role="graphics-document document" viewBox="0 0 1347.3046875 422" class="flowchart" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" id="mermaid-1785591322501"><style>#mermaid-1785591322501{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:13px;fill:#111a3e;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#mermaid-1785591322501 .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#mermaid-1785591322501 .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#mermaid-1785591322501 .error-icon{fill:#f6f7fb;}#mermaid-1785591322501 .error-text{fill:#090804;stroke:#090804;}#mermaid-1785591322501 .edge-thickness-normal{stroke-width:1px;}#mermaid-1785591322501 .edge-thickness-thick{stroke-width:3.5px;}#mermaid-1785591322501 .edge-pattern-solid{stroke-dasharray:0;}#mermaid-1785591322501 .edge-thickness-invisible{stroke-width:0;fill:none;}#mermaid-1785591322501 .edge-pattern-dashed{stroke-dasharray:3;}#mermaid-1785591322501 .edge-pattern-dotted{stroke-dasharray:2;}#mermaid-1785591322501 .marker{fill:#8b95b5;stroke:#8b95b5;}#mermaid-1785591322501 .marker.cross{stroke:#8b95b5;}#mermaid-1785591322501 svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:13px;}#mermaid-1785591322501 p{margin:0;}#mermaid-1785591322501 .label{font-family:"trebuchet ms",verdana,arial,sans-serif;color:#111a3e;}#mermaid-1785591322501 .cluster-label text{fill:#090804;}#mermaid-1785591322501 .cluster-label span{color:#090804;}#mermaid-1785591322501 .cluster-label span p{background-color:transparent;}#mermaid-1785591322501 .label text,#mermaid-1785591322501 span{fill:#111a3e;color:#111a3e;}#mermaid-1785591322501 .node rect,#mermaid-1785591322501 .node circle,#mermaid-1785591322501 .node ellipse,#mermaid-1785591322501 .node polygon,#mermaid-1785591322501 .node path{fill:#ffffff;stroke:#f9660e;stroke-width:1px;}#mermaid-1785591322501 .rough-node .label text,#mermaid-1785591322501 .node .label text,#mermaid-1785591322501 .image-shape .label,#mermaid-1785591322501 .icon-shape .label{text-anchor:middle;}#mermaid-1785591322501 .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#mermaid-1785591322501 .rough-node .label,#mermaid-1785591322501 .node .label,#mermaid-1785591322501 .image-shape .label,#mermaid-1785591322501 .icon-shape .label{text-align:center;}#mermaid-1785591322501 .node.clickable{cursor:pointer;}#mermaid-1785591322501 .root .anchor path{fill:#8b95b5!important;stroke-width:0;stroke:#8b95b5;}#mermaid-1785591322501 .arrowheadPath{fill:#0b0b0b;}#mermaid-1785591322501 .edgePath .path{stroke:#8b95b5;stroke-width:2.0px;}#mermaid-1785591322501 .flowchart-link{stroke:#8b95b5;fill:none;}#mermaid-1785591322501 .edgeLabel{background-color:#ffffff;text-align:center;}#mermaid-1785591322501 .edgeLabel p{background-color:#ffffff;}#mermaid-1785591322501 .edgeLabel rect{opacity:0.5;background-color:#ffffff;fill:#ffffff;}#mermaid-1785591322501 .labelBkg{background-color:rgba(255, 255, 255, 0.5);}#mermaid-1785591322501 .cluster rect{fill:#f6f7fb;stroke:#e7e9f2;stroke-width:1px;}#mermaid-1785591322501 .cluster text{fill:#090804;}#mermaid-1785591322501 .cluster span{color:#090804;}#mermaid-1785591322501 div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:12px;background:#f6f7fb;border:1px solid hsl(228, 0%, 87.4509803922%);border-radius:2px;pointer-events:none;z-index:100;}#mermaid-1785591322501 .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#111a3e;}#mermaid-1785591322501 rect.text{fill:none;stroke-width:0;}#mermaid-1785591322501 .icon-shape,#mermaid-1785591322501 .image-shape{background-color:#ffffff;text-align:center;}#mermaid-1785591322501 .icon-shape p,#mermaid-1785591322501 .image-shape p{background-color:#ffffff;padding:2px;}#mermaid-1785591322501 .icon-shape rect,#mermaid-1785591322501 .image-shape rect{opacity:0.5;background-color:#ffffff;fill:#ffffff;}#mermaid-1785591322501 :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}</style><g><marker orient="auto" markerHeight="8" markerWidth="8" markerUnits="userSpaceOnUse" refY="5" refX="5" viewBox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1785591322501_flowchart-v2-pointEnd"><path style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 0 0 L 10 5 L 0 10 z"></path></marker><marker orient="auto" markerHeight="8" markerWidth="8" markerUnits="userSpaceOnUse" refY="5" refX="4.5" viewBox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1785591322501_flowchart-v2-pointStart"><path style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 0 5 L 10 10 L 10 0 z"></path></marker><marker orient="auto" markerHeight="11" markerWidth="11" markerUnits="userSpaceOnUse" refY="5" refX="11" viewBox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1785591322501_flowchart-v2-circleEnd"><circle style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" r="5" cy="5" cx="5"></circle></marker><marker orient="auto" markerHeight="11" markerWidth="11" markerUnits="userSpaceOnUse" refY="5" refX="-1" viewBox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1785591322501_flowchart-v2-circleStart"><circle style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" r="5" cy="5" cx="5"></circle></marker><marker orient="auto" markerHeight="11" markerWidth="11" markerUnits="userSpaceOnUse" refY="5.2" refX="12" viewBox="0 0 11 11" class="marker cross flowchart-v2" id="mermaid-1785591322501_flowchart-v2-crossEnd"><path style="stroke-width: 2; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 1,1 l 9,9 M 10,1 l -9,9"></path></marker><marker orient="auto" markerHeight="11" markerWidth="11" markerUnits="userSpaceOnUse" refY="5.2" refX="-1" viewBox="0 0 11 11" class="marker cross flowchart-v2" id="mermaid-1785591322501_flowchart-v2-crossStart"><path style="stroke-width: 2; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 1,1 l 9,9 M 10,1 l -9,9"></path></marker><g class="root"><g class="clusters"></g><g class="edgePaths"><path marker-end="url(#mermaid-1785591322501_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_R_E_0" d="M628.945,77L628.945,81.167C628.945,85.333,628.945,93.667,628.945,101.333C628.945,109,628.945,116,628.945,119.5L628.945,123"></path><path marker-end="url(#mermaid-1785591322501_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_E_C_0" d="M558.906,157.88L475.844,165.15C392.781,172.42,226.656,186.96,143.594,197.751C60.531,208.542,60.531,215.583,60.531,219.104L60.531,222.625"></path><path marker-end="url(#mermaid-1785591322501_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_E_S_0" d="M558.906,160.817L506.531,167.598C454.156,174.378,349.406,187.939,297.031,199.845C244.656,211.75,244.656,222,244.656,227.125L244.656,232.25"></path><path marker-end="url(#mermaid-1785591322501_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_E_V_0" d="M558.906,170.469L539.555,175.641C520.203,180.812,481.5,191.156,462.148,201.453C442.797,211.75,442.797,222,442.797,227.125L442.797,232.25"></path><path marker-end="url(#mermaid-1785591322501_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_E_K_0" d="M628.945,176.5L628.945,180.667C628.945,184.833,628.945,193.167,628.945,202.458C628.945,211.75,628.945,222,628.945,227.125L628.945,232.25"></path><path marker-end="url(#mermaid-1785591322501_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_E_W_0" d="M698.984,168.147L722.728,173.706C746.471,179.265,793.958,190.382,817.702,201.066C841.445,211.75,841.445,222,841.445,227.125L841.445,232.25"></path><path marker-end="url(#mermaid-1785591322501_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_E_D_0" d="M698.984,159.484L762.397,166.487C825.81,173.49,952.635,187.495,1016.048,197.997C1079.461,208.5,1079.461,215.5,1079.461,219L1079.461,222.5"></path><path marker-end="url(#mermaid-1785591322501_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_E_SU_0" d="M698.984,157.125L795.348,164.521C891.711,171.917,1084.438,186.708,1180.801,197.623C1277.164,208.538,1277.164,215.577,1277.164,219.096L1277.164,222.615"></path><path marker-end="url(#mermaid-1785591322501_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" id="L_SU_ING_0" d="M1277.164,295.385L1277.164,301.154C1277.164,306.923,1277.164,318.462,1277.164,329.314C1277.164,340.167,1277.164,350.333,1277.164,355.417L1277.164,360.5"></path></g><g class="edgeLabels"><g><rect style="stroke: none" class="background"></rect></g><g><rect style="stroke: none" class="background"></rect></g><g><rect style="stroke: none" class="background"></rect></g><g><rect style="stroke: none" class="background"></rect></g><g><rect style="stroke: none" class="background"></rect></g><g><rect style="stroke: none" class="background"></rect></g><g><rect style="stroke: none" class="background"></rect></g><g><rect style="stroke: none" class="background"></rect></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><text y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"></tspan></text></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><text y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"></tspan></text></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><text y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"></tspan></text></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><text y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"></tspan></text></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><text y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"></tspan></text></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><text y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"></tspan></text></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><text y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"></tspan></text></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><text y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"></tspan></text></g></g><g transform="translate(1277.1640625, 330)" class="edgeLabel"><g transform="translate(-44.487060546875, -9.5)" class="label"><g><rect width="88.97412109375" y="-1" x="-2" style="" class="background"></rect><text style="" y="-10.1"><tspan dy="1.1em" y="-0.1em" x="0" class="text-outer-tspan"><tspan font-weight="normal" class="text-inner-tspan" font-style="normal">chặn</tspan><tspan font-weight="normal" class="text-inner-tspan" font-style="normal"> re-ingest</tspan></tspan></text></g></g></g></g><g class="nodes"><g transform="translate(628.9453125, 42.5)" id="flowchart-R-0" class="node default"><rect height="69" width="199.375" y="-34.5" x="-99.6875" style="" class="basic label-container"></rect><g transform="translate(-69.6875, -19.5)" style="" class="label"><rect></rect><foreignObject height="39" width="139.375"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Verified privacy request<br>hoặc source withdrawal</p></span></div></foreignObject></g></g><g transform="translate(628.9453125, 151.75)" id="flowchart-E-1" class="node default"><rect height="49.5" width="140.078125" y="-24.75" x="-70.0390625" style="" class="basic label-container"></rect><g transform="translate(-40.0390625, -9.75)" style="" class="label"><rect></rect><foreignObject height="19.5" width="80.078125"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Erasure event</p></span></div></foreignObject></g></g><g transform="translate(60.53125, 261)" id="flowchart-C-3" class="node default"><path transform="translate(-52.53125, -34.375101874490625)" style="" class="basic label-container" d="M0,11.416734582993751 a52.53125,11.416734582993751 0,0,0 105.0625,0 a52.53125,11.416734582993751 0,0,0 -105.0625,0 l0,45.916734582993755 a52.53125,11.416734582993751 0,0,0 105.0625,0 l0,-45.916734582993755"></path><g transform="translate(-45.03125, 0.25)" style="" class="label"><rect></rect><foreignObject height="19.5" width="90.0625"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Canonical store</p></span></div></foreignObject></g></g><g transform="translate(244.65625, 261)" id="flowchart-S-5" class="node default"><rect height="49.5" width="163.1875" y="-24.75" x="-81.59375" style="" class="basic label-container"></rect><g transform="translate(-51.59375, -9.75)" style="" class="label"><rect></rect><foreignObject height="19.5" width="103.1875"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Search projection</p></span></div></foreignObject></g></g><g transform="translate(442.796875, 261)" id="flowchart-V-7" class="node default"><rect height="49.5" width="133.09375" y="-24.75" x="-66.546875" style="" class="basic label-container"></rect><g transform="translate(-36.546875, -9.75)" style="" class="label"><rect></rect><foreignObject height="19.5" width="73.09375"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Vector index</p></span></div></foreignObject></g></g><g transform="translate(628.9453125, 261)" id="flowchart-K-9" class="node default"><rect height="49.5" width="139.203125" y="-24.75" x="-69.6015625" style="" class="basic label-container"></rect><g transform="translate(-39.6015625, -9.75)" style="" class="label"><rect></rect><foreignObject height="19.5" width="79.203125"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Caches / CDN</p></span></div></foreignObject></g></g><g transform="translate(841.4453125, 261)" id="flowchart-W-11" class="node default"><rect height="49.5" width="185.796875" y="-24.75" x="-92.8984375" style="" class="basic label-container"></rect><g transform="translate(-62.8984375, -9.75)" style="" class="label"><rect></rect><foreignObject height="19.5" width="125.796875"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Subscription payloads</p></span></div></foreignObject></g></g><g transform="translate(1079.4609375, 261)" id="flowchart-D-13" class="node default"><rect height="69" width="190.234375" y="-34.5" x="-95.1171875" style="" class="basic label-container"></rect><g transform="translate(-65.1171875, -19.5)" style="" class="label"><rect></rect><foreignObject height="39" width="130.234375"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Downstream contracts<br>đã redistribute</p></span></div></foreignObject></g></g><g transform="translate(1277.1640625, 261)" id="flowchart-SU-15" class="node default"><path transform="translate(-52.5859375, -34.384783789287894)" style="" class="basic label-container" d="M0,11.423189192858597 a52.5859375,11.423189192858597 0,0,0 105.171875,0 a52.5859375,11.423189192858597 0,0,0 -105.171875,0 l0,45.9231891928586 a52.5859375,11.423189192858597 0,0,0 105.171875,0 l0,-45.9231891928586"></path><g transform="translate(-45.0859375, 0.25)" style="" class="label"><rect></rect><foreignObject height="19.5" width="90.171875"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Suppression list</p></span></div></foreignObject></g></g><g transform="translate(1277.1640625, 389.25)" id="flowchart-ING-17" class="node default"><rect height="49.5" width="124.28125" y="-24.75" x="-62.140625" style="" class="basic label-container"></rect><g transform="translate(-32.140625, -9.75)" style="" class="label"><rect></rect><foreignObject height="19.5" width="64.28125"><div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"><p>Ingest gate</p></span></div></foreignObject></g></g></g></g></g></svg></div>
+  </div>
+  <figcaption>Hình 5.1 — Bề mặt lan truyền của một erasure event. Bỏ sót một nhánh là bỏ sót nghĩa vụ.</figcaption>
+</figure>
+
+<div class="box warn">
+  <span class="lbl">Suppression list tự nó là personal data</span>
+  <p>
+  Hash identifier để chặn re-ingest vẫn có thể là personal data khi còn link ngược lại được. Retention
+  của chính suppression list phải được policy hoá, ngược lại cơ chế bảo vệ quyền riêng tư trở thành
+  một kho PII vĩnh viễn không ai kiểm soát.
+  </p>
+</div>
+
+<!-- ===== 6 ===== -->
+<h2 id="s6"><span class="n">Part 6</span>Capacity and cost</h2>
+
+<h3>Arithmetic you can check</h3>
+
+<div class="formula">1.000.000.000 ÷ 180 ngày ÷ 86.400 s ≈ 64,3 record / giây</div>
+
+<p>
+64 rec/s là trung bình của một lần bootstrap 180 ngày, không phải target vận hành. Provision headroom
+cho burst, replay, entity resolution và bulk indexing.
+</p>
+
+<div class="formula">OpenSearch provisioned ≈ indexed source × (1 + replicas) × 1,45</div>
+
+<div class="tw">
+<table>
+  <caption>Hệ số 1,45 gồm indexing overhead ÷ Linux reserved ÷ OpenSearch overhead — <a href="https://docs.aws.amazon.com/opensearch-service/latest/developerguide/bp-storage.html">AWS sizing</a></caption>
+  <thead><tr><th>Đại lượng</th><th class="num">Giả định</th><th class="num">Kết quả</th></tr></thead>
+  <tbody>
+    <tr><td>Canonical record</td><td class="num">8 KB × 1e9</td><td class="num">~8 TB</td></tr>
+    <tr><td>Assertion ledger</td><td class="num">×3–5 canonical</td><td class="num">24–40 TB</td></tr>
+    <tr><td>Search document</td><td class="num">12 KB × 1e9</td><td class="num">12 TB primary</td></tr>
+    <tr><td><strong>OpenSearch provisioned</strong></td><td class="num">12 TB × 2 × 1,45</td><td class="num"><strong>~35 TB</strong></td></tr>
+    <tr><td>Vector, int8 768-dim</td><td class="num">768 B × 1e9 + graph</td><td class="num">~0,9 TB + overhead</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Cost model</h3>
+
+<div class="formula">license + ingest + normalize/ER compute + storage + search serving + compliance/ops</div>
+
+<div class="tw">
+<table>
+  <caption>Điểm neo thị trường cho tầng access. Full-corpus redistribution license đàm phán riêng, không công bố.</caption>
+  <thead><tr><th>Nhà cung cấp</th><th class="num">Giá công bố</th><th>Loại</th></tr></thead>
+  <tbody>
+    <tr><td>ZoomInfo</td><td class="num">~$32K/năm</td><td>Trung vị hợp đồng, seat/credit access</td></tr>
+    <tr><td>ZoomInfo enterprise</td><td class="num">$50–150K/năm</td><td>Access tier</td></tr>
+    <tr><td>People Data Labs</td><td class="num">$20–100K+/năm</td><td>Enterprise contract, 1,5 tỷ unique profile</td></tr>
+    <tr><td>Apollo</td><td class="num">$5–20K/năm</td><td>Seat-based</td></tr>
+    <tr><td>Coresignal</td><td class="num">~$0,005/record</td><td>Top volume tier</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+Đây là giá <em>truy cập</em>, không phải giá <em>sở hữu và bán lại</em>. License cho phép redistribution
+và bulk retention là hợp đồng riêng, thường cao hơn một tới hai bậc so với access tier, và không có
+bảng giá công khai. Nhân retail per-record với tổng số record cho ra một con số không mô tả giao dịch
+nào có thật.
+</p>
+
+<div class="box stop">
+  <span class="lbl">Không thuộc unit economics</span>
+  <p>
+  Profiles-per-proxy-IP, cookie reset rate, CAPTCHA cost và proxy bandwidth thuộc một đường thu thập
+  bị loại ở §1. Chúng không xuất hiện trong cost model.
+  </p>
+</div>
+
+<h3>What dominates the cost</h3>
+
+<div class="tw">
+<table>
+  <thead><tr><th>Biến</th><th>Ảnh hưởng</th><th>Chốt bằng</th></tr></thead>
+  <tbody>
+    <tr><td>Redistribution rights</td><td>Bậc độ lớn của license cost</td><td>Vendor quote với scope cụ thể</td></tr>
+    <tr><td>Search document size</td><td>Tuyến tính lên ~35 TB provisioned</td><td>Benchmark với representative workload</td></tr>
+    <tr><td>Assertion multiplier</td><td>24–40 TB, dải rộng nhất trong storage</td><td>Đếm assertion/person trên vendor sample</td></tr>
+    <tr><td>ER compute</td><td>Bậc 10<sup>10</sup> comparison lúc bootstrap</td><td>Chạy Splink trên sample rồi ngoại suy</td></tr>
+    <tr><td>QPS / SLO</td><td>Instance count và replica</td><td>Load test</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ===== 7 ===== -->
+<h2 id="s7"><span class="n">Part 7</span>API contract</h2>
+
+<p>
+Agent-ready nghĩa là response nói rõ giới hạn của chính nó: ai được dùng, mới đến đâu, match có mơ hồ
+không, và field vắng mặt là bị redact hay vốn không tồn tại.
+</p>
+
+<h3>Required on every call</h3>
+
+<div class="tw">
+<table>
+  <thead><tr><th>Field</th><th>Vai trò</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">purpose</td><td>Đối chiếu với <code>permitted_purposes</code> của từng assertion</td></tr>
+    <tr><td class="mono">tenant_id</td><td>Scope dữ liệu; OAuth workspace không rò sang tenant khác</td></tr>
+    <tr><td class="mono">actor_id</td><td>Accountability; ai đứng sau agent</td></tr>
+    <tr><td class="mono">trace_id</td><td>Audit chain xuyên suốt request</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+Authorization là <strong>field × source × jurisdiction × purpose</strong>, không phải OAuth scope đơn
+thuần. Một token hợp lệ vẫn có thể nhận response đã redact một nửa số field.
+</p>
+
+<h3>Endpoints</h3>
+
+<div class="tw">
+<table>
+  <thead><tr><th>Endpoint</th><th>Điểm contract</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">POST /v1/people/search</td><td><code>purpose</code> bắt buộc; <code>return_fields</code> bắt buộc; cursor ổn định</td></tr>
+    <tr><td class="mono">POST /v1/people/resolve</td><td>Trả candidate set khi mơ hồ, không tự chọn top-1</td></tr>
+    <tr><td class="mono">GET /v1/people/{id}</td><td>Field-level entitlement; không có chế độ trả toàn bộ record</td></tr>
+    <tr><td class="mono">POST /v1/enrichment-jobs</td><td>Async; <code>refresh_if_permitted</code>, không force live fetch</td></tr>
+    <tr><td class="mono">POST /v1/privacy/requests</td><td>Verified DSR workflow</td></tr>
+    <tr><td class="mono">GET /v1/admin/provenance/{id}</td><td>Compliance role riêng, không phải endpoint đại trà</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Search</h3>
+
+<pre><code>POST /v1/people/search
+{
+  "query":   "machine learning platform engineer",
+  "filters": { "locations": ["Singapore"], "fresh_within_days": 90 },
+  "return_fields": ["identity", "current_employment", "skills"],
+  "purpose": "internal_recruiting",
+  "tenant_id": "tn_04",  "actor_id": "svc_agent_7",  "trace_id": "tr_9k2m",
+  "limit": 20
+}
+
+200 OK
+{
+  "results": [{
+    "person_id": "per_01J8F3A1C",
+    "identity":  { "full_name": "…", "location": "Singapore" },
+    "current_employment": { "title": "Staff Engineer", "company": "Example" },
+
+    "match_confidence": 0.93,
+    "freshness": { "last_verified_at": "2026-07-20T00:00:00Z", "age_days": 12 },
+
+    "field_availability": {
+      "skills":        "available",
+      "education":     "not_in_source",
+      "contact_email": "requires_entitlement",
+      "salary":        "not_permitted_for_purpose"
+    },
+
+    "usage": { "purpose": "internal_recruiting", "redistribution": "prohibited" }
+  }],
+  "total_matches": 47,
+  "next_cursor":   "opaque_cursor_v1_…"
+}</code></pre>
+
+<div class="box">
+  <span class="lbl">field_availability</span>
+  <p>
+  Bốn trạng thái phân biệt được là điều kiện để agent không suy luận sai.
+  <code>not_in_source</code> nghĩa là dữ liệu không có; <code>requires_entitlement</code> nghĩa là có
+  nhưng tenant này không được cấp; <code>not_permitted_for_purpose</code> nghĩa là có và được cấp
+  nhưng sai purpose. Ba trạng thái sau <strong>không tiết lộ source nào</strong> — agent chỉ cần biết
+  trạng thái, không cần biết lý do chi tiết.
+  </p>
+</div>
+
+<h3>Resolve when ambiguous</h3>
+
+<pre><code>POST /v1/people/resolve   { "name": "Tran Minh", "company": "Example Corp", … }
+
+200 OK
+{
+  "match":  null,
+  "reason": "AMBIGUOUS_MATCH",
+  "message": "3 candidate vượt ngưỡng tối thiểu. Cần thêm identifier.",
+  "candidates": [
+    { "person_id": "per_11d2", "title": "Backend Engineer",
+      "tenure": "2021–present", "education": "HCMUT", "confidence": 0.61 },
+    { "person_id": "per_77b9", "title": "Product Manager",
+      "tenure": "2019–2023",    "education": "RMIT",  "confidence": 0.58 },
+    { "person_id": "per_4e0f", "title": "Data Analyst",
+      "tenure": "2024–present", "education": "UEH",   "confidence": 0.44 }
+  ]
+}</code></pre>
+
+<p>
+Candidate set kèm <strong>các field phân biệt được</strong> cho agent đủ cơ sở để hỏi lại người dùng
+hoặc tự lọc. Trả về top-1 với confidence 0,61 như thể chắc chắn là chế độ lỗi tệ nhất trong một
+pipeline agent.
+</p>
+
+<h3>Errors</h3>
+
+<div class="tw">
+<table>
+  <caption>Mỗi code ánh xạ tới đúng một hành động khắc phục.</caption>
+  <thead><tr><th>Code</th><th class="num">HTTP</th><th>Agent làm gì</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">AMBIGUOUS_MATCH</td><td class="num">200</td><td>Lọc bằng field phân biệt, hoặc hỏi lại người dùng</td></tr>
+    <tr><td class="mono">NOT_FOUND</td><td class="num">404</td><td>Dừng. Không thử biến thể tên</td></tr>
+    <tr><td class="mono">POLICY_RESTRICTED</td><td class="num">200</td><td>Dùng field còn lại. Không thử endpoint khác để lấy field bị chặn</td></tr>
+    <tr><td class="mono">PURPOSE_NOT_PERMITTED</td><td class="num">403</td><td>Dừng. Purpose phải đổi ở tầng cấu hình, không phải ở request</td></tr>
+    <tr><td class="mono">STALE_BEYOND_LIMIT</td><td class="num">200</td><td>Dùng cached nhưng nêu rõ tuổi khi báo cáo</td></tr>
+    <tr><td class="mono">REFRESH_NOT_PERMITTED</td><td class="num">200</td><td>Chấp nhận cached. Source không cấp quyền refresh</td></tr>
+    <tr><td class="mono">QUOTA_EXCEEDED</td><td class="num">429</td><td>Đọc <code>Retry-After</code>, dừng. Không retry loop</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="box warn">
+  <span class="lbl">Suppressed record trả 404</span>
+  <p>
+  Không có mã lỗi riêng cho record đã bị xoá theo yêu cầu. Một mã như <code>SUBJECT_ERASED</code> xác
+  nhận rằng người đó <em>từng có</em> trong hệ thống — chính là thông tin mà erasure request muốn loại
+  bỏ. Suppressed record trả <code>NOT_FOUND</code> giống hệt record chưa từng tồn tại; phân biệt hai
+  trường hợp chỉ tồn tại trong audit log nội bộ.
+  </p>
+</div>
+
+<h3>MCP tool</h3>
+
+<pre><code>{
+  "name": "resolve_person",
+  "description":
+    "Resolve a partial identifier into a canonical person_id. Call this FIRST
+     when you have a name or company but no ID. Returns exactly one match, or
+     a ranked candidate list when ambiguous — disambiguate before calling
+     get_person. Does NOT return profile data. Requires `purpose`; the same
+     query under a different purpose may return different results.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "name":    { "type": "string" },
+      "company": { "type": "string" },
+      "purpose": { "type": "string",
+                   "enum": ["internal_recruiting", "crm_enrichment"] },
+      "min_confidence": { "type": "number", "default": 0.75 }
+    },
+    "required": ["purpose"],
+    "anyOf": [ { "required": ["name","company"] } ]
+  }
+}</code></pre>
+
+<pre><code>{
+  "name": "get_person",
+  "description":
+    "Fetch fields for a canonical person_id. Check `field_availability` before
+     concluding anything about a missing field: `not_in_source` means no data
+     exists; `requires_entitlement` and `not_permitted_for_purpose` mean data
+     exists but is withheld. Absence is never evidence that the person lacks
+     the attribute. Check `freshness.age_days` before relying on a value.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "person_id":     { "type": "string" },
+      "return_fields": { "type": "array", "items": { "type": "string" } },
+      "purpose":       { "type": "string" },
+      "refresh_if_permitted": { "type": "boolean", "default": false }
+    },
+    "required": ["person_id", "return_fields", "purpose"]
+  }
+}</code></pre>
+
+<p>
+Batch chạy qua Tasks extension của
+<a href="https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/">MCP 2026-07-28</a>,
+với stateless core và authorization theo OAuth/OIDC.
+</p>
+
+<h3>Recruiting purpose</h3>
+
+<div class="box stop">
+  <span class="lbl">Ràng buộc riêng cho tuyển dụng</span>
+  <p>
+  EU AI Act xếp AI dùng trong tuyển dụng và tuyển chọn vào nhóm <strong>high-risk</strong> —
+  <a href="https://commission.europa.eu/news-and-media/news/ai-act-enters-force-2024-08-01_en">AI Act</a>.
+  ICO yêu cầu fairness, data minimisation, minh bạch và human oversight cho AI recruitment —
+  <a href="https://ico.org.uk/about-the-ico/media-centre/news-and-blogs/2024/11/thinking-of-using-ai-to-assist-recruitment-our-key-data-protection-considerations/">ICO guidance</a>.
+  </p>
+  <p>
+  Với <code>purpose: internal_recruiting</code>: không suy diễn special-category trait, không trả field
+  proxy cho protected characteristic, không cho phép automated adverse decision, và mọi outreach phải
+  qua anti-spam gate với human review. Contact field là scope riêng, không mặc định có.
+  </p>
+</div>
+
+<!-- ===== 8 ===== -->
+<h2 id="s8"><span class="n">Part 8</span>Decision records</h2>
+
+<div class="qd">
+  <header><span class="id">QĐ-01</span><span class="ttl">Licensed và consented ingestion, không crawl</span></header>
+  <dl>
+    <dt>Bối cảnh</dt>
+    <dd>Đề bài mô tả crawl một tỷ profile page.</dd>
+    <dt>Drivers</dt>
+    <dd><ul>
+      <li>Automated crawling cần express permission; permitted use giới hạn ở public search engine indexing</li>
+      <li>Bán và bulk transfer dữ liệu thu được bị cấm riêng</li>
+      <li>Profile API chỉ cho lưu data của authenticated member</li>
+    </ul></dd>
+    <dt>Options</dt>
+    <dd>(a) Crawl không xin phép · (b) Xin express permission rồi crawl · (c) Account pool · (d) Licensed + consented ingestion</dd>
+    <dt>Quyết định</dt>
+    <dd><strong>(d)</strong>. (b) bị loại không phải vì khó xin mà vì permitted use không bao gồm sản phẩm này.</dd>
+    <dt>Hệ quả</dt>
+    <dd>Coverage và schema do vendor quyết định. Bù lại, mọi field có lawful basis truy vết được, và deletion obligation thực thi được.</dd>
+  </dl>
+</div>
+
+<div class="qd">
+  <header><span class="id">QĐ-02</span><span class="ttl">Policy envelope ở cấp field</span></header>
+  <dl>
+    <dt>Bối cảnh</dt>
+    <dd>Một corpus gộp nhiều nguồn với quyền sử dụng khác nhau.</dd>
+    <dt>Drivers</dt>
+    <dd>Record phẳng không cho phép xoá chọn lọc khi một source bị thu hồi, cũng không cho phép gate theo purpose ở query time.</dd>
+    <dt>Options</dt>
+    <dd>(a) Không lưu policy · (b) Policy cấp source · (c) Policy cấp record · (d) Policy cấp field</dd>
+    <dt>Quyết định</dt>
+    <dd><strong>(d)</strong>. Mỗi assertion mang <code>permitted_purposes</code>, <code>redistribution</code>, <code>retention_until</code>, <code>refresh_rights</code>.</dd>
+    <dt>Hệ quả</dt>
+    <dd>Assertion ledger phình 3–5 lần so với canonical. Đổi lại: selective deletion, purpose gating, và GDPR Art.14/17 thực thi được.</dd>
+  </dl>
+</div>
+
+<div class="qd">
+  <header><span class="id">QĐ-03</span><span class="ttl">Connector fleet, không shared crawler pool</span></header>
+  <dl>
+    <dt>Bối cảnh</dt>
+    <dd>Nhiều source với contract, quota và schema khác nhau.</dd>
+    <dt>Drivers</dt>
+    <dd>Shared pool giả định quyền dùng chung. Khi một source thu hồi quyền, pool không biết assertion nào bị ảnh hưởng.</dd>
+    <dt>Options</dt>
+    <dd>(a) Shared fetch pool · (b) Connector độc lập với contract riêng</dd>
+    <dt>Quyết định</dt>
+    <dd><strong>(b)</strong>. Backoff trong quota đã cấp; không rotate identity, không đổi egress khi gặp 429/403.</dd>
+    <dt>Hệ quả</dt>
+    <dd>Throughput bị giới hạn bởi contract chứ không bởi hạ tầng. Đây là hành vi mong muốn, không phải giới hạn kỹ thuật.</dd>
+  </dl>
+</div>
+
+<div class="qd">
+  <header><span class="id">QĐ-04</span><span class="ttl">Conservative merge</span></header>
+  <dl>
+    <dt>Bối cảnh</dt>
+    <dd>Entity resolution ở bậc 10<sup>10</sup> candidate pair.</dd>
+    <dt>Drivers</dt>
+    <dd>False merge gán lịch sử nghề nghiệp của người này cho người khác — sai sản phẩm và gây hại cho cá nhân. False split chỉ gây trùng lặp.</dd>
+    <dt>Options</dt>
+    <dd>(a) Tối ưu F1 · (b) Ưu tiên recall · (c) Ưu tiên precision, giữ candidate set ở vùng mơ hồ</dd>
+    <dt>Quyết định</dt>
+    <dd><strong>(c)</strong>. Ngưỡng benchmark riêng theo source và locale.</dd>
+    <dt>Hệ quả</dt>
+    <dd>Nhiều person record hơn số người thật. API phải trả candidate set, và consumer phải xử lý được trường hợp mơ hồ.</dd>
+  </dl>
+</div>
+
+<div class="qd">
+  <header><span class="id">QĐ-05</span><span class="ttl">Refresh bị chặn bởi contract</span></header>
+  <dl>
+    <dt>Bối cảnh</dt>
+    <dd>Scheduler có thể tính ra lịch refresh tối ưu theo demand và hazard.</dd>
+    <dt>Drivers</dt>
+    <dd>Lịch tối ưu có thể vượt quyền refresh mà source cấp.</dd>
+    <dt>Options</dt>
+    <dd>(a) Scheduler tự do · (b) Scheduler bị bound bởi <code>refresh_rights</code></dd>
+    <dt>Quyết định</dt>
+    <dd><strong>(b)</strong>. <code>refresh_if_permitted</code> trả <code>REFRESH_NOT_PERMITTED</code> thay vì cố fetch.</dd>
+    <dt>Hệ quả</dt>
+    <dd>Freshness SLA khác nhau theo source. API phải lộ điều này ra thay vì che giấu.</dd>
+  </dl>
+</div>
+
+<div class="qd">
+  <header><span class="id">QĐ-06</span><span class="ttl">Tách resolve khỏi get</span></header>
+  <dl>
+    <dt>Bối cảnh</dt>
+    <dd>Luồng phổ biến là «tên + công ty → dữ liệu đầy đủ».</dd>
+    <dt>Drivers</dt>
+    <dd>Hai thao tác có failure mode khác nhau: resolve thất bại bằng ambiguity, get thất bại bằng entitlement hoặc staleness. Gộp lại buộc agent phân biệt hai loại lỗi từ một response.</dd>
+    <dt>Options</dt>
+    <dd>(a) Một endpoint · (b) Tách</dd>
+    <dt>Quyết định</dt>
+    <dd><strong>(b)</strong>. Mỗi lỗi ánh xạ tới đúng một hành động khắc phục.</dd>
+    <dt>Hệ quả</dt>
+    <dd>Agent gọi hai lần. Đổi lại, không có trường hợp agent nhận top-1 mơ hồ và tưởng là chắc chắn.</dd>
+  </dl>
+</div>
+
+<div class="qd">
+  <header><span class="id">QĐ-07</span><span class="ttl">Suppressed record trả 404</span></header>
+  <dl>
+    <dt>Bối cảnh</dt>
+    <dd>Record bị xoá theo privacy request cần một response cho caller.</dd>
+    <dt>Drivers</dt>
+    <dd>Mã lỗi riêng cho «đã bị xoá» xác nhận record từng tồn tại — rò rỉ chính thông tin mà erasure muốn loại bỏ.</dd>
+    <dt>Options</dt>
+    <dd>(a) 410 với mã riêng · (b) 404 giống record chưa từng tồn tại</dd>
+    <dt>Quyết định</dt>
+    <dd><strong>(b)</strong>. Phân biệt chỉ tồn tại trong audit log nội bộ.</dd>
+    <dt>Hệ quả</dt>
+    <dd>Agent không phân biệt được hai trường hợp — đúng ý đồ. Debug dựa vào <code>trace_id</code> và audit log.</dd>
+  </dl>
+</div>
+
+<!-- ===== 9 ===== -->
+<h2 id="s9"><span class="n">Part 9</span>Risks and limits</h2>
+
+<div class="tw">
+<table>
+  <thead><tr><th>Rủi ro</th><th>Bản chất</th><th>Xử lý</th></tr></thead>
+  <tbody>
+    <tr><td>Vendor concentration</td><td>Phần lớn corpus từ một nguồn</td><td>Policy envelope cấp field cho phép thay source mà giữ phần còn lại</td></tr>
+    <tr><td>Rights revocation</td><td>Source rút quyền giữa chừng</td><td>Kill switch + provenance graph liệt kê assertion cần suppress</td></tr>
+    <tr><td>Schema drift</td><td>Vendor đổi format, ingest lặng lẽ hỏng</td><td>Field-fill-rate monitor; drift không ném exception nên phải theo dõi phân phối</td></tr>
+    <tr><td>False merge tích luỹ</td><td>Sai lan qua downstream đã redistribute</td><td>Conservative threshold + split log để rollback</td></tr>
+    <tr><td>Suppression list</td><td>Cơ chế bảo vệ tự nó là PII</td><td>Policy hoá retention của chính list</td></tr>
+    <tr><td>Purpose creep</td><td>Tenant dùng data ngoài purpose đã khai</td><td><code>purpose</code> bắt buộc + audit; không tự phát hiện được nếu tenant khai sai</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Still open</h3>
+
+<div class="tw">
+<table>
+  <thead><tr><th>Câu hỏi</th><th>Chốt bằng</th></tr></thead>
+  <tbody>
+    <tr><td>License cho redistribution giá bao nhiêu</td><td>Vendor quote với scope, geography và retention cụ thể</td></tr>
+    <tr><td>Vendor corpus thực sự cover bao nhiêu unique person ở thị trường mục tiêu</td><td>Sample do vendor cấp, đo coverage và field-fill rate</td></tr>
+    <tr><td>Assertion multiplier thực tế</td><td>Đếm assertion/person trên sample</td></tr>
+    <tr><td>ER precision ở ngưỡng đã chọn</td><td>Labelled evaluation set theo từng locale</td></tr>
+    <tr><td>Search document size và QPS</td><td>Benchmark với representative workload</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+Không câu nào trong bảng trên chốt được bằng cách crawl thử. Chúng chốt bằng vendor sample, sandbox có
+authorization bằng văn bản, synthetic corpus, hoặc licensed delta feed.
+</p>
+
+<!-- ===== SRC ===== -->
+<h2 id="src"><span class="n">Sources</span>References</h2>
+
+<p class="fn">
+Bài này không dùng dữ liệu đo từ LinkedIn, không suy ra rate limit nội bộ, và không báo giá thay
+vendor. Con số capacity là giả định ghi ngay cạnh phép tính.
+</p>
+
+<ul class="srcs">
+  <li><a href="https://www.linkedin.com/legal/crawling-terms">LinkedIn — Crawling Terms and Conditions</a></li>
+  <li><a href="https://www.linkedin.com/legal/user-agreement">LinkedIn — User Agreement §8.2</a></li>
+  <li><a href="https://learn.microsoft.com/en-us/linkedin/shared/integrations/people/profile-api">LinkedIn — Profile API documentation</a></li>
+  <li><a href="https://about.linkedin.com/transparency/community-report">LinkedIn — Community / transparency report</a></li>
+  <li><a href="https://commission.europa.eu/law/law-topic/data-protection/information-business-and-organisations/principles-gdpr_en">European Commission — Principles of the GDPR</a></li>
+  <li><a href="https://commission.europa.eu/news-and-media/news/ai-act-enters-force-2024-08-01_en">European Commission — AI Act</a></li>
+  <li><a href="https://ico.org.uk/about-the-ico/media-centre/news-and-blogs/2024/11/thinking-of-using-ai-to-assist-recruitment-our-key-data-protection-considerations/">ICO — AI in recruitment</a></li>
+  <li><a href="https://docs.aws.amazon.com/opensearch-service/latest/developerguide/bp-storage.html">AWS — Calculating OpenSearch storage requirements</a></li>
+  <li><a href="https://nightlies.apache.org/flink/flink-docs-release-1.16/docs/concepts/stateful-stream-processing/">Apache Flink — Stateful stream processing</a></li>
+  <li><a href="https://moj-analytical-services.github.io/splink/index.html">Splink — probabilistic record linkage</a></li>
+  <li><a href="https://arxiv.org/abs/1603.07816">Murray (2016) — Probabilistic record linkage after indexing, blocking and filtering</a></li>
+  <li><a href="https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/">MCP — 2026-07-28 specification release candidate</a></li>
+</ul>
+
+<hr/>
+
+<p class="fn">
+Giá trị của một people-data product không nằm ở khả năng lấy một tỷ trang. Nó nằm ở khả năng biết một
+field đến từ đâu, được dùng vào việc gì, hết hạn khi nào, và phải biến mất ra sao.
+</p>
+
+</main>
+</div>
+
+
+<hr>
+<p class="foot">Day 13 · Custody. <a href="../index.html">← Portfolio</a></p>
+</main>
+</div>
+
+<script>
+(function(){
+  var data = {
+    licensed: ["ALLOW WITH POLICY", "var(--ok)",
+      "Vào canonical corpus nếu hợp đồng cấp đủ purpose, retention, refresh và redistribution. Mọi assertion mang policy envelope riêng và hết hạn độc lập.",
+      "enforce → source registry · field entitlement · retention clock"],
+    oauth: ["ALLOW, ISOLATED", "var(--warn)",
+      "Data của authenticated member chỉ sống trong tenant workspace theo consent và API terms. Không làm nguồn cho global person index, không commingle với licensed corpus.",
+      "enforce → tenant boundary · consent scope · no cross-tenant read"],
+    public: ["ALLOW IF PERMITTED", "var(--warn)",
+      "Chỉ nguồn public có điều khoản cho phép thu thập và tái sử dụng. Ghi lawful basis và permitted purpose ngay tại ingest, không suy đoán từ việc trang truy cập được.",
+      "enforce → source terms review · lawful basis · purpose tagging"],
+    crawl: ["BLOCK", "var(--stop)",
+      "Không tạo ingest job. Public visibility không phải quyền crawl, và retry hay evasion để vượt access control không nằm trong thiết kế.",
+      "enforce → ingest gate reject · audit entry · no fallback path"]
+  };
+  var out = document.getElementById("out");
+  document.querySelectorAll("[data-mode]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      document.querySelectorAll("[data-mode]").forEach(function(b){ b.setAttribute("aria-pressed","false"); });
+      btn.setAttribute("aria-pressed","true");
+      var v = data[btn.dataset.mode];
+      out.innerHTML =
+        '<div class="st" style="color:' + v[1] + '">' + v[0] + '</div>' +
+        '<p class="bd">' + v[2] + '</p>' +
+        '<div class="rule">' + v[3] + '</div>';
+    });
+  });
+})();
+</script>
+<script>
+(function(){
+  var links=[].slice.call(document.querySelectorAll(".toc a[href]"));
+  var by={};links.forEach(function(a){var id=(a.getAttribute("href")||"").slice(1);if(id)by[id]=a;});
+  var secs=Object.keys(by).map(function(i){return document.getElementById(i);}).filter(Boolean);
+  if(!window.IntersectionObserver||!secs.length)return;
+  var vis={},cur=null;
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){vis[e.target.id]=e.isIntersecting;});
+    var best=null,top=1e9;
+    secs.forEach(function(s){if(!vis[s.id])return;var y=s.getBoundingClientRect().top;if(y<top){top=y;best=s.id;}});
+    if(best&&best!==cur){links.forEach(function(a){a.classList.remove("on");});if(by[best])by[best].classList.add("on");cur=best;}
+  },{rootMargin:"-12% 0px -68% 0px",threshold:[0,.05,.3]});
+  secs.forEach(function(s){io.observe(s);});
+  var d=document.querySelector(".toc-mobile");
+  if(d)d.addEventListener("click",function(e){if(e.target.closest("a"))d.open=false;});
+})();
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/assets/comments.js" data-page="day13"></script>
+</body>
+</html>

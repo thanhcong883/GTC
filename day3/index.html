@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 3 — Under the hood: how MindPal runs an agent | Giang Thanh Cong</title>
+  <meta name="description" content="A black-box teardown of MindPal's agent harness — orchestration loop, tool interface, memory, guardrails and human-in-the-loop — inferred purely from network traces, response payloads, errors and UI. Day 3 of a 30-day build challenge." />
+  <meta property="og:title" content="Day 3 — Under the hood: how MindPal runs an agent" />
+  <meta property="og:description" content="The runtime harness behind MindPal, reconstructed from the outside: engine, model routing, memory and guardrails — each claim tagged with the evidence that supports it." />
+  <meta property="og:type" content="article" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔬</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --orange:#f9660e; --orange-soft:#ffe7d6;
+      --navy:#111a3e; --navy-soft:#5a6488;
+      --peach:#fdece1; --lav:#efe6fb; --purple:#8b5cf6; --purple-soft:#eee9fb;
+      --blue:#2f6fed; --blue-soft:#e2ecfd;
+      --green:#1e9257; --green-soft:#e4f3ea;
+      --amber:#b0771a; --amber-soft:#f7edda;
+      --red:#c64b3e; --red-soft:#f8e6e3;
+      --bg:#f6f7fb; --card:#fff; --border:#e7e9f2; --ink-dark:#0f1730;
+      --shadow:0 18px 50px rgba(17,26,62,.12);
+      --shadow-sm:0 6px 20px rgba(17,26,62,.08);
+      --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+      background:var(--bg);color:var(--navy);line-height:1.6;-webkit-font-smoothing:antialiased}
+    a{text-decoration:none;color:inherit}
+    .wrap{max-width:1000px;margin:0 auto;padding:0 24px}
+    h1,h2,h3{line-height:1.15;letter-spacing:-.015em}
+    .accent{color:var(--orange)}
+    code,.mono{font-family:var(--mono)}
+    svg{max-width:100%}
+
+    /* top bar */
+    header.top{background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+    .bar{display:flex;align-items:center;justify-content:space-between;gap:16px;height:64px;max-width:1000px;margin:0 auto;padding:0 24px}
+    .back{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:.92rem}
+    .back:hover{color:var(--orange)}
+    .meta{text-align:center;flex:1;min-width:0}
+    .meta .tag{display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:.68rem;
+      font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:20px}
+    .meta h1{font-size:1rem;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;
+      text-overflow:ellipsis;margin-top:2px}
+    .src{display:inline-flex;align-items:center;gap:7px;background:var(--navy);color:#fff;font-weight:700;
+      font-size:.85rem;padding:9px 16px;border-radius:24px;white-space:nowrap}
+    .src:hover{background:var(--orange)}
+    @media(max-width:720px){ .meta h1{font-size:.8rem} .src span{display:none} }
+
+    /* hero */
+    .hero{padding:56px 0 30px;background:
+      radial-gradient(120% 130% at 88% -10%, var(--lav) 0%, transparent 46%),
+      linear-gradient(180deg,var(--peach) 0%, #fdf4ee 55%, var(--bg) 100%)}
+    .eyebrow{color:var(--orange);font-weight:700;text-transform:uppercase;letter-spacing:.14em;font-size:.76rem;margin-bottom:12px}
+    .hero h2{font-size:clamp(2rem,4.8vw,3rem);font-weight:800;max-width:19ch}
+    .hero p.lede{color:var(--navy-soft);max-width:64ch;margin-top:16px;font-size:1.04rem}
+    .method{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+    .method span{background:#fff;border:1px solid var(--border);border-radius:20px;padding:8px 15px;
+      font-size:.8rem;font-weight:700;color:var(--navy-soft);box-shadow:var(--shadow-sm)}
+    .method span b{color:var(--navy)}
+
+    /* TL;DR strip */
+    .tldr{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:30px}
+    .tl{background:#fff;border-radius:16px;padding:16px 18px;box-shadow:var(--shadow-sm);border-top:3px solid var(--c,var(--orange))}
+    .tl .ic{font-size:24px;line-height:1}
+    .tl .n{font-weight:800;font-size:1.5rem;margin-top:8px;letter-spacing:-.02em}
+    .tl .l{font-size:.76rem;color:var(--navy-soft);font-weight:600;margin-top:2px}
+    @media(max-width:720px){.tldr{grid-template-columns:repeat(2,1fr)}}
+
+    section{padding:44px 0}
+    .shead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+    .shead .n{font-family:var(--mono);font-weight:700;font-size:.74rem;color:var(--orange);
+      background:rgba(249,102,14,.1);padding:3px 9px;border-radius:6px}
+    h3.title{font-size:clamp(1.35rem,2.8vw,1.7rem);font-weight:800}
+    .lede{color:var(--navy-soft);max-width:70ch;margin-bottom:26px;font-size:.98rem}
+
+    /* stack cards */
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+    .obj{background:#fff;border-radius:14px;padding:15px 17px;box-shadow:var(--shadow-sm);border-top:3px solid var(--purple)}
+    .obj .k{font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--navy-soft)}
+    .obj .v{font-weight:800;font-size:1.02rem;margin-top:4px}
+    .obj .v small{display:block;font-weight:500;color:var(--navy-soft);font-size:.74rem;margin-top:4px;font-family:var(--mono);letter-spacing:0}
+
+    /* diagram frame */
+    .figframe{background:#fff;border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow-sm);
+      padding:22px;overflow-x:auto}
+    .figframe.tint{background:linear-gradient(170deg,#fbf7ff,#fff)}
+    svg.chart{display:block;min-width:660px;width:100%;height:auto}
+
+    /* run pipeline */
+    .pipe{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding-bottom:4px}
+    .stage{flex:1 1 0;min-width:132px;text-align:center;padding:6px 6px}
+    .stage .ic{width:56px;height:56px;margin:0 auto;border-radius:16px;display:grid;place-items:center;font-size:26px;
+      background:var(--bg);border:1px solid var(--border);box-shadow:var(--shadow-sm)}
+    .stage.a .ic{background:var(--green-soft);border-color:#bfe4cd}
+    .stage.b .ic{background:var(--blue-soft);border-color:#c9ddfb}
+    .stage.c .ic{background:var(--lav);border-color:#e0d3f7}
+    .stage.d .ic{background:var(--orange-soft);border-color:#ffd3b6}
+    .stage.e .ic{background:#e9edf5;border-color:#d5dce7}
+    .stage .t{font-weight:800;font-size:.86rem;margin-top:10px}
+    .stage .s{font-size:.73rem;color:var(--navy-soft);margin-top:3px;line-height:1.4}
+    .sep{display:flex;align-items:center;color:#c2c9dd;font-size:1.2rem;font-weight:700;flex:0 0 18px}
+
+    /* two transports */
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px}
+    @media(max-width:640px){.two{grid-template-columns:1fr}}
+    .tp{background:#fff;border-radius:16px;padding:18px 20px;box-shadow:var(--shadow-sm);border-top:4px solid var(--t,var(--orange))}
+    .tp h4{font-size:1rem;font-weight:800;display:flex;align-items:center;gap:8px}
+    .tp .ep{font-family:var(--mono);font-size:.72rem;color:var(--orange);background:var(--orange-soft);padding:3px 8px;border-radius:6px;display:inline-block;margin:9px 0}
+    .tp p{font-size:.85rem;color:var(--navy-soft)}
+
+    /* workflow node chain */
+    .chain{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding-bottom:6px}
+    .wf{flex:1 1 0;min-width:150px;background:#fff;border-radius:15px;box-shadow:var(--shadow-sm);
+      border-top:4px solid var(--c,var(--navy));padding:15px 14px;display:flex;flex-direction:column;gap:4px}
+    .wf .top{display:flex;align-items:center;justify-content:space-between;gap:6px}
+    .wf .ic{font-size:20px}
+    .wf .bd{font-family:var(--mono);font-size:.56rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+      color:#fff;background:var(--c,var(--navy));padding:3px 6px;border-radius:5px}
+    .wf h5{font-size:.86rem;font-weight:800;margin-top:6px}
+    .wf p{font-size:.72rem;color:var(--navy-soft);line-height:1.45}
+    .wf .step{font-family:var(--mono);font-size:.62rem;color:var(--navy-soft);font-weight:700}
+    .csep{display:flex;align-items:center;justify-content:center;color:#c2c9dd;font-weight:800;flex:0 0 20px;font-size:1.1rem}
+
+    /* memory tiers */
+    .mem{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    @media(max-width:720px){.mem{grid-template-columns:1fr}}
+    .mt{background:#fff;border-radius:16px;padding:18px 20px;box-shadow:var(--shadow-sm);position:relative;border-left:5px solid var(--c,var(--purple))}
+    .mt .ic{font-size:26px}
+    .mt h4{font-size:.98rem;font-weight:800;margin-top:8px}
+    .mt .scope{font-family:var(--mono);font-size:.64rem;font-weight:700;color:var(--c,var(--purple));text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+    .mt p{font-size:.8rem;color:var(--navy-soft);margin-top:8px}
+    .mt .ev{font-family:var(--mono);font-size:.68rem;color:var(--navy-soft);margin-top:9px;padding-top:9px;border-top:1px dashed var(--border)}
+
+    /* terminal / request decode */
+    .term{background:var(--ink-dark);border-radius:16px;overflow:hidden;box-shadow:0 20px 44px rgba(17,26,62,.22)}
+    .term .tbar{display:flex;align-items:center;gap:9px;padding:11px 16px;background:#0b1226;border-bottom:1px solid #1e2a4d}
+    .term .tbar i{width:11px;height:11px;border-radius:50%;display:block}
+    .term .tbar .r{background:#ff5f57}.term .tbar .y{background:#febc2e}.term .tbar .g{background:#28c840}
+    .term .tbar span{margin-left:6px;color:#7c89b4;font-size:.76rem;font-weight:700;font-family:var(--mono)}
+    .term .tbody{padding:16px 18px;font-family:var(--mono);font-size:.76rem;line-height:1.85;color:#d6deff;white-space:pre-wrap;overflow-x:auto}
+    .term .tbody .c{color:#8b949e}.term .tbody .k{color:#79c0ff}.term .tbody .s{color:#a5d6ff}
+    .term .tbody .n{color:#ffa657}.term .tbody .hot{color:#ff7b72;font-weight:700}.term .tbody .ok{color:#3fb950}
+    .decode{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+    .drow{display:grid;grid-template-columns:150px 1fr;gap:14px;background:#fff;border-radius:12px;padding:12px 15px;box-shadow:var(--shadow-sm)}
+    .drow .f{font-family:var(--mono);font-size:.74rem;font-weight:700;color:var(--purple);word-break:break-word}
+    .drow .m{font-size:.84rem;color:var(--navy-soft)}
+    .drow .m b{color:var(--navy)}
+    @media(max-width:600px){.drow{grid-template-columns:1fr;gap:4px}}
+    .note{border-left:3px solid var(--amber);background:var(--amber-soft);padding:11px 15px;border-radius:0 10px 10px 0;margin-top:18px;font-size:.86rem;color:var(--navy)}
+
+    /* evidence gallery */
+    .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px}
+    .fig{margin:0;background:#fff;border-radius:14px;overflow:hidden;box-shadow:var(--shadow-sm);border:1px solid var(--border);display:flex;flex-direction:column;transition:transform .15s ease,border-color .2s}
+    .fig:hover{transform:translateY(-4px);border-color:var(--orange)}
+    .fig a.shot{display:block;background:var(--ink-dark);line-height:0;border-bottom:1px solid var(--border)}
+    .fig a.shot img{width:100%;height:auto;display:block}
+    .fig figcaption{padding:13px 16px 15px}
+    .fig figcaption .t{font-weight:800;font-size:.88rem;margin-bottom:4px}
+    .fig figcaption .d{font-size:.77rem;color:var(--navy-soft);font-family:var(--mono);line-height:1.5}
+    .fig figcaption .tag{display:inline-block;margin-top:9px;font-family:var(--mono);font-size:.62rem;font-weight:800;
+      letter-spacing:.04em;color:var(--purple);background:var(--purple-soft);padding:3px 9px;border-radius:20px}
+
+    /* hypotheses table */
+    .tablewrap{overflow-x:auto;border-radius:14px;box-shadow:var(--shadow-sm)}
+    table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden}
+    th,td{text-align:left;padding:11px 14px;font-size:.83rem;border-bottom:1px solid var(--border);vertical-align:top}
+    th{background:var(--bg);color:var(--navy-soft);text-transform:uppercase;font-size:.66rem;letter-spacing:.06em;font-weight:800}
+    tr:last-child td{border-bottom:none}
+    td .hid{font-family:var(--mono);font-weight:700;color:var(--purple)}
+    td .ev{font-family:var(--mono);font-size:.72rem;color:var(--navy-soft);line-height:1.55}
+    td .claim{font-weight:600}
+    .grp td{background:linear-gradient(90deg,var(--peach),transparent);font-family:var(--mono);
+      font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--orange)}
+    .conf{font-family:var(--mono);font-size:.64rem;font-weight:800;padding:3px 9px;border-radius:20px;white-space:nowrap;display:inline-block}
+    .conf.high{background:var(--green-soft);color:var(--green)}
+    .conf.med{background:var(--amber-soft);color:var(--amber)}
+    .conf.corr{background:var(--purple-soft);color:var(--purple)}
+    .legend{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:18px;font-family:var(--mono);font-size:.72rem;color:var(--navy-soft)}
+    .legend span{display:inline-flex;align-items:center;gap:7px}
+    .sw{width:11px;height:11px;border-radius:4px;display:inline-block}
+
+    /* implications */
+    .dd{display:flex;flex-direction:column;gap:14px}
+    .ddrow{background:#fff;border-radius:16px;box-shadow:var(--shadow-sm);padding:18px 20px;display:grid;grid-template-columns:38px 1fr;gap:15px}
+    .ddrow .num{width:38px;height:38px;border-radius:11px;background:var(--orange-soft);color:var(--orange);
+      display:grid;place-items:center;font-weight:800;font-size:.98rem}
+    .ddrow h5{font-size:.96rem;font-weight:800;margin-bottom:5px}
+    .ddrow p{font-size:.85rem;color:var(--navy-soft);line-height:1.6}
+    .ddrow p.why{margin-top:7px;padding-top:7px;border-top:1px dashed var(--border)}
+    .ddrow p.why b{color:var(--navy)}
+    @media(max-width:600px){.ddrow{grid-template-columns:1fr}}
+
+    .subh{font-size:1.06rem;font-weight:800;margin-top:28px;margin-bottom:4px}
+    .modes{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+    @media(max-width:640px){.modes{grid-template-columns:repeat(2,1fr)}}
+    .mode{background:#fff;border-radius:12px;padding:12px 14px;box-shadow:var(--shadow-sm);border:1px solid var(--border);display:flex;flex-direction:column;gap:2px}
+    .mode .mi{font-size:20px;line-height:1}
+    .mode b{font-size:.9rem;margin-top:5px}
+    .mode span{font-size:.72rem;color:var(--navy-soft)}
+
+    footer{padding:44px 0 60px;border-top:1px solid var(--border);margin-top:20px}
+    footer p{color:var(--navy-soft);font-size:.84rem;text-align:center}
+    footer a{color:var(--orange);font-weight:700}
+  </style>
+</head>
+<body>
+
+  <header class="top">
+    <div class="bar">
+      <a class="back" href="../index.html">← Portfolio</a>
+      <div class="meta">
+        <span class="tag">Day 3 · 30 Day Challenge</span>
+        <h1>Under the hood: how MindPal runs an agent</h1>
+      </div>
+      <a class="src" href="#run">🔬 <span>See it run</span></a>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div class="wrap">
+        <div class="eyebrow">Black-box harness teardown</div>
+        <h2>How MindPal actually <span class="accent">runs an agent</span>, seen only from the outside</h2>
+        <p class="lede">Day 2 mapped what MindPal <em>is</em>. Day 3 goes one layer down: what happens the moment you
+          hit <b>Run</b>. No source code — every claim is read off live network traces, decoded payloads and error
+          states, then cross-checked against the public docs.</p>
+        <div class="method">
+          <span>Method&nbsp;<b>DevTools · payload decode</b></span>
+          <span>Evidence&nbsp;<b>network + errors only</b></span>
+          <span>Hypotheses&nbsp;<b>20, each tagged</b></span>
+        </div>
+        <div class="tldr">
+          <div class="tl" style="--c:var(--purple)"><div class="ic">🧩</div><div class="n">1 engine</div><div class="l">agents &amp; workflows share it</div></div>
+          <div class="tl" style="--c:var(--orange)"><div class="ic">🔀</div><div class="n">2 transports</div><div class="l">SSE stream · polled job</div></div>
+          <div class="tl" style="--c:var(--green)"><div class="ic">🧠</div><div class="n">3 memory tiers</div><div class="l">run · notes · RAG</div></div>
+          <div class="tl" style="--c:var(--blue)"><div class="ic">⏸️</div><div class="n">wait-states</div><div class="l">it pauses for humans</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 01 · RUN PIPELINE -->
+    <section class="wrap" id="run">
+      <div class="shead"><span class="n">01</span><h3 class="title">What happens when you hit Run</h3></div>
+      <p class="lede">Follow one message end to end. The client barely does anything — the real work happens
+        server-side, and how the answer comes back depends on <em>what</em> you ran.</p>
+
+      <div class="figframe">
+        <div class="pipe">
+          <div class="stage a"><div class="ic">👆</div><div class="t">You</div><div class="s">hit Run / send a message</div></div>
+          <div class="sep">›</div>
+          <div class="stage b"><div class="ic">▲</div><div class="t">Client</div><div class="s">POSTs via tRPC, then just listens</div></div>
+          <div class="sep">›</div>
+          <div class="stage c"><div class="ic">⚙️</div><div class="t">Engine</div><div class="s">walks the DAG, spawns an execution per node</div></div>
+          <div class="sep">›</div>
+          <div class="stage d"><div class="ic">🧠</div><div class="t">Node → LLM</div><div class="s">Vercel AI SDK → Auto model → provider</div></div>
+          <div class="sep">›</div>
+          <div class="stage e"><div class="ic">📤</div><div class="t">Back to you</div><div class="s">streamed, or polled for updates</div></div>
+        </div>
+      </div>
+
+      <div class="two">
+        <div class="tp" style="--t:var(--orange)">
+          <h4>📡 SSE stream — chat &amp; single agent</h4>
+          <span class="ep">POST /api/workflows/agent-run/direct</span>
+          <p>The answer streams back token by token over one held-open connection. Used when a human is watching a
+            live reply. Fast first byte.</p>
+        </div>
+        <div class="tp" style="--t:var(--purple)">
+          <h4>🔄 Polled job — full workflow</h4>
+          <span class="ep">workflowRun.getExecutionUpdates</span>
+          <p>The run becomes a background job; the client re-queries every few seconds. It has to — a workflow can
+            sit paused at a human step for minutes or hours.</p>
+        </div>
+      </div>
+
+      <h4 class="subh">Those transports are how it answers — here's how you launch it</h4>
+      <div class="modes">
+        <div class="mode"><span class="mi">▶️</span><b>Default</b><span>live, window stays open</span></div>
+        <div class="mode"><span class="mi">🧑‍✈️</span><b>Supervised</b><span>approve each node</span></div>
+        <div class="mode"><span class="mi">🌙</span><b>Background</b><span>async · emailed link</span></div>
+        <div class="mode"><span class="mi">🗂️</span><b>Bulk</b><span>CSV · runs in parallel</span></div>
+      </div>
+    </section>
+
+    <!-- 02 · THE HARNESS -->
+    <section class="wrap" id="arch">
+      <div class="shead"><span class="n">02</span><h3 class="title">The harness, in five layers</h3></div>
+      <p class="lede">Two phases share one engine. <b>Authoring</b> turns a sentence into a declarative JSON graph;
+        <b>execution</b> runs it server-side as a durable state machine the client polls.</p>
+
+      <div class="figframe tint">
+        <svg class="chart" viewBox="0 0 720 610" xmlns="http://www.w3.org/2000/svg" role="img"
+          aria-label="Five-layer harness: authoring builds a JSON workflow, the client calls tRPC, the engine walks the DAG as a state machine, each node runs through the Vercel AI SDK to an LLM, and results return over SSE or polling.">
+          <defs>
+            <marker id="ar" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#9aa3c4"/>
+            </marker>
+          </defs>
+          <!-- A authoring -->
+          <rect x="20" y="16" width="680" height="96" rx="18" fill="#f7f2fd" stroke="#e2d7f5" stroke-width="1.5" stroke-dasharray="6 5"/>
+          <text x="36" y="40" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" fill="#8b5cf6" letter-spacing="1">A · AUTHORING — BUILD-TIME</text>
+          <g font-family="Plus Jakarta Sans, sans-serif" text-anchor="middle">
+            <rect x="36" y="52" width="128" height="46" rx="11" fill="#fff" stroke="#e7e9f2"/><text x="100" y="74" font-size="12.5" font-weight="800" fill="#111a3e">💡 Idea</text><text x="100" y="90" font-size="9.5" fill="#5a6488" font-family="JetBrains Mono, monospace">a sentence</text>
+            <rect x="196" y="52" width="128" height="46" rx="11" fill="#fff" stroke="#8b5cf6" stroke-width="2"/><text x="260" y="74" font-size="12.5" font-weight="800" fill="#111a3e">✨ Mindie</text><text x="260" y="90" font-size="9.5" fill="#5a6488" font-family="JetBrains Mono, monospace">NL → nodes</text>
+            <rect x="356" y="52" width="140" height="46" rx="11" fill="#fff" stroke="#e7e9f2"/><text x="426" y="74" font-size="12.5" font-weight="800" fill="#111a3e">🧩 Workflow JSON</text><text x="426" y="90" font-size="9.5" fill="#5a6488" font-family="JetBrains Mono, monospace">Nodes + Edges</text>
+            <rect x="528" y="52" width="152" height="46" rx="11" fill="#fff" stroke="#e7e9f2"/><text x="604" y="74" font-size="12.5" font-weight="800" fill="#111a3e">🧑‍⚖️ Human review</text><text x="604" y="90" font-size="9.5" fill="#5a6488" font-family="JetBrains Mono, monospace">Preview / Save</text>
+            <line x1="164" y1="75" x2="194" y2="75" stroke="#9aa3c4" stroke-width="1.75" marker-end="url(#ar)"/>
+            <line x1="324" y1="75" x2="354" y2="75" stroke="#9aa3c4" stroke-width="1.75" marker-end="url(#ar)"/>
+            <line x1="496" y1="75" x2="526" y2="75" stroke="#9aa3c4" stroke-width="1.75" marker-end="url(#ar)"/>
+          </g>
+          <line x1="360" y1="112" x2="360" y2="140" stroke="#9aa3c4" stroke-width="2" marker-end="url(#ar)"/>
+          <text x="372" y="131" font-family="JetBrains Mono, monospace" font-size="9" font-weight="700" fill="#5a6488">save</text>
+
+          <!-- B client/api -->
+          <rect x="20" y="142" width="680" height="70" rx="16" fill="#fff" stroke="#e7e9f2" stroke-width="1.5"/>
+          <text x="36" y="166" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" fill="#f9660e" letter-spacing="1">B · CLIENT &amp; API</text>
+          <g font-family="Plus Jakarta Sans, sans-serif" text-anchor="middle">
+            <rect x="36" y="176" width="300" height="26" rx="8" fill="#f6f7fb" stroke="#e7e9f2"/><text x="186" y="193" font-size="11.5" font-weight="700" fill="#111a3e">▲ Next.js SPA — renders forms · polls</text>
+            <rect x="360" y="176" width="320" height="26" rx="8" fill="#f6f7fb" stroke="#e7e9f2"/><text x="520" y="193" font-size="11" font-weight="700" fill="#111a3e" font-family="JetBrains Mono, monospace">tRPC · /api/workflows/agent-run</text>
+          </g>
+          <line x1="360" y1="212" x2="360" y2="240" stroke="#9aa3c4" stroke-width="2" marker-end="url(#ar)"/>
+          <text x="372" y="231" font-family="JetBrains Mono, monospace" font-size="9" font-weight="700" fill="#5a6488">server-side</text>
+
+          <!-- C engine (dark) -->
+          <rect x="20" y="242" width="680" height="118" rx="18" fill="#131c3a" stroke="#26315a" stroke-width="1.5"/>
+          <text x="36" y="266" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" fill="#ffb27d" letter-spacing="1">C · EXECUTION ENGINE — DURABLE STATE MACHINE</text>
+          <g font-family="Plus Jakarta Sans, sans-serif" text-anchor="middle">
+            <rect x="36" y="278" width="280" height="42" rx="11" fill="#1b2547" stroke="#33406e"/><text x="176" y="298" font-size="12.5" font-weight="800" fill="#fff">🔁 DAG walker</text><text x="176" y="313" font-size="9.5" fill="#a9b3d6" font-family="JetBrains Mono, monospace">1 run → N executions</text>
+            <rect x="336" y="278" width="344" height="42" rx="11" fill="#1b2547" stroke="#33406e"/><text x="508" y="298" font-size="12.5" font-weight="800" fill="#fff">🗂️ Execution record / node</text><text x="508" y="313" font-size="9.5" fill="#a9b3d6" font-family="JetBrains Mono, monospace">{status · waitState · output}</text>
+          </g>
+          <g font-family="JetBrains Mono, monospace" font-size="9.5" font-weight="700" text-anchor="middle">
+            <rect x="40" y="330" width="70" height="20" rx="10" fill="#0f1730" stroke="#33406e"/><text x="75" y="343.5" fill="#c7d0ec">PENDING</text>
+            <rect x="126" y="330" width="72" height="20" rx="10" fill="#0f1730" stroke="#33406e"/><text x="162" y="343.5" fill="#c7d0ec">RUNNING</text>
+            <rect x="214" y="330" width="74" height="20" rx="10" fill="#241b0c" stroke="#c9932f"/><text x="251" y="343.5" fill="#f0c069">WAITING</text>
+            <rect x="360" y="330" width="60" height="20" rx="10" fill="#0e2417" stroke="#2f8f57"/><text x="390" y="343.5" fill="#6cd79a">DONE</text>
+            <rect x="436" y="330" width="62" height="20" rx="10" fill="#2a1210" stroke="#b8504a"/><text x="467" y="343.5" fill="#f19189">ERROR</text>
+            <text x="118" y="344" fill="#7c89b4">→</text><text x="205" y="344" fill="#7c89b4">→</text><text x="330" y="344" fill="#7c89b4">⇄</text><text x="427" y="344" fill="#7c89b4">/</text>
+          </g>
+          <line x1="360" y1="360" x2="360" y2="388" stroke="#9aa3c4" stroke-width="2" marker-end="url(#ar)"/>
+          <text x="372" y="379" font-family="JetBrains Mono, monospace" font-size="9" font-weight="700" fill="#5a6488">per node</text>
+
+          <!-- D agent runtime -->
+          <rect x="20" y="390" width="680" height="86" rx="16" fill="#fff" stroke="#e7e9f2" stroke-width="1.5"/>
+          <text x="36" y="414" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" fill="#f9660e" letter-spacing="1">D · AGENT RUNTIME — INSIDE ONE NODE</text>
+          <g font-family="Plus Jakarta Sans, sans-serif" text-anchor="middle">
+            <rect x="36" y="424" width="150" height="42" rx="11" fill="#f6f7fb" stroke="#e7e9f2"/><text x="111" y="444" font-size="11.5" font-weight="800" fill="#111a3e">📥 Assemble ctx</text><text x="111" y="459" font-size="9" fill="#5a6488" font-family="JetBrains Mono, monospace">hydrate by ID</text>
+            <rect x="202" y="424" width="150" height="42" rx="11" fill="#ffe7d6" stroke="#f9660e" stroke-width="2"/><text x="277" y="444" font-size="11.5" font-weight="800" fill="#111a3e">⚙️ Vercel AI SDK</text><text x="277" y="459" font-size="9" fill="#5a6488" font-family="JetBrains Mono, monospace">function-calling</text>
+            <rect x="368" y="424" width="146" height="42" rx="11" fill="#f6f7fb" stroke="#e7e9f2"/><text x="441" y="444" font-size="11.5" font-weight="800" fill="#111a3e">🎯 Auto router</text><text x="441" y="459" font-size="9" fill="#5a6488" font-family="JetBrains Mono, monospace">server picks</text>
+            <rect x="530" y="424" width="150" height="42" rx="11" fill="#f6f7fb" stroke="#e7e9f2"/><text x="605" y="444" font-size="11.5" font-weight="800" fill="#111a3e">🧠 LLM</text><text x="605" y="459" font-size="9" fill="#5a6488" font-family="JetBrains Mono, monospace">Google/OpenAI/…</text>
+            <line x1="186" y1="445" x2="200" y2="445" stroke="#9aa3c4" stroke-width="1.75" marker-end="url(#ar)"/>
+            <line x1="352" y1="445" x2="366" y2="445" stroke="#9aa3c4" stroke-width="1.75" marker-end="url(#ar)"/>
+            <line x1="514" y1="445" x2="528" y2="445" stroke="#9aa3c4" stroke-width="1.75" marker-end="url(#ar)"/>
+          </g>
+          <line x1="360" y1="476" x2="360" y2="504" stroke="#9aa3c4" stroke-width="2" marker-end="url(#ar)"/>
+
+          <!-- E transport -->
+          <rect x="20" y="506" width="680" height="84" rx="16" fill="#fff" stroke="#e7e9f2" stroke-width="1.5"/>
+          <text x="36" y="530" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" fill="#f9660e" letter-spacing="1">E · TRANSPORT &amp; PERSISTENCE</text>
+          <g font-family="Plus Jakarta Sans, sans-serif" text-anchor="middle">
+            <rect x="36" y="540" width="212" height="40" rx="11" fill="#ffe7d6" stroke="#f9660e"/><text x="142" y="558" font-size="11.5" font-weight="800" fill="#111a3e">📡 SSE stream</text><text x="142" y="573" font-size="9" fill="#5a6488" font-family="JetBrains Mono, monospace">agent / chat</text>
+            <rect x="258" y="540" width="212" height="40" rx="11" fill="#eee9fb" stroke="#8b5cf6"/><text x="364" y="558" font-size="11.5" font-weight="800" fill="#111a3e">🔄 Job + polling</text><text x="364" y="573" font-size="9" fill="#5a6488" font-family="JetBrains Mono, monospace">getExecutionUpdates</text>
+            <rect x="480" y="540" width="200" height="40" rx="11" fill="#e4f3ea" stroke="#1e9257"/><text x="580" y="558" font-size="11.5" font-weight="800" fill="#111a3e">🍃 MongoDB</text><text x="580" y="573" font-size="9" fill="#5a6488" font-family="JetBrains Mono, monospace">runs · executions</text>
+          </g>
+        </svg>
+      </div>
+    </section>
+
+    <!-- 03 · THE WORKFLOW YOU BUILD -->
+    <section class="wrap" id="workflow">
+      <div class="shead"><span class="n">03</span><h3 class="title">The workflow you actually build</h3></div>
+      <p class="lede">This is a real 6-node workflow Mindie generated from one sentence — and it uses six different
+        node types. Each is a link in the orchestration chain; the colours mark what kind of work each does.</p>
+
+      <div class="figframe">
+        <div class="chain">
+          <div class="wf" style="--c:var(--green)"><div class="top"><span class="ic">👤</span><span class="bd">Human&nbsp;input</span></div><h5>Requirements</h5><p>Collect project &amp; scope from a person</p></div>
+          <div class="csep">→</div>
+          <div class="wf" style="--c:var(--amber)"><div class="top"><span class="ic">🚦</span><span class="bd">Gate</span></div><h5>Validation</h5><p>An LLM judges: <b>CONTINUE</b> or <b>STOP</b></p></div>
+          <div class="csep">→</div>
+          <div class="wf" style="--c:var(--purple)"><div class="top"><span class="ic">🎯</span><span class="bd">Orchestrator</span></div><h5>Strategy</h5><p>Planner delegates to 2 worker agents</p></div>
+          <div class="csep">→</div>
+          <div class="wf" style="--c:var(--blue)"><div class="top"><span class="ic">🔁</span><span class="bd">Loop</span></div><h5>Test cases</h5><p>Runs once per category (map/foreach)</p></div>
+          <div class="csep">→</div>
+          <div class="wf" style="--c:var(--orange)"><div class="top"><span class="ic">💬</span><span class="bd">Chat</span></div><h5>Review</h5><p>Pauses for a human to refine</p></div>
+          <div class="csep">→</div>
+          <div class="wf" style="--c:var(--navy)"><div class="top"><span class="ic">🤖</span><span class="bd">Agent</span></div><h5>Report</h5><p>Synthesises the master test plan</p></div>
+        </div>
+      </div>
+      <div class="note"><b>Read the chain:</b> the engine walks it left to right, one node at a time. The 🚦 Gate can
+        halt the whole run; the 🔁 Loop fans out over a list; the 💬 Chat node is where it <em>pauses and waits for
+        you</em> — which is exactly the wait-state below.</div>
+
+      <h4 class="subh">Two node types hide a real agentic loop</h4>
+      <p class="lede" style="margin-bottom:16px">Most nodes call the LLM once and move on. Two of the ~16 node types
+        run a genuine reasoning loop inside a single step — this is where the orchestration stops being a straight line.</p>
+      <div class="two">
+        <div class="tp" style="--t:var(--purple)">
+          <h4>🎯 Orchestrator-Worker</h4>
+          <p>A planner breaks the task into subtasks and delegates to a <b>fixed team of worker agents chosen
+            upfront</b>, then synthesises their results. Dynamic planning over a static pool.</p>
+        </div>
+        <div class="tp" style="--t:var(--blue)">
+          <h4>♻️ Evaluator-Optimizer</h4>
+          <p>An executor drafts, an evaluator scores it against criteria, and it <b>loops — draft → critique → revise
+            — until it passes or hits a max-iteration cap</b>. A real reflection loop.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 · IT PAUSES -->
+    <section class="wrap" id="state">
+      <div class="shead"><span class="n">04</span><h3 class="title">It pauses — and proves it</h3></div>
+      <p class="lede">A workflow run isn't a script that finishes in one shot. It's a job with saved state that can
+        stop, wait for a human, and resume. One field in the poll response gives it away.</p>
+
+      <div class="figframe tint">
+        <svg class="chart" viewBox="0 0 720 210" xmlns="http://www.w3.org/2000/svg" role="img"
+          aria-label="State machine: PENDING to RUNNING, RUNNING to WAITING and back on resume, RUNNING to DONE, RUNNING to ERROR.">
+          <defs>
+            <marker id="ar2" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#9aa3c4"/>
+            </marker>
+          </defs>
+          <g font-family="JetBrains Mono, monospace" font-weight="700" text-anchor="middle">
+            <rect x="30" y="82" width="120" height="46" rx="23" fill="#eef1f7" stroke="#c9d0df" stroke-width="2"/><text x="90" y="110" font-size="13" fill="#5a6488">PENDING</text>
+            <rect x="240" y="82" width="120" height="46" rx="23" fill="#e2ecfd" stroke="#2f6fed" stroke-width="2"/><text x="300" y="110" font-size="13" fill="#1f4fbf">RUNNING</text>
+            <rect x="450" y="82" width="120" height="46" rx="23" fill="#f7edda" stroke="#b0771a" stroke-width="2"/><text x="510" y="110" font-size="13" fill="#8a5c12">WAITING</text>
+            <rect x="612" y="20" width="86" height="42" rx="21" fill="#e4f3ea" stroke="#1e9257" stroke-width="2"/><text x="655" y="46" font-size="13" fill="#146c40">DONE</text>
+            <rect x="612" y="148" width="86" height="42" rx="21" fill="#f8e6e3" stroke="#c64b3e" stroke-width="2"/><text x="655" y="174" font-size="13" fill="#a2382c">ERROR</text>
+          </g>
+          <g fill="none" stroke="#9aa3c4" stroke-width="2">
+            <line x1="150" y1="105" x2="238" y2="105" marker-end="url(#ar2)"/>
+            <line x1="360" y1="105" x2="448" y2="105" marker-end="url(#ar2)"/>
+            <path d="M470,82 C470,50 340,50 320,80" marker-end="url(#ar2)"/>
+            <path d="M362,90 C440,60 560,40 610,42" marker-end="url(#ar2)"/>
+            <path d="M362,120 C440,150 560,166 610,168" marker-end="url(#ar2)"/>
+          </g>
+          <g font-family="JetBrains Mono, monospace" font-size="9.5" font-weight="700" fill="#5a6488" text-anchor="middle">
+            <text x="194" y="97">start</text>
+            <text x="404" y="97">hit HITL node</text>
+            <text x="392" y="49" fill="#b0771a">resume ⇄</text>
+            <text x="512" y="46" fill="#1e9257">finish</text>
+            <text x="512" y="182" fill="#c64b3e">fail</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="term" style="margin-top:16px">
+        <div class="tbar"><i class="r"></i><i class="y"></i><i class="g"></i><span>GET workflowRun.getExecutionUpdates → 200</span></div>
+<div class="tbody">result.data.json[0] = {
+  <span class="k">"id"</span>: <span class="s">"6a5dd8009999af94699576bc"</span>,
+  <span class="k">"status"</span>: <span class="s">"RUNNING"</span>,
+  <span class="k">"output"</span>: <span class="hot">null</span>,  <span class="k">"error"</span>: <span class="hot">null</span>,
+  <span class="k">"waitState"</span>: <span class="ok">"WAITING"</span>          <span class="c">// ← paused at the Chat node, waiting for a human</span>
+}
+<span class="c">// query also carries: reconcileWaitState=false, runId ≠ executionIds[]</span></div>
+      </div>
+      <div class="note"><b>Why it matters:</b> a persisted <code>waitState</code> is the only way a run can pause for
+        minutes or hours and pick up where it left off. Human-in-the-loop isn't bolted on — it's a first-class state.</div>
+    </section>
+
+    <!-- 05 · THE STACK -->
+    <section class="wrap" id="stack">
+      <div class="shead"><span class="n">05</span><h3 class="title">The stack, read off the wire</h3></div>
+      <p class="lede">None of this is documented. Each value is grounded in a captured request, a header, an ID format
+        or an SDK signature.</p>
+      <div class="grid">
+        <div class="obj"><div class="k">Frontend</div><div class="v">Next.js + Turbopack<small>initiator: turbopack-*.js</small></div></div>
+        <div class="obj"><div class="k">Hosting</div><div class="v">Vercel<small>remote 76.76.21.x</small></div></div>
+        <div class="obj"><div class="k">API layer</div><div class="v">tRPC + superjson<small>/api/trpc/… · meta.values:["Date"]</small></div></div>
+        <div class="obj"><div class="k">LLM orchestration</div><div class="v">Vercel AI SDK<small>message.parts:[{type,text}]</small></div></div>
+        <div class="obj"><div class="k">Models · 7 providers</div><div class="v">Auto → Gemini 3.0 Flash<small>docs default GPT-4o Mini · null → server picks</small></div></div>
+        <div class="obj"><div class="k">Database</div><div class="v">MongoDB<small>24-hex ObjectId on every id</small></div></div>
+        <div class="obj"><div class="k">Auth</div><div class="v">Clerk<small>clerk.browser.js · __clerk_api_version</small></div></div>
+        <div class="obj"><div class="k">Analytics</div><div class="v">Microsoft Clarity<small>clarity.js · /collect</small></div></div>
+      </div>
+    </section>
+
+    <!-- 06 · ONE REQUEST -->
+    <section class="wrap" id="request">
+      <div class="shead"><span class="n">06</span><h3 class="title">One request, decoded</h3></div>
+      <p class="lede">The most honest evidence is the raw payload. Here's what the browser sent to run the agent —
+        and what four fields quietly reveal.</p>
+      <div class="term">
+        <div class="tbar"><i class="r"></i><i class="y"></i><i class="g"></i><span>POST /api/workflows/agent-run/direct</span></div>
+<div class="tbody">{
+  <span class="k">"workspaceId"</span>: <span class="s">"6a58535a89746903be792597"</span>,   <span class="c">// 24-hex → MongoDB</span>
+  <span class="k">"agentId"</span>: <span class="s">"6a5daceaeb27733fbd3f246b"</span>,       <span class="c">// by-reference, not inlined</span>
+  <span class="k">"messages"</span>: [{
+    <span class="k">"role"</span>: <span class="s">"user"</span>,
+    <span class="k">"parts"</span>: [{ <span class="k">"type"</span>:<span class="s">"text"</span>, <span class="k">"text"</span>:<span class="s">"xin chào, bạn là ai"</span> }],  <span class="c">// Vercel AI SDK shape</span>
+    <span class="k">"metadata"</span>: {
+      <span class="k">"languageModelId"</span>: <span class="hot">null</span>,          <span class="c">// ← client does NOT choose the model</span>
+      <span class="k">"knowledgeSourceTreeNodeIds"</span>: [],
+      <span class="k">"noteIds"</span>: []                    <span class="c">// working-memory notes, by ID</span>
+    }
+  }],
+  <span class="k">"trigger"</span>: <span class="s">"regenerate-message"</span>
+}
+<span class="c">// UI header then renders:</span> <span class="ok">Gemini 3.0 Flash</span>  <span class="c">← server resolved the model</span></div>
+      </div>
+      <div class="decode">
+        <div class="drow"><div class="f">parts:[{type,text}]</div><div class="m"><b>Vercel AI SDK</b> is doing the LLM orchestration — the typed-part message shape is its signature.</div></div>
+        <div class="drow"><div class="f">languageModelId: null</div><div class="m"><b>Model routing is server-side.</b> The client sends nothing; "Auto" resolves to Gemini Flash on the backend.</div></div>
+        <div class="drow"><div class="f">agentId (no prompt)</div><div class="m"><b>Agents bind by reference.</b> The server hydrates config from the DB — a saved workflow instead inlines the full prompt.</div></div>
+        <div class="drow"><div class="f">24-hex ids</div><div class="m"><b>MongoDB.</b> Every identifier is an ObjectId; run/execution records live there too.</div></div>
+      </div>
+    </section>
+
+    <!-- 07 · MEMORY -->
+    <section class="wrap" id="memory">
+      <div class="shead"><span class="n">07</span><h3 class="title">Memory comes in three tiers</h3></div>
+      <p class="lede">"Does the agent remember?" turns out to be three separate questions with three separate
+        mechanisms — each visible in the config or the payload.</p>
+      <div class="mem">
+        <div class="mt" style="--c:var(--blue)"><div class="ic">🔗</div><h4>Run variables</h4><div class="scope">short-term · one run</div>
+          <p>Output of one node feeds the next by reference. Dies when the run ends.</p>
+          <div class="ev">@[node](…) &amp; {{loop_var}}</div></div>
+        <div class="mt" style="--c:var(--purple)"><div class="ic">📝</div><h4>Working notes</h4><div class="scope">mid-term · per agent</div>
+          <p>The agent can autonomously jot notes to itself and reuse them as scratch memory.</p>
+          <div class="ev">toggle + payload noteIds[]</div></div>
+        <div class="mt" style="--c:var(--green)"><div class="ic">📚</div><h4>Knowledge (RAG)</h4><div class="scope">long-term · retrieved</div>
+          <p>Uploaded docs are embedded and semantically searched — but only when relevant by default.</p>
+          <div class="ev">"Force always get context" = OFF</div></div>
+      </div>
+    </section>
+
+    <!-- 08 · EVIDENCE -->
+    <section class="wrap" id="evidence">
+      <div class="shead"><span class="n">08</span><h3 class="title">The receipts</h3></div>
+      <p class="lede">Nothing above is taken on faith — these are the raw captures each claim was read from. Click any
+        to open it full size.</p>
+      <div class="gallery">
+        <figure class="fig">
+          <a class="shot" href="evidence/payload-direct.png" target="_blank" rel="noopener"><img src="evidence/payload-direct.png" alt="Request payload of POST agent-run/direct showing agentId, parts array and languageModelId null" loading="lazy"></a>
+          <figcaption><div class="t">Agent-run request payload</div><div class="d">agentId · parts:[{type,text}] · languageModelId:null</div><span class="tag">backs H6 · H9 · H17</span></figcaption>
+        </figure>
+        <figure class="fig">
+          <a class="shot" href="evidence/waitstate.png" target="_blank" rel="noopener"><img src="evidence/waitstate.png" alt="getExecutionUpdates response preview showing status RUNNING and waitState WAITING" loading="lazy"></a>
+          <figcaption><div class="t">Execution record — paused</div><div class="d">status:"RUNNING" · waitState:"WAITING"</div><span class="tag">backs H3 · H16</span></figcaption>
+        </figure>
+        <figure class="fig">
+          <a class="shot" href="evidence/model-auto.png" target="_blank" rel="noopener"><img src="evidence/model-auto.png" alt="Language model settings showing Model set to Auto resolved to Gemini 3.0 Flash" loading="lazy"></a>
+          <figcaption><div class="t">Model = Auto → Gemini Flash</div><div class="d">Max tokens &amp; Temperature also "Auto"</div><span class="tag">backs H17</span></figcaption>
+        </figure>
+        <figure class="fig">
+          <a class="shot" href="evidence/integrations.png" target="_blank" rel="noopener"><img src="evidence/integrations.png" alt="Agent Integrations tab with three sub-tabs Tools, App Integrations and MCPs" loading="lazy"></a>
+          <figcaption><div class="t">Integrations: 3 tool channels</div><div class="d">Tools · App Integrations · MCPs · built-ins</div><span class="tag">backs H7 · H8</span></figcaption>
+        </figure>
+        <figure class="fig">
+          <a class="shot" href="evidence/chatnode-leak.png" target="_blank" rel="noopener"><img src="evidence/chatnode-leak.png" alt="Chat node message leaking the raw input object plus a network panel of polling requests" loading="lazy"></a>
+          <figcaption><div class="t">The resolver leaks an object</div><div class="d">{"text":"Mobile Banking Login"…} · + polling</div><span class="tag">backs H12 · H14 · H3</span></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- 09 · HYPOTHESES -->
+    <section class="wrap" id="hypotheses">
+      <div class="shead"><span class="n">09</span><h3 class="title">Hypotheses &amp; evidence</h3></div>
+      <p class="lede">Every inference, grouped by the question it answers, each tagged with the observation behind it
+        and how strongly the evidence backs it.</p>
+      <div class="legend">
+        <span><span class="sw" style="background:var(--green-soft);border:1px solid var(--green)"></span>High — direct evidence</span>
+        <span><span class="sw" style="background:var(--amber-soft);border:1px solid var(--amber)"></span>Medium — plausible</span>
+        <span><span class="sw" style="background:var(--purple-soft);border:1px solid var(--purple)"></span>Corrected — revised on new evidence</span>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th style="width:52px">#</th><th>Hypothesis</th><th>Evidence</th><th style="width:90px">Confidence</th></tr></thead>
+          <tbody>
+            <tr class="grp"><td colspan="4">Orchestration loop</td></tr>
+            <tr><td><span class="hid">H1</span></td><td class="claim">Workflows are a declarative DAG walked sequentially by Edges.</td><td class="ev">JSON spec has Nodes[] + Edges[]; runtime splits 1 run into ordered executions.</td><td><span class="conf high">High</span></td></tr>
+            <tr><td><span class="hid">H2</span></td><td class="claim">Agent &amp; workflow share one engine — an agent is a workflow of one node.</td><td class="ev">Single-agent chat POSTs /api/workflows/agent-run/direct.</td><td><span class="conf high">High</span></td></tr>
+            <tr><td><span class="hid">H3</span></td><td class="claim">The engine is a durable, suspendable state machine with per-node wait-states.</td><td class="ev">status:"RUNNING", waitState:"WAITING"; reconcileWaitState; runId ≠ executionIds[].</td><td><span class="conf high">High</span></td></tr>
+            <tr><td><span class="hid">H4</span></td><td class="claim">Orchestrator-Worker = a planner delegating to a fixed, pre-defined worker pool.</td><td class="ev">OrchestratorAgent + static WorkerAgents[] array in the spec.</td><td><span class="conf high">High</span></td></tr>
+            <tr><td><span class="hid">H5</span></td><td class="claim">Loop is a map/foreach over a prior node's output; parsing prose into items is a fragility point.</td><td class="ev">LoopNode.listSource → prior node output, listItemName, per-item agent.</td><td><span class="conf med">Medium</span></td></tr>
+            <tr><td><span class="hid">H19</span></td><td class="claim">Real agentic loops live inside two specialised nodes, not the top-level DAG: Orchestrator-Worker (plan→delegate→synthesise) and Evaluator-Optimizer (draft→critique→revise).</td><td class="ev">docs: Evaluator-Optimizer "repeats until all criteria satisfied or a max iteration limit"; workers "chosen upfront".</td><td><span class="conf high">High</span></td></tr>
+
+            <tr class="grp"><td colspan="4">Tool interface</td></tr>
+            <tr><td><span class="hid">H6</span></td><td class="claim">LLM calls run through the Vercel AI SDK with native function-calling.</td><td class="ev">Payload uses AI-SDK messages:[{role,parts:[{type,text}]}] shape; SSE streaming.</td><td><span class="conf high">High</span></td></tr>
+            <tr><td><span class="hid">H7</span></td><td class="claim">Tools are wired via Composio, MCP and built-ins — not hand-written per integration.</td><td class="ev">Integrations tab has three sub-tabs: Tools · App Integrations · MCPs.</td><td><span class="conf high">High</span></td></tr>
+            <tr><td><span class="hid">H8</span></td><td class="claim">Built-in agentic tools let one agent plan &amp; track multi-step work.</td><td class="ev">Built-in "Task Planning" ("create and track task plans"), Canvas tools.</td><td><span class="conf high">High</span></td></tr>
+
+            <tr class="grp"><td colspan="4">Context &amp; memory</td></tr>
+            <tr><td><span class="hid">H9</span></td><td class="claim">Two binding modes: agents by-reference (agentId), workflows inline-snapshot at save.</td><td class="ev">Chat payload carries agentId only; workflow JSON embeds full system prompts.</td><td><span class="conf high">High</span></td></tr>
+            <tr><td><span class="hid">H10</span></td><td class="claim">Long-term memory is RAG; retrieval is relevance-gated by default.</td><td class="ev">Knowledge Sources embedding step; "Force always get context" toggle defaults OFF.</td><td><span class="conf high">High</span></td></tr>
+            <tr><td><span class="hid">H11</span></td><td class="claim">A third memory tier: agent-authored "notes" as working memory.</td><td class="ev">Toggle "autonomously take notes as working memory"; payload field noteIds[].</td><td><span class="conf high">High</span></td></tr>
+            <tr><td><span class="hid">H12</span></td><td class="claim">Human-input values are multimodal objects; the reference resolver can leak the raw object.</td><td class="ev">Chat node rendered {"text":"Mobile Banking Login","documents":[]…} where only text was expected.</td><td><span class="conf high">High</span></td></tr>
+            <tr><td><span class="hid">H20</span></td><td class="claim">Structure is lost between nodes — complex outputs are flattened to strings, which is exactly what makes the resolver leak raw objects (H12).</td><td class="ev">docs: Code Node — complex Orchestrator/Loop/Gate outputs "simplified into a string representation"; inputs "treated as strings".</td><td><span class="conf high">High</span></td></tr>
+
+            <tr class="grp"><td colspan="4">Guardrails</td></tr>
+            <tr><td><span class="hid">H13</span></td><td class="claim">Guardrails are agentic: a Gate is an LLM-as-judge emitting CONTINUE/STOP — non-deterministic.</td><td class="ev">GateNode contains an Agent whose system prompt says "Decide CONTINUE or STOP".</td><td><span class="conf high">High</span></td></tr>
+            <tr><td><span class="hid">H14</span></td><td class="claim">No build-time validation — Mindie can emit broken references that pass review unchecked.</td><td class="ev">Generated ref f-stack vs actual field f-tech-stack; "ready to save" regardless.</td><td><span class="conf high">High</span></td></tr>
+            <tr><td><span class="hid">H15</span></td><td class="claim">No built-in moderation layer — control is user-configured plus AI-credit cost metering.</td><td class="ev">"Brand voice" output shaping; "You've run out of AI credits" hard stop.</td><td><span class="conf med">Medium</span></td></tr>
+
+            <tr class="grp"><td colspan="4">Human-in-the-loop</td></tr>
+            <tr><td><span class="hid">H16</span></td><td class="claim">Three HITL mechanisms: Human Input node, Chat node, Supervised mode — at both build &amp; run time.</td><td class="ev">Node types in spec; Supervised run tab; workflow paused at Chat node with waitState:"WAITING".</td><td><span class="conf high">High</span></td></tr>
+
+            <tr class="grp"><td colspan="4">Model backend</td></tr>
+            <tr><td><span class="hid">H17</span></td><td class="claim">A server-side "Auto" router over a multi-provider proxy — the client never names the model.</td><td class="ev">payload languageModelId:null yet UI resolves to Gemini 3.0 Flash; calls hit *.mindpal.space. docs list ~7 providers/20 models, default GPT-4o Mini — yet Auto picks Gemini 3.0 Flash (not even in the manual list), so Auto is a real router.</td><td><span class="conf high">High</span></td></tr>
+            <tr><td><span class="hid">H18</span></td><td class="claim"><s>Runtime model is Claude.</s> Corrected: XML-tag prompts are a house style, not proof of the backend.</td><td class="ev">Mindie emits &lt;background_information&gt;… everywhere, yet the resolved model is Gemini Flash — format ≠ backend.</td><td><span class="conf corr">Corrected</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 10 · IMPLICATIONS -->
+    <section class="wrap" id="implications">
+      <div class="shead"><span class="n">10</span><h3 class="title">What the evidence implies</h3></div>
+      <p class="lede">Reading the harness as a set of deliberate choices — the same outside-in method as Day 2, one
+        level deeper.</p>
+      <div class="dd">
+        <div class="ddrow"><div class="num">1</div><div>
+          <h5>The workflow engine is durable, not a one-shot script</h5>
+          <p>Runs are jobs with per-node records the client polls — not a request that returns when done.</p>
+          <p class="why"><b>Why it matters:</b> a suspend/resume state machine is the only architecture that lets a
+            run pause at a human step for minutes or hours. Human-in-the-loop is a first-class state.</p>
+        </div></div>
+        <div class="ddrow"><div class="num">2</div><div>
+          <h5>Model choice is a backend decision, exposed as "Auto"</h5>
+          <p>The client sends <code>languageModelId:null</code>; the server resolves and only then reports the model.</p>
+          <p class="why"><b>Why it matters:</b> MindPal can swap models, tier access and control cost centrally
+            without touching a saved agent — the tradeoff is the user cedes model control by default.</p>
+        </div></div>
+        <div class="ddrow"><div class="num">3</div><div>
+          <h5>Guardrails are LLM calls, not rules</h5>
+          <p>A Gate node is literally an agent that answers CONTINUE or STOP — and no build-time validator catches
+            Mindie's broken references.</p>
+          <p class="why"><b>Why it matters:</b> flexible and fast to build, but non-deterministic. Safety and
+            correctness are pushed onto the user's prompts and review.</p>
+        </div></div>
+        <div class="ddrow"><div class="num">4</div><div>
+          <h5>One engine, two transports, on purpose</h5>
+          <p>Interactive chat streams over SSE; long workflows run as polled background jobs — both through the same
+            <code>/api/workflows</code> surface.</p>
+          <p class="why"><b>Why it matters:</b> unifying agents and workflows behind one execution model keeps the
+            product coherent while matching each transport to how long the work takes.</p>
+        </div></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>Day 3 of a 30-day build challenge — the runtime harness behind MindPal, inferred from the outside ·
+        <a href="../index.html">← back to the portfolio</a> · <a href="../day2/">Day 2: two teardowns →</a></p>
+    </div>
+  </footer>
+
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/assets/comments.js" data-page="day3"></script>
+</body>
+</html>

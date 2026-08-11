@@ -1,0 +1,16 @@
+{
+  "chain": 5,
+  "generation": 3,
+  "model": "gpt-4o-mini-2024-07-18",
+  "temperature": 1.0,
+  "prompt": "Summarize the following meeting notes in 2-3 sentences for the project record.",
+  "input_text": "The project kickoff meeting for Northwind Logistics' RFP response was held on March 14, where attendees outlined a three-phase rollout plan beginning with a discovery phase in April and a pilot at the Hai Phong depot in May. Key discussions focused on integrating an on-premise warehouse management system with a budget of $50,000 for the initial phase, subject to finance committee approval following the pilot review in June. Action items included adjusting the pilot schedule to avoid peak staffing periods and documenting the integration approach.",
+  "output_text": "The project kickoff meeting for the Northwind Logistics RFP response took place on March 14, establishing a three-phase rollout plan that starts with a discovery phase in April and a pilot at the Hai Phong depot in May. Discussions emphasized the integration of an on-premise warehouse management system with an initial phase budget of $50,000, pending finance committee approval after the pilot review in June. Action items included rescheduling the pilot to avoid peak staffing periods and documenting the integration strategy.",
+  "classification": "PRESERVED",
+  "usage": {
+    "input_tokens": 126,
+    "output_tokens": 97,
+    "total_tokens": 223
+  },
+  "recorded_at": "2026-08-10T07:53:42.527147+00:00"
+}

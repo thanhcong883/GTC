@@ -1,0 +1,361 @@
+api_version: pal.ai/v1
+kind: PublishedPlugin
+
+# A PublishedPlugin is not a tool with extra fields. It is the unit PAL installs,
+# versions, authorizes, bills, observes and revokes. Everything a workspace admin
+# must decide before a third party runs inside their workflows is declared here.
+
+metadata:
+  id: acme.crm
+  version: 2.3.1
+  title: Acme CRM
+  summary: Read contacts, tag them, and sync them to an enrichment provider.
+  publisher:
+    id: acme
+    display_name: Acme Software B.V.
+    verified_domain: acme.example
+    signing_key_id: key_2026_01
+  support_url: https://acme.example/support/pal
+  categories: [crm, sales]
+
+spec:
+  protocol:
+    type: mcp
+    version: "2026-07-28"
+    # Tasks is an official extension and support is negotiated, never assumed.
+    # PAL declares it; whether this server returns a task is the server's call
+    # on any given request.
+    extensions:
+      - io.modelcontextprotocol/tasks
+
+  runtime:
+    mode: remote                  # remote | hosted
+    endpoint: https://plugins.acme.example/mcp
+    # For mode: remote, PAL does not sandbox this process. It controls what it
+    # sends, where it sends it, and what it records. Nothing after that.
+
+  auth:
+    type: user_oauth              # none | user_oauth | workspace_service_account | enterprise_managed
+    authorization_server: https://auth.acme.example
+    scopes:
+      - crm.contacts.read
+      - crm.contacts.write
+    # Scopes are requested per tool below. A tool may never use a scope it did
+    # not declare, and the broker issues nothing broader than the call needs.
+
+  # PAL supplies these on every call. A model should never be asked to invent an
+  # idempotency key, and a plugin should never be trusted to mint the session id
+  # that temporal policies group by.
+  runtime_envelope:
+    system_supplied:
+      - idempotency_key
+      - workflow_run_id
+      - policy_revision
+
+  ui:
+    resources:
+      - uri: ui://acme.crm/contact-card
+        tools: [acme.crm.get_contact]
+    # Declared by the plugin, therefore reviewed by PAL and intersected with
+    # workspace policy. This is a data egress surface in its own right: an
+    # iframe that may load from these origins can also talk to them.
+    requested_csp_origins:
+      script_src:
+        - static.acme.example
+      connect_src:
+        - api.acme.example
+      img_src:
+        - media.acme.example
+
+  egress:
+    # Both surfaces, in one list. The UI origins below are not decoration: an
+    # iframe allowed to load from a host can also talk to it, so leaving them
+    # out would let data leave through the UI after the gateway said no.
+    destinations:
+      - api.acme.example
+      - enrich.acme-partner.example
+      - static.acme.example         # ui script_src
+      - media.acme.example          # ui img_src
+    data_classes:
+      - customer_pii
+      - contact_metadata
+    purpose: CRM synchronisation and contact enrichment
+    retention_days: 30
+    subprocessors:
+      - name: Acme Partner Enrichment
+        host: enrich.acme-partner.example
+        data_classes: [customer_pii]
+
+  tools:
+
+    # ---------------------------------------------------------------- read ---
+    - id: acme.crm.search_contacts
+      version: 1
+      title: Search contacts
+      description: Find contacts by name, company or tag. Returns a page of matches.
+      input_schema:
+        type: object
+        additionalProperties: false
+        required: [query]
+        properties:
+          query: { type: string, maxLength: 200 }
+          limit: { type: integer, minimum: 1, maximum: 100, default: 25 }
+      output_schema:
+        type: object
+        additionalProperties: false
+        required: [contacts, total]
+        properties:
+          contacts:
+            type: array
+            items:
+              type: object
+              required: [id, name]
+              properties:
+                id: { type: string }
+                name: { type: string }
+                email: { type: string }
+                company: { type: string }
+          total: { type: integer }
+      effect:
+        classes: [read]               # reversibility does not apply to a read
+        destinations: [api.acme.example]
+        data_classes: [customer_pii]
+      auth:
+        scopes: [crm.contacts.read]
+      execution:
+        timeout_ms: 10000
+        retry_policy: { max_attempts: 3, backoff: exponential }
+        idempotency: natural          # a read repeats safely
+        task_support: false
+      availability:
+        on_unavailable: cached_read
+        max_staleness: PT6H           # and the staleness is shown to the user
+      annotations:
+        sensitivity: confidential
+        # Not "trusted". Schema validation proves the shape is right, not that
+        # the contents are true, and a remote server can misdeclare anything.
+        # Only a workspace policy or a PAL-controlled validator raises this.
+        integrity: validated
+        influence: external_system
+
+    # ---------------------------------------------------------------- read ---
+    - id: acme.crm.get_contact
+      version: 1
+      title: Get one contact
+      description: Fetch a single contact by id, for the contact-card UI resource.
+      input_schema:
+        type: object
+        additionalProperties: false
+        required: [contact_id]
+        properties:
+          contact_id: { type: string }
+      output_schema:
+        type: object
+        additionalProperties: false
+        required: [id, name]
+        properties:
+          id: { type: string }
+          name: { type: string }
+          email: { type: string }
+          phone: { type: string }
+          tags: { type: array, items: { type: string } }
+      effect:
+        classes: [read]
+        destinations: [api.acme.example]
+        data_classes: [customer_pii]
+      auth:
+        scopes: [crm.contacts.read]
+      execution:
+        timeout_ms: 8000
+        retry_policy: { max_attempts: 3, backoff: exponential }
+        idempotency: natural
+        task_support: false
+      availability:
+        on_unavailable: cached_read
+        max_staleness: PT6H
+      annotations:
+        sensitivity: confidential
+        integrity: validated
+        influence: external_system
+
+    # -------------------------------------------------- write, reversible ---
+    - id: acme.crm.add_tag
+      version: 1
+      title: Add a tag to a contact
+      description: Attach one tag to one contact. Removing the tag undoes it.
+      input_schema:
+        type: object
+        additionalProperties: false
+        # idempotency_key is not here: PAL supplies it from runtime_envelope.
+        required: [contact_id, tag, destination]
+        properties:
+          contact_id: { type: string }
+          tag: { type: string, maxLength: 40 }
+          destination:
+            type: string
+            description: >
+              Which CRM host the write lands on. A real argument, because a
+              workspace may run more than one instance — and because a grant
+              scoped to one host must not silently authorise another.
+      output_schema:
+        type: object
+        additionalProperties: false
+        required: [contact_id, tags, updated_at]
+        properties:
+          contact_id: { type: string }
+          tags: { type: array, items: { type: string } }
+          updated_at: { type: string, format: date-time }
+      effect:
+        classes: [write]
+        # "reversible: true" on its own is a promise with no mechanism behind
+        # it. Undoing has to name the operation, the window, and how strong the
+        # guarantee is — otherwise a standing grant is resting on a word.
+        reversibility:
+          mode: compensatable         # not a true rollback; an inverse operation
+          undo_tool: acme.crm.remove_tag
+          window: PT24H
+          guarantee: best_effort
+        destinations: [api.acme.example]
+        data_classes: [contact_metadata]
+      auth:
+        scopes: [crm.contacts.write]
+      execution:
+        timeout_ms: 10000
+        retry_policy: { max_attempts: 3, backoff: exponential }
+        idempotency: system_supplied
+        task_support: false
+      availability:
+        on_unavailable: fail          # a write never falls back silently
+      annotations:
+        sensitivity: internal
+        integrity: validated
+        influence: user_input
+
+    # ------------------------------------------------- write, the undo op ---
+    # Named by add_tag's reversibility block. An undo_tool pointing at something
+    # that does not exist is the same defect as a UI resource referencing a
+    # missing tool: a promise the registry can check and should reject.
+    - id: acme.crm.remove_tag
+      version: 1
+      title: Remove a tag from a contact
+      description: Detach one tag from one contact. The inverse of add_tag.
+      input_schema:
+        type: object
+        additionalProperties: false
+        required: [contact_id, tag, destination]
+        properties:
+          contact_id: { type: string }
+          tag: { type: string, maxLength: 40 }
+          destination: { type: string }
+      output_schema:
+        type: object
+        additionalProperties: false
+        required: [contact_id, tags, updated_at]
+        properties:
+          contact_id: { type: string }
+          tags: { type: array, items: { type: string } }
+          updated_at: { type: string, format: date-time }
+      effect:
+        classes: [write]
+        reversibility:
+          mode: compensatable
+          undo_tool: acme.crm.add_tag
+          window: PT24H
+          guarantee: best_effort
+        destinations: [api.acme.example]
+        data_classes: [contact_metadata]
+      auth:
+        scopes: [crm.contacts.write]
+      execution:
+        timeout_ms: 10000
+        retry_policy: { max_attempts: 3, backoff: exponential }
+        idempotency: system_supplied
+        task_support: false
+      availability:
+        on_unavailable: fail
+      annotations:
+        sensitivity: internal
+        integrity: validated
+        influence: user_input
+
+    # ------------------------------------------ write, bulk, irreversible ---
+    - id: acme.crm.bulk_sync
+      version: 3
+      title: Sync contacts to enrichment provider
+      description: >
+        Send a selected set of contacts to the enrichment provider and overwrite
+        the returned fields in place. The overwrite cannot be undone from PAL.
+      input_schema:
+        type: object
+        additionalProperties: false
+        # idempotency_key comes from runtime_envelope, not from the model.
+        required: [segment_id, fields, destination]
+        properties:
+          segment_id: { type: string }
+          fields:
+            type: array
+            minItems: 1
+            items: { enum: [email, phone, consent_status, company, title] }
+          destination:
+            type: string
+            description: Which enrichment endpoint receives the records.
+          dry_run: { type: boolean, default: false }
+      output_schema:
+        type: object
+        additionalProperties: false
+        required: [record_count, changed_fields, completed_at]
+        properties:
+          record_count: { type: integer }
+          changed_fields: { type: array, items: { type: string } }
+          completed_at: { type: string, format: date-time }
+      effect:
+        # Two effects in one call, and collapsing them to "write" hides the one
+        # a privacy reviewer cares about: PII crosses an organisational boundary
+        # before anything is written back.
+        classes: [transfer, write]
+        reversibility:
+          mode: irreversible          # forces prepare/commit and a human
+        destinations: [enrich.acme-partner.example]
+        data_classes: [customer_pii]
+        externally_visible: true
+        # record_count is NOT an input. PAL resolves the segment and composes it
+        # into the EffectManifest, so the number a person approves is one PAL
+        # measured — not one the plugin asserted.
+        scale_source: pal_resolved_segment
+      auth:
+        scopes: [crm.contacts.read, crm.contacts.write]
+      execution:
+        timeout_ms: 60000
+        retry_policy: { max_attempts: 1 }   # never auto-retry an irreversible write
+        idempotency: system_supplied
+        task_support: true            # this one usually returns an MCP Task
+        # An MCP server sets ttlMs per task, so publish time cannot see the
+        # actual value. The publisher instead commits to a floor, which is what
+        # the approval SLA is checked against at publish. PAL re-checks the real
+        # ttlMs at runtime and refuses to start a human approval it cannot
+        # finish inside the task's lifetime.
+        guaranteed_min_task_ttl: PT6H
+      availability:
+        on_unavailable: fail
+        approval_deadline: PT4H       # must be <= the task's own ttlMs
+      approval:
+        policy: always
+        surface: host_rendered        # PAL renders it; the plugin never does
+      annotations:
+        sensitivity: restricted
+        integrity: validated
+        influence: user_input
+
+  lifecycle:
+    deprecation_policy: 90_days_notice
+    migration_guide_url: https://acme.example/pal/migrations
+    on_unavailable: fail              # plugin-wide default; tools may narrow it
+    contact_on_incident: security@acme.example
+
+# The digest covers metadata and spec. It does not cover, and cannot cover, what
+# the remote server actually does when called. A last-known-good manifest is not
+# last-known-good remote behaviour.
+signature:
+  algorithm: ed25519
+  signing_key_id: key_2026_01
+  manifest_digest: sha256:3f1c9a0e77b4d2568ac41e0b9d3f7a21c8e5b60d4f9a1c73e28b5d0619f4ac82

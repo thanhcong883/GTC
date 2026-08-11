@@ -1,0 +1,1 @@
+run_id,task_id,sut,arm,repeat,timestamp,resolved_model,credits_used,latency_s,t0_pass,t0_failed_checks,groundedness,quality_1_5,safety_flag,path_label,notes

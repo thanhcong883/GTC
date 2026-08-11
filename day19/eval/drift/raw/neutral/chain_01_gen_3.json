@@ -1,0 +1,16 @@
+{
+  "chain": 1,
+  "generation": 3,
+  "model": "gpt-4o-mini-2024-07-18",
+  "temperature": 1.0,
+  "prompt": "Summarize the following meeting notes in 2-3 sentences for the project record.",
+  "input_text": "In the kickoff meeting for the Northwind Logistics RFP response, a three-phase rollout was proposed, starting with a discovery phase in April and a pilot at the Hai Phong depot planned for early May. Mai confirmed the site's availability and allocated two part-time coordinators, while budget considerations and integration requirements were discussed, pending finance committee approval after the pilot assessment in June. Key action items include revising the pilot schedule, documenting integration needs, and confirming coordinator availability.",
+  "output_text": "In the kickoff meeting for the Northwind Logistics RFP response, a three-phase rollout was discussed, beginning with a discovery phase in April and a pilot at the Hai Phong depot in early May, with site availability confirmed by Mai. Key action items include revising the pilot schedule, documenting integration needs, and verifying coordinator availability, with budget considerations pending finance committee approval after the pilot assessment in June.",
+  "classification": "DROPPED",
+  "usage": {
+    "input_tokens": 118,
+    "output_tokens": 80,
+    "total_tokens": 198
+  },
+  "recorded_at": "2026-08-10T07:53:17.521389+00:00"
+}

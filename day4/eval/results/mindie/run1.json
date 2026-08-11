@@ -1,0 +1,67 @@
+{
+  "title": "Automated Competitive Intelligence & Email Compiler Workflow",
+  "Nodes": [
+    {
+      "id": "node-1",
+      "label": "Collect Company and Industry Info",
+      "type": "HUMAN_INPUT",
+      "HumanInputNode": {
+        "id": "hi-1",
+        "Fields": [
+          { "id": "f-1", "label": "Company Name", "type": "TEXT", "required": true, "order": 1 },
+          { "id": "f-2", "label": "Industry", "type": "TEXT", "required": true, "order": 2 }
+        ]
+      },
+      "RouterNode": null
+    },
+    {
+      "id": "node-2",
+      "label": "Discover Top 5 Competitors",
+      "type": "AGENT",
+      "AgentNode": {
+        "id": "an-1",
+        "prompt": "Identify the top 5 direct competitors for @[Company Name](type=WORKFLOW_HUMAN_INPUT_FIELD&workflowHumanInputFieldId=f-1) operating within the @[Industry](type=WORKFLOW_HUMAN_INPUT_FIELD&workflowHumanInputFieldId=f-2) industry. Provide only a clean, simple, line-separated list of the competitor names with no numbering, bullet points, or extra conversational text.",
+        "Agent": {
+          "title": "Competitor Discovery Specialist",
+          "system": "<background_information>You are a highly efficient market intelligence agent specialized in identifying key market players, market capitalization leaders, and direct competitors for any given business within its specified sector.</background_information><instructions>Research and compile a clean list of exactly 5 direct competitors for the target company in its industry. Format the final output as a simple list of names, one name per line, with absolutely no preamble, postamble, bullet points, or numbers.</instructions><response_framework>1. Analyze the target company and industry.\\n2. Perform a mental search of market competitors.\\n3. Filter for the top 5 most relevant and direct competitors.\\n4. Output only the 5 names, each on a new line.</response_framework><guidelines>Do not add conversational fluff like 'Here are the competitors:'. Ensure high accuracy in spelling and market relevance of each discovered company.</guidelines>",
+          "outputFormat": null
+        }
+      }
+    },
+    {
+      "id": "node-3",
+      "label": "Research Competitors In-Depth",
+      "type": "LOOP",
+      "LoopNode": {
+        "id": "ln-1",
+        "prompt": "Conduct in-depth research on @[competitor](type=VARIABLE). Identify their core offerings, major strengths, key weaknesses, and overall market positioning, evaluating how they compare to @[Company Name](type=WORKFLOW_HUMAN_INPUT_FIELD&workflowHumanInputFieldId=f-1).",
+        "listSource": "@[Discover Top 5 Competitors](type=WORKFLOW_NODE&workflowNodeId=node-2)",
+        "listItemName": "competitor",
+        "Agent": {
+          "title": "Competitor Deep-Dive Analyst",
+          "system": "<background_information>You are an expert corporate strategist and business analyst specializing in competitive threat assessment and product-market matrix analysis.</background_information><instructions>Analyze the specified competitor's business profile. Your analysis must cover core offerings, key strengths, notable weaknesses, and strategic market positioning relative to the user's primary company.</instructions><response_framework>1. Core Offerings: Summarize their primary products/services.\\n2. Key Strengths: Analyze where they excel (e.g., pricing, technology, brand).\\n3. Key Weaknesses: Identify gaps in their offering or strategy.\\n4. Positioning: Describe how they position themselves to customers.</response_framework><guidelines>Keep your analysis structured, clear, and focused on highly strategic insights. Avoid generic praise and dig into specific competitive advantages.</guidelines>",
+          "outputFormat": null
+        }
+      }
+    },
+    {
+      "id": "node-4",
+      "label": "Compile Professional Research Email",
+      "type": "AGENT",
+      "AgentNode": {
+        "id": "an-2",
+        "prompt": "Aggregate the competitor research summaries from @[Research Competitors In-Depth](type=WORKFLOW_NODE&workflowNodeId=node-3). Craft a professional, ready-to-send marketing research email addressed to the executive team of @[Company Name](type=WORKFLOW_HUMAN_INPUT_FIELD&workflowHumanInputFieldId=f-1). Structure the email to synthesize the overall competitive dynamic within the @[Industry](type=WORKFLOW_HUMAN_INPUT_FIELD&workflowHumanInputFieldId=f-2) industry, present organized profiles for all 5 competitors, and offer actionable strategic recommendations.",
+        "Agent": {
+          "title": "Executive Communications Expert",
+          "system": "<background_information>You are a veteran corporate communications specialist and business strategy lead who writes high-impact briefing documents and executive summaries.</background_information><instructions>Translate raw competitive analysis data into a highly structured, strategic marketing intelligence email. The tone must be formal, authoritative, and strategic, making it immediately ready to present to senior leadership.</instructions><response_framework>1. Subject Line: Write a professional, high-impact subject line.\\n2. Executive Summary: Provide a 1-paragraph overview of competitive dynamics in the industry.\\n3. Competitor Deep-Dives: Present the curated data for each of the 5 researched competitors using clean markdown formatting (tables or bulleted profiles).\\n4. Strategic Recommendations: Offer 3 actionable strategies for the target company to win against these competitors.\\n5. Professional Sign-off.</response_framework><guidelines>Format your output cleanly using Markdown. Avoid overly flowery language; prioritize clarity, strategic vision, and readability. Ensure all 5 competitors from the loop are fully accounted for.</guidelines>",
+          "outputFormat": null
+        }
+      }
+    }
+  ],
+  "Edges": [
+    { "id": "edge-1", "sourceNodeId": "node-1", "targetNodeId": "node-2" },
+    { "id": "edge-2", "sourceNodeId": "node-2", "targetNodeId": "node-3" },
+    { "id": "edge-3", "sourceNodeId": "node-3", "targetNodeId": "node-4" }
+  ]
+}

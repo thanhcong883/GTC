@@ -1,0 +1,17 @@
+{
+  "chain": 14,
+  "generation": 2,
+  "condition": "decisions",
+  "model": "gpt-4o-mini-2024-07-18",
+  "temperature": 1.0,
+  "prompt": "Summarize what was decided in the following meeting notes, in 2-3 sentences for the project record.",
+  "input_text": "During the project kickoff meeting for Northwind Logistics' RFP response, it was decided to proceed with a three-phase rollout, starting with a discovery phase in April, followed by an earlier pilot at the Hai Phong depot in the first two weeks of May, to avoid conflicts with a seasonal peak. Mai Tran confirmed the allocation of two part-time coordinators for the pilot, while Tom Rasmussen addressed the requirement for an on-premise integration approach. Action items included revisions to the pilot schedule, documentation of the connector strategy, and planning for a finance committee review after the pilot results in June.",
+  "output_text": "During the kickoff meeting for Northwind Logistics' RFP response, it was agreed to implement a three-phase rollout, initiating with a discovery phase in April, followed by a pilot at the Hai Phong depot in early May. Mai Tran confirmed the allocation of two part-time coordinators for the pilot, while Tom Rasmussen emphasized the need for an on-premise integration approach. Key action items included revising the pilot schedule, documenting the connector strategy, and planning a finance committee review following the pilot results in June.",
+  "classification": "DROPPED",
+  "usage": {
+    "input_tokens": 148,
+    "output_tokens": 102,
+    "total_tokens": 250
+  },
+  "recorded_at": "2026-08-10T08:03:49.935931+00:00"
+}

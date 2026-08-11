@@ -1,0 +1,208 @@
+"""Render a recorded trace as a self-contained, interactive HTML page.
+
+No CDN, no external assets, no network at view time: the trace is embedded as
+JSON and a small amount of inline JS steps through it. Open the file and you can
+walk the run one event at a time — watching the model reason, call tools, get
+results, write to memory, and (the point of this build) grow its own tool
+surface mid-task.
+"""
+
+from __future__ import annotations
+
+import html
+import json
+from typing import Any
+
+_CSS = """
+/* An instrument-panel view of one agent run. Cool chosen neutrals; indigo is
+   the agent/interaction voice, amber is reserved for the one moment that matters
+   (the tool surface growing), green/red are semantic result states. Monospace
+   carries the log/data voice, system sans carries prose. Three-state theming:
+   bare :root = light; prefers-color-scheme:dark (guarded) = system dark;
+   [data-theme=dark] = explicit toggle. */
+*{box-sizing:border-box}
+:root{
+  --bg:#f4f5f7; --panel:#ffffff; --ink:#161a22; --muted:#5b6472; --line:#e2e5ea;
+  --code:#eef0f4; --accent:#3b5bdb; --accent-soft:rgba(59,91,219,.14);
+  --spark:#c77800; --spark-soft:rgba(199,120,0,.13); --ok:#1f7a4d; --err:#c02a2a;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --bg:#0e1116; --panel:#161b22; --ink:#e6e9ef; --muted:#8b95a5; --line:#252b34;
+  --code:#1b212a; --accent:#7d93f5; --accent-soft:rgba(125,147,245,.16);
+  --spark:#e0a53a; --spark-soft:rgba(224,165,58,.15); --ok:#4cba82; --err:#e26d63;
+}}
+:root[data-theme=dark]{
+  --bg:#0e1116; --panel:#161b22; --ink:#e6e9ef; --muted:#8b95a5; --line:#252b34;
+  --code:#1b212a; --accent:#7d93f5; --accent-soft:rgba(125,147,245,.16);
+  --spark:#e0a53a; --spark-soft:rgba(224,165,58,.15); --ok:#4cba82; --err:#e26d63;
+}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 var(--sans);
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:40px 22px 72px}
+.eyebrow{font:600 11px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 10px}
+h1{font-size:29px;line-height:1.15;margin:0 0 6px;letter-spacing:-.02em;text-wrap:balance}
+.sub{color:var(--muted);margin:0 0 26px;font-size:14.5px;max-width:62ch}
+.sub b{color:var(--ink);font-weight:600}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:22px}
+button{font:600 13px/1 var(--sans);padding:9px 15px;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink);border-radius:8px;cursor:pointer;transition:.14s}
+button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button:disabled{opacity:.38;cursor:default}
+.count{color:var(--muted);font:12px/1 var(--mono);letter-spacing:.04em;margin-left:6px;
+  font-variant-numeric:tabular-nums}
+.cols{display:grid;grid-template-columns:1fr 288px;gap:22px}
+@media (max-width:840px){.cols{grid-template-columns:1fr}}
+.feed{display:flex;flex-direction:column;gap:0;min-width:0;position:relative}
+.feed::before{content:"";position:absolute;left:7px;top:14px;bottom:14px;width:2px;
+  background:var(--line)}
+.ev{position:relative;margin-left:30px;margin-bottom:11px;border:1px solid var(--line);
+  background:var(--panel);border-radius:11px;padding:13px 15px;opacity:.34;
+  transition:opacity .16s,border-color .16s,box-shadow .16s}
+.ev::before{content:"";position:absolute;left:-30px;top:16px;width:9px;height:9px;
+  border-radius:50%;background:var(--line);box-shadow:0 0 0 4px var(--bg);transition:.16s}
+.ev.on{opacity:1}
+.ev.on::before{background:var(--accent)}
+.ev.cur{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.ev.cur::before{box-shadow:0 0 0 4px var(--bg),0 0 0 6px var(--accent-soft)}
+.ev.grew{border-color:var(--spark)}
+.ev.grew.on::before{background:var(--spark)}
+.ev.grew.cur{box-shadow:0 0 0 3px var(--spark-soft)}
+.tag{font:600 10.5px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;
+  color:var(--muted);display:flex;justify-content:space-between;gap:12px;margin-bottom:7px}
+.tag .t{color:var(--muted);opacity:.7;font-variant-numeric:tabular-nums;flex:none}
+.ev.grew .tag{color:var(--spark)}
+.body{font-size:14.5px;word-break:break-word}
+pre{margin:8px 0 0;background:var(--code);padding:10px 12px;border-radius:7px;overflow-x:auto;
+  font:12.5px/1.55 var(--mono);white-space:pre-wrap;word-break:break-word;color:var(--ink)}
+pre.err{color:var(--err)}
+.side{position:sticky;top:26px;align-self:start;display:flex;flex-direction:column;gap:14px}
+.card{border:1px solid var(--line);background:var(--panel);border-radius:11px;padding:15px}
+.card h2{font:600 10.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;
+  color:var(--muted);margin:0 0 12px}
+.chip{display:inline-block;font:12.5px/1.4 var(--mono);background:var(--code);
+  border:1px solid var(--line);border-radius:6px;padding:3px 8px;margin:0 5px 6px 0;color:var(--ink)}
+.chip.new{border-color:var(--spark);color:var(--spark);background:var(--spark-soft);font-weight:600}
+.kv{font-size:13px;margin-bottom:8px;word-break:break-word;line-height:1.5}
+.kv b{font:600 12.5px var(--mono);color:var(--accent)}
+.empty{color:var(--muted);font-size:13px;font-style:italic}
+.final{margin-top:26px;border:1px solid var(--line);border-left:4px solid var(--accent);
+  padding:14px 18px;background:var(--panel);border-radius:0 10px 10px 0}
+.final .fh{font:600 10.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:8px;display:flex;gap:10px;align-items:center}
+.final .fh .count{margin:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+"""
+
+_JS = """
+const T = window.__TRACE__;
+const feed = document.getElementById('feed');
+const tools = document.getElementById('tools');
+const mem = document.getElementById('mem');
+let i = 0;
+
+const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+function card(e){
+  const d = document.createElement('div');
+  d.className = 'ev';
+  let label = e.kind, body = '';
+  if (e.kind === 'user'){ label = 'task'; body = '<div class="body">'+esc(e.text)+'</div>'; }
+  else if (e.kind === 'assistant'){ label = 'model'; body = '<div class="body">'+esc(e.text)+'</div>'; }
+  else if (e.kind === 'tool_call'){
+    label = 'tool call \\u2192 ' + e.name;
+    body = '<pre>'+esc(JSON.stringify(e.input, null, 2))+'</pre>';
+  } else if (e.kind === 'tool_result'){
+    label = (e.is_error ? '\\u2717 error \\u2190 ' : '\\u2713 result \\u2190 ') + e.name;
+    body = '<pre class="'+(e.is_error?'err':'')+'">'+esc(e.output)+'</pre>';
+  } else if (e.kind === 'tools'){
+    if (!e.new || !e.new.length) return null;   // only show growth
+    d.className = 'ev grew';
+    label = '\\u2726 tool surface grew';
+    body = '<div class="body">The agent wrote itself: '
+         + e.new.map(n=>'<span class="chip new">'+esc(n)+'</span>').join('') + '</div>';
+  }
+  d.innerHTML = '<div class="tag"><span>'+esc(label)+'</span><span class="t">'+e.t+'s</span></div>'+body;
+  return d;
+}
+
+const nodes = [];
+T.events.forEach(e => { const n = card(e); if (n){ feed.appendChild(n); nodes.push({n, e}); } });
+
+function render(){
+  nodes.forEach((x, k) => {
+    x.n.classList.toggle('on', k <= i);
+    x.n.classList.toggle('cur', k === i);
+  });
+  let surface = T.tool_surface[0] || [], memory = {}, newest = [];
+  for (let k = 0; k <= i && k < nodes.length; k++){
+    const e = nodes[k].e;
+    if (e.kind === 'tools'){ surface = e.names; newest = e.new || []; }
+    if (e.memory) memory = e.memory;
+  }
+  tools.innerHTML = surface.map(n =>
+    '<span class="chip'+(newest.includes(n)?' new':'')+'">'+esc(n)+'</span>').join('');
+  const keys = Object.keys(memory);
+  mem.innerHTML = keys.length
+    ? keys.map(k => '<div class="kv"><b>'+esc(k)+'</b>: '+esc(memory[k])+'</div>').join('')
+    : '<div class="empty">nothing remembered yet</div>';
+  document.getElementById('pos').textContent = (i+1)+' / '+nodes.length;
+  document.getElementById('prev').disabled = i <= 0;
+  document.getElementById('next').disabled = i >= nodes.length-1;
+  if (nodes[i]) nodes[i].n.scrollIntoView({block:'nearest', behavior:'smooth'});
+}
+document.getElementById('prev').onclick = () => { if(i>0){i--; render();} };
+document.getElementById('next').onclick = () => { if(i<nodes.length-1){i++; render();} };
+document.getElementById('all').onclick  = () => { i = nodes.length-1; render(); };
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'ArrowRight' || ev.key === 'j') document.getElementById('next').click();
+  if (ev.key === 'ArrowLeft'  || ev.key === 'k') document.getElementById('prev').click();
+});
+render();
+"""
+
+
+def render_trace(trace: dict[str, Any]) -> str:
+    """Return a complete, self-contained HTML document for a recorded trace."""
+    title = html.escape(trace.get("title", "Agent run"))
+    grew = len(trace.get("tool_surface", [])) > 1
+    output = html.escape(trace.get("output") or "")
+    stopped = html.escape(str(trace.get("stopped_reason") or ""))
+    payload = json.dumps(trace).replace("</", "<\\/")
+
+    return f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{title} — agent trace</title>
+<style>{_CSS}</style></head><body>
+<div class="wrap">
+  <p class="eyebrow">agent-runtime · trace replay</p>
+  <h1>{title}</h1>
+  <p class="sub">One agent run, step by step —
+    <b>{len(trace.get("events", []))} events</b> in {trace.get("duration", 0)}s.
+    {"Watch the tool surface panel grow — the agent wrote its own tool mid-task. " if grew else ""}
+    Step with the buttons or the ← / → keys.</p>
+  <div class="bar">
+    <button id="prev">← Prev</button>
+    <button id="next">Next →</button>
+    <button id="all">Show all</button>
+    <span class="count" id="pos"></span>
+  </div>
+  <div class="cols">
+    <div class="feed" id="feed"></div>
+    <div class="side">
+      <div class="card"><h2>Tool surface</h2><div id="tools"></div></div>
+      <div class="card"><h2>Long-term memory</h2><div id="mem"></div></div>
+    </div>
+  </div>
+  <div class="final">
+    <div class="fh">Final answer <span class="count">({stopped})</span></div>
+    <div>{output}</div>
+  </div>
+</div>
+<script>window.__TRACE__ = {payload};</script>
+<script>{_JS}</script>
+</body></html>"""

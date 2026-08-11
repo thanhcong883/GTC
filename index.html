@@ -52,10 +52,9 @@
     /* ---------- NAV ---------- */
     .nav-outer{position:sticky;top:16px;z-index:50;padding:0 28px}
     nav{max-width:1120px;margin:16px auto 0;background:#fff;border-radius:18px;
-      box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:space-between;
+      box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:flex-end;
       padding:14px 22px}
-    .logo{font-weight:800;font-size:1.35rem}
-    .logo span{color:var(--orange)}
+    .logo{font-weight:800;font-size:1.35rem}   /* footer wordmark */
     .nav-links{display:flex;align-items:center;gap:30px}
     .nav-links a{font-weight:600;font-size:.95rem;color:var(--navy-soft)}
     .nav-links a:hover,.nav-links a.active{color:var(--navy)}
@@ -208,9 +207,32 @@
     .prog .n{font-weight:800;font-size:.9rem}
     .prog .n b{color:var(--orange);font-size:1.35rem}
     .prog .track{height:8px;background:#e9e6f5;border-radius:6px;overflow:hidden;margin-top:8px}
-    .prog .track i{display:block;height:100%;width:6.7%;border-radius:6px;
+    .prog .track i{display:block;height:100%;width:10%;border-radius:6px;
       background:linear-gradient(90deg,var(--orange),#ffb27d)}
-    .days{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:32px}
+    .days{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:32px}
+    @media(max-width:1000px){ .days{grid-template-columns:repeat(2,1fr)} }
+
+    /* compact index for older days */
+    .earlier{margin-top:26px}
+    .earlier .hd{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+    .earlier .hd span{font-family:ui-monospace,Consolas,monospace;font-size:.72rem;font-weight:800;
+      letter-spacing:.12em;text-transform:uppercase;color:var(--navy-soft);white-space:nowrap}
+    .earlier .hd i{flex:1;height:0;border-top:1px solid var(--border,#e7e9f2)}
+    .rows{background:#fff;border:1px solid var(--border,#e7e9f2);border-radius:18px;overflow:hidden}
+    .row{display:grid;grid-template-columns:52px 1fr auto auto;align-items:center;gap:14px;
+      padding:14px 20px;border-bottom:1px solid var(--border,#e7e9f2);transition:background .15s ease}
+    .row:last-child{border-bottom:none}
+    .row:hover{background:var(--bg-soft)}
+    .row:hover .rt{color:var(--orange)}
+    .row .rn{font-family:ui-monospace,Consolas,monospace;font-weight:800;font-size:.82rem;color:var(--navy-soft)}
+    .row .rt{font-weight:700;font-size:.94rem;line-height:1.35}
+    .row .rtag{font-size:.68rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+      background:var(--bg-soft);color:var(--navy-soft);padding:4px 10px;border-radius:20px;white-space:nowrap}
+    .row .rar{color:var(--orange);font-weight:800;font-size:.95rem}
+    @media(max-width:620px){
+      .row{grid-template-columns:44px 1fr auto;gap:10px;padding:13px 16px}
+      .row .rtag{display:none}
+    }
     .day{background:#fff;border:1px solid var(--border,#e7e9f2);border-radius:20px;overflow:hidden;
       box-shadow:var(--shadow-sm);display:flex;flex-direction:column;transition:transform .16s ease,border-color .2s}
     .day:hover{transform:translateY(-5px);border-color:var(--orange)}
@@ -268,7 +290,6 @@
       /* nav fits small screens */
       .nav-outer{padding:0 16px}
       nav{padding:11px 14px}
-      .logo{font-size:1.15rem}
       .nav-links{gap:12px}
       .nav-links .btn{padding:10px 16px;font-size:.86rem}
     }
@@ -279,7 +300,6 @@
   <!-- NAV -->
   <div class="nav-outer">
     <nav>
-      <div class="logo">Công<span>.</span></div>
       <div class="nav-links">
         <a href="#home" class="active">Home</a>
         <a href="#services">What I Do</a>
@@ -433,7 +453,7 @@ acc <span class="num">0.94</span>  ·  loss <span class="num">0.08</span>
     <div class="wrap">
       <div class="feature">
         <div class="art">
-          <img class="shot" src="vietguide.jpg" alt="VietGuide AI — live app screenshot" loading="lazy" width="900" height="625">
+          <img class="shot" src="assets/vietguide.jpg" alt="VietGuide AI — live app screenshot" loading="lazy" width="900" height="625">
           <span class="scrim"></span>
           <span class="pill">⭐ Featured Project</span>
           <div>
@@ -496,62 +516,191 @@ acc <span class="num">0.94</span>  ·  loss <span class="num">0.08</span>
           <p class="muted" style="max-width:56ch">A 30-day sprint: ship something real every day and publish it here — from AI agents to go-to-market thinking.</p>
         </div>
         <div class="prog">
-          <div class="n"><b>3</b> / 30 shipped</div>
-          <div class="track"><i style="width:10%"></i></div>
+          <div class="n"><b id="shipped">5</b> / 30 shipped</div>
+          <div class="track"><i id="bar" style="width:16.7%"></i></div>
         </div>
       </div>
 
-      <div class="days">
-        <a class="day" href="#home">
-          <div class="shot" style="background:linear-gradient(135deg,#fdece1,#efe6fb);display:grid;place-items:center">
-            <div style="font-family:ui-monospace,Consolas,monospace;font-size:.8rem;color:var(--navy-soft);text-align:center;padding:16px">
-              &lt;/&gt;<br><strong style="color:var(--navy)">gtc883.vercel.app</strong>
-            </div>
-          </div>
-          <div class="txt">
-            <span class="badge">Day 0 · Warm-up</span>
-            <h3>This portfolio site</h3>
-            <p>Built from scratch with plain HTML, CSS and vanilla JS — no framework, no build step — and shipped to Vercel. The warm-up: get the build → deploy → submit loop working.</p>
-            <span class="go">You're looking at it ↑</span>
-          </div>
-        </a>
-
-        <a class="day" href="pitch.html">
-          <div class="shot"><img src="pitch-thumb.png" alt="MindPal for Revenue — pitch deck, title slide" loading="lazy"></div>
-          <div class="txt">
-            <span class="badge live">Day 1 · Shipped</span>
-            <h3>MindPal for Revenue — pitch deck</h3>
-            <p>A 15-slide investor-grade deck selling MindPal's multi-agent AI workforce to a VP&nbsp;Sales/CRO: the problem in their language, value quantified with every formula shown, three agent use cases, and a 90-day rollout with a clear ask.</p>
-            <span class="go">View the deck →</span>
-          </div>
-        </a>
-
-        <a class="day" href="day2.html">
-          <div class="shot" style="background:linear-gradient(135deg,#efe6fb,#0f1730);display:grid;place-items:center">
-            <div style="font-family:ui-monospace,Consolas,monospace;font-size:.78rem;color:#d6deff;text-align:center;padding:16px">
-              🗺️<br><strong style="color:#fff">MindPal · PAM — 2 teardowns</strong>
-            </div>
-          </div>
-          <div class="txt">
-            <span class="badge live">Day 2 · Shipped</span>
-            <h3>Two product teardowns: MindPal &amp; PAM</h3>
-            <p>Two unrelated products, reconstructed from the outside with no source access: MindPal (multi-agent automation, built around a public/login seam) and PAM (brand creative generation, with no public layer at all). Same method, two independent case studies.</p>
-            <span class="go">View both teardowns →</span>
-          </div>
-        </a>
-
-        <div class="locked">
-          <div class="lbl">Days 3 – 30 · coming up</div>
-          <div class="cells">
-            <span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span>
-            <span>9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
-            <span>16</span><span>17</span><span>18</span><span>19</span><span>20</span><span>21</span><span>22</span>
-            <span>23</span><span>24</span><span>25</span><span>26</span><span>27</span><span>28</span><span>29</span>
-            <span>30</span>
-          </div>
-        </div>
+      <div class="days" id="days">
+        <noscript>
+          <a class="day" href="day4/"><div class="txt"><span class="badge live">Day 4 · Shipped</span>
+            <h3>Are these agents actually good?</h3><span class="go">Read the eval →</span></div></a>
+          <a class="day" href="day3/"><div class="txt"><span class="badge live">Day 3 · Shipped</span>
+            <h3>Under the hood: how MindPal runs an agent</h3><span class="go">Open the teardown →</span></div></a>
+          <a class="day" href="day2/"><div class="txt"><span class="badge live">Day 2 · Shipped</span>
+            <h3>Two product teardowns: MindPal &amp; PAM</h3><span class="go">View both teardowns →</span></div></a>
+          <a class="day" href="day1/"><div class="txt"><span class="badge live">Day 1 · Shipped</span>
+            <h3>MindPal for Revenue — pitch deck</h3><span class="go">View the deck →</span></div></a>
+        </noscript>
       </div>
+
+      <div class="earlier" id="earlier" hidden>
+        <div class="hd"><span>Earlier</span><i></i></div>
+        <div class="rows" id="rows"></div>
+      </div>
+
+      <div class="locked" id="locked" style="margin-top:22px"></div>
     </div>
+
+    <script>
+    /* ── 30-day log ────────────────────────────────────────────────────────────
+       To ship a new day: add ONE object at the TOP of this array. Nothing else.
+       The newest FEATURED entries render as full cards; the rest collapse into
+       the compact index below them, and the "coming up" grid recalculates.
+       ───────────────────────────────────────────────────────────────────────── */
+    const TOTAL = 30, FEATURED = 3;
+    const DAYS = [
+      { n:20, href:'day20/', tag:'Platform', cta:'Run the policy engine →',
+        title:'PAL Tool Fabric',
+        blurb:'A Tool and Plugin SDK for a product that already has three ways to extend it and no way to distribute any of them. PAL ships managed app integrations, workspace-local custom API tools and MCP — and its own navigation tree gives away what is missing: Tools sit under Assets, beside Notes and Brand Guidelines, so a tool is something a workspace owns rather than something a third party publishes. The missing primitive is not Tool. It is PublishedPlugin, and the deliverable defines it: publisher identity and signature, protocol version, declared effects, both egress surfaces, lifecycle, and a downloadable four-tool sample. The load-bearing correction is that authority is not a data label and never propagates — sensitivity, integrity and influence travel on edges, while authority is resolved fresh at each call from the principal, the grant and the exact arguments. Which makes catalog visibility not a permission: a tool is listable if some circumstance would allow calling it, and that guarantees nothing about this call. The page ships the gateway. Edit the payload of a real call and watch the verdict move on the field the policy actually reads while holding steady on the one it does not; consume a poisoned web page and watch the untrusted label survive with the injection detector switched off, because detection is not what makes web content untrustworthy. Ten fixtures run in the browser against the same code path the canvas uses. Approve the manifest PAL composed and a token gets minted bound to its hash; approve what the plugin iframe drew instead and it is refused, because MCP\'s own sandbox protects the host from the app and says nothing about the app lying to you.',
+        icon:'🔌', kicker:'Authority never travels with data', grad:['#e2ecfd','#0f1730'], ink:'#fff' },
+
+      { n:19, href:'day19/', tag:'Systems', cta:'Compile a context →',
+        title:'PAL Memory Compiler',
+        blurb:'A memory and context architecture for agents that run for days, built on one distinction: memory is governed state, context is a view compiled for a single step. Every record carries three independent axes — what kind of claim it is, what standing it has, whether it is still current — so the failure everyone calls summary drift becomes something a compiler can refuse by name: a proposal cast as an approval with no authority event to license it. The page ships the compiler itself. Pick a scenario, run the agent out to 200 steps, switch optimization level, toggle the linter, and watch a hedged $50,000 become an approved budget or get refused with a span pointing at the sentence that was never authorization. Two evaluations, labelled differently on purpose. The engine recomputes its own conformance in your browser: a recency-ranked assembler — what most implementations actually are — holds all three governed constraints at ten steps and none at two hundred, keeping seventeen routine progress notes instead. And a real model, 20 chains per condition, was asked whether it would promote the hedged claim. It never did, not once in 40 chains, not even under a prompt that explicitly asked what had been decided. What it did instead was delete the number entirely in nearly half of them, on the first summary rather than the fifth — which killed the hypothesis and produced a better rule than the one it replaced.',
+        icon:'🧾', kicker:'0 promotions in 40 chains · measured', grad:['#eeeafe','#0f1730'], ink:'#fff' },
+
+      { n:18, href:'day18/', tag:'Agent', cta:'Step through a run →',
+        title:'A self-extending agent runtime',
+        blurb:'A minimal agent runtime — orchestration loop, tool-calling, two-layer memory — built to the letter of the brief, then pushed one line further. The tool schema list is recomputed every iteration instead of once before the loop starts, and that one line is the entire difference between an agent that can write a new tool for itself mid-task and one where the tool it just wrote is permanently invisible. create_tool lets it define a function, screens the code — AST-allowlisted imports, no dunder access, stripped builtins, explicitly documented as not a security boundary — and persists it, so a skill invented in one session is already loaded at the start of the next. OpenAI is wired in as a translation layer rather than a rewrite: the internal contract stays vendor-neutral while the adapter bridges two real wire-format differences, including one where getting the direction backwards is a rejected request, not a quiet failure. 39 offline tests pass with no key, no framework, two swappable backends. Ships with a live trace replay embedded in the page: step through a run and watch the tool surface visibly grow the moment the agent registers what it just wrote.',
+        icon:'🛠️', kicker:'1 line makes self-extension work', grad:['#fbead2','#0f1730'], ink:'#fff' },
+
+      { n:17, href:'day17/', tag:'Product', cta:'Enter the room →',
+        title:'PAL — teach on one case, test on another',
+        blurb:'A first-run redesign whose activation metric refuses to count its own demo. Today PAL opens with an architecture choice — agent, workflow or template — before the user has seen anything work, so the new path deletes every builder decision from the first ten minutes and replaces them with an apprenticeship: show one finished piece of real work, confirm the standard PAL inferred from it, then hand over a second real case it has never seen and let it try with the answer sealed. Activation counts only when a human approves or exports that unseen-case output; sample data, demo completion and any run that needed coaching are excluded by name. Two things keep it honest. The ten-minute promise is scoped to a bounded deliverable, because the runtime still executes nodes one at a time — which makes parallel execution a prerequisite rather than an optimization. And the free tier’s credit budget allows only a handful of attempts, so the plan adds a block rate instead of quietly dropping credit-starved users out of the denominator. Ships with the room itself: teach it, seal a case, deliver the verdict.',
+        icon:'🎓', kicker:'0 builder decisions before proof', grad:['#e4f3ea','#0f1730'], ink:'#fff' },
+
+      { n:16, href:'day16/', tag:'Strategy', cta:'Read the verdict →',
+        title:'PAL — market position and the missing moat',
+        blurb:'A strategy report that concludes its own subject has no moat, then scores that subject on the same grid as its competitors to show why. PAL sits in AI business automation, squeezed between model labs adding agent runtimes from above and Zapier, Make and n8n adding routing and evaluation from below. The survival map plots outcome-learning against workflow embeddedness, and the finding is not that the valuable corner is empty: n8n is already inside it, arriving from embeddedness — the direction that takes years to accumulate, while evaluation capability ships fast. On the capability grid PAL lands behind: evaluation not demonstrated, run observability partial, against n8n strong on both. So the verdict is one moat candidate and a set of enablers, and the plan refuses to scale a hypothesis — four strategic branches selected by evidence, including deliberate commoditization, and four quarters that each carry a kill criterion and one thing explicitly not done. Every figure is tagged as measured, modeled or proposed.',
+        icon:'🧭', kicker:'Scored below n8n on its own grid', grad:['#ffe7d6','#0f1730'], ink:'#fff' },
+
+      { n:15, href:'day15/', tag:'Business', cta:'Run the model →',
+        title:'PAL — pricing and unit economics',
+        blurb:'A pricing teardown of PAL that starts with the question these analyses usually skip: what does one agent run actually cost to serve? Reverse-engineered end to end — customer price → per-request model COGS → workflow economics → plan contribution margin — with every assumption printed on the page and every figure reproducible from it. The finding is that the ladder runs backwards. Cost to serve stays roughly flat at $2.78 per 1,000 credits, but revenue per 1,000 falls $6.50 → $4.97 → $3.74 from Pro to Ultra, and because a single workflow can burn 3 credits or 300+ with no ceiling, the top plan lands at 14.7% contribution margin once a customer actually uses what they paid for. The best deal on the menu is the worst line on the P&L. The back half rebuilds it — three cost pools instead of one bundle, normalized units so a heavy request stops billing like a cheap one, and a 90-day migration with grandfathering. Ships with a live model: pick a plan, set runs per month and credits per run, watch the margin move.',
+        icon:'🧮', kicker:'Ultra at full use · 14.7% margin', grad:['#eeeafe','#0f1730'], ink:'#fff' },
+
+      { n:14, href:'day14/', tag:'Systems', cta:'Read the design →',
+        title:'Ceiling — rethinking the browser for agents',
+        blurb:'Take the human eye out of the loop and what is left is not a smaller browser. It is a different machine: a mediator that turns an untrusted counterparty’s claims into bounded, attributable effects. Built on three laws about what anyone can actually promise — a component guarantees only what it enforces inside a boundary it controls; a policy decision is worth no more than the oracle behind its facts; and web content may influence a choice but can never create authority. Domain is not a primitive here: looking up a grant deadline, sending mail, submitting a job application and buying under a price cap all run through one action profile and one propose→approve→commit→verify protocol, differing only in who enforces and what evidence survives — which is why a submitted job application ends in remote_state: unknown rather than a comfortable success. The load-bearing consequence is unglamorous: a spending cap enforced by a policy engine reading the seller’s own HTML is not a constraint, it is an intention. A commerce stress test proves it — approve at 2,890,000 VND, watch the price move to 3,150,000, and four combinations of timing and infrastructure give four endings. In one, nothing errors at all, the money leaves, and the cap never existed.',
+        icon:'🧱', kicker:'One control model · six domains', grad:['#e2ecfd','#0f1730'], ink:'#fff' },
+
+      { n:13, href:'day13/', tag:'Systems', cta:'Read the design →',
+        title:'Custody — data rights as the control plane',
+        blurb:'A people-data platform canonicalising about a billion people, designed from the constraint that decides everything: LinkedIn bans automated crawling without express permission, and the one permitted crawling tier is limited to public search-engine indexing — selling and bulk transfer are prohibited outright. So there is no crawler. Every field carries a policy envelope with its source, lawful basis, permitted purposes, jurisdiction and expiry, and that envelope is enforced at ingest, at query time and at expiry rather than sitting in an appendix. Counting is done honestly too: 1.2 billion registered accounts is not 1.2 billion people, and after fakes, duplicates and 25–30% annual decay the number a product can actually sell is closer to 500–590 million. Ships with a clickable policy gate — four routes into the same profile, four different verdicts.',
+        icon:'🔐', kicker:'0 crawlers · 7 decision records', grad:['#e4f3ea','#0f1730'], ink:'#fff' },
+
+      { n:12, href:'day12/', tag:'UX', cta:'Try the canvas →',
+        title:'Counterpoint — two hands, one canvas',
+        blurb:'Design tools are adding an agent to the canvas, and every one of them inherits three broken assumptions: that changes are yours, that they are instant, and that you know why they happened. This is the interaction spec and the architecture for a canvas where a person and an agent edit the same document at once — three channels chosen by how hard a change is to reverse, per-actor undo so Ctrl+Z never eats work you did not do, and a soft lock that signals without blocking. The load-bearing decision is that operations stream one at a time instead of landing as a batch: it costs more messages, and it is the only reason the agent can be stopped mid-sentence. Ships with a working demo — start an alignment run, click anything on the canvas, and watch the agent drop what it had left to do.',
+        icon:'📐', kicker:'Click mid-run · the agent yields', grad:['#ffe7d6','#0f1730'], ink:'#fff' },
+
+      { n:11, href:'day11/', tag:'Agent', cta:'Read the design →',
+        title:'Continuity — the agent that judges the video',
+        blurb:'Video generation is bought, not built. HeyGen ships ten research posts on avatar models, inference infrastructure, data and context engineering, and open-sources a deterministic HTML→MP4 renderer — and not one of them asks whether the video is right. Continuity is a ten-agent workflow that goes from brief to gate report, built on one structured object: the Cut, where every scene declares three things nobody else records — which engine and why, what it will cost, and the factual claims it asserts. Six lenses review it and a Checker that may propose but never act, because a fabricated finding should cost five seconds of reading rather than a wrong edit. Gates are ordered by cumulative spend: approve the words at $0.38, watch a full-length animatic that costs almost nothing because the audio was already paid for, and only then pay for pixels. Ships with a workbench that prices a Cut in the browser — and catches an example priced at $3.87 that actually costs $5.30.',
+        icon:'🎬', kicker:'10 agents · $0.38 before pixels', grad:['#e2ecfd','#0f1730'], ink:'#fff' },
+
+      { n:10, href:'day10/', tag:'Systems', cta:'Try the Airlock →',
+        title:'A sandbox where undo is the safety mechanism',
+        blurb:'An architecture and UX design for a cloud computer an AI agent drives on your behalf, written as a real design doc — goals and non-goals, prior art, alternatives rejected, open questions. The machine first: microVM over container and why, resource ceilings with the sentence each shows the user, what sleep does to a running process. Then the harder half — an agent using your real authority and getting it wrong. Built on one data type, Effects, shared by the UI, the policy engine and the audit log, plus three pillars: rewind the world, hold everything irreversible at one gate, give the model that reads the web no hands at all. Ships with a clickable prototype whose layout is the argument — a wall down the middle of the screen, and a rewind that deliberately fails to recall what already crossed it.',
+        icon:'⏳', kicker:'8 of 12 steps need no approval', grad:['#efe6fb','#0f1730'], ink:'#fff' },
+
+      { n:9, href:'day9/', tag:'UX', cta:'See the redesign →',
+        title:'One instruction per edit',
+        blurb:'A UX teardown of PAM’s image editor — which is genuinely good: real Paint/Smart-select, a clean recoverable version saved per Apply. But it takes one instruction per Apply, so a poster with three different fixes becomes three sequential rounds. Measured off the live window, with a working 1:1 reproduction you can paint in — then “One for All”: an interactive redesign that adds just a colour palette, so one click carries every region-scoped change in a single pass.',
+        icon:'🖌️', kicker:'One for All · one click, all fixes', grad:['#ffe7d6','#0f1730'], ink:'#fff' },
+
+      { n:8, href:'day8/', tag:'UX', cta:'See the redesign →',
+        title:'The parallel-execution teardown',
+        blurb:'A UX teardown of one MindPal flow that genuinely feels bad. Its multi-agent workflows run every node one at a time, so a seven-lens fan-out that looks parallel takes 3m21s. Measured from a real run: exactly where it feels bad, honestly when it does not, and an end-to-end redesign that hands back two minutes — 2.5×, not 8×. Bilingual, with annotated before/after execution traces.',
+        icon:'⚡', kicker:'3m21s → ~1:20 · measured', grad:['#ffe7d6','#0f1730'], ink:'#fff' },
+
+      { n:7, href:'day7/', tag:'Playbook', cta:'See the batch →',
+        title:'A playbook that ships a full ad pack',
+        blurb:'One high-value format — performance ad variations — turned into a repeatable PAM Playbook: a SKILL.md of inputs → steps → checks → outputs. Run on two brands (CarePlus, plus GreenSM concept work) and scored honestly across 15 real creatives: brand identity holds on every size, but the full placement set isn’t emitted autonomously — reliable where it matters, with the caveats stated plainly, and no invented ad metrics.',
+        icon:'📐', kicker:'2 brands · 15 creatives · scored', grad:['#e4f3ea','#0f1730'], ink:'#fff' },
+
+      { n:6, href:'day6/', tag:'Agent', cta:'Read the one-pager →',
+        title:'The Launch Readiness Committee',
+        blurb:'A live multi-agent committee on MindPal that stress-tests whether a product is ready to launch — seven functional lenses, a red team, and a chair. Run on my own product, VietGuide, it cited real Vietnamese law (Decree 13 & 53) and surfaced five launch-killing risks nobody owned — including one no functional lens could reach.',
+        icon:'🏛️', kicker:'10 agents · run on my own product', grad:['#ffe7d6','#0f1730'], ink:'#fff' },
+
+      { n:5, href:'day5/', tag:'UI/UX', cta:'Open the dashboard →',
+        title:'Console — an agent workspace, redesigned',
+        blurb:'A working redesign of the MindPal console: four screens, one date range, and a thesis — every run shows what each node cost and what it would cost on another model. Cost X-ray, per-workflow drill-down, failure timeline. Hand-coded, no framework, and every figure reconciles to the same total.',
+        icon:'⌘', kicker:'4 screens · every number reconciles', grad:['#eeedfd','#15161c'], ink:'#fff' },
+
+      { n:4, href:'day4/', tag:'Eval', cta:'Read the eval →',
+        title:'Are these agents actually good?',
+        blurb:'An evaluation system for MindPal agents — task suite, five metric families, four grading tiers including one that grades the grader, and regression detection — then actually run: 45 hand-graded runs across three systems for 272 AI credits. It falsified nine of my own hypotheses.',
+        icon:'⚖️', kicker:'45 runs · 9 hypotheses killed', grad:['#ffe7d6','#0f1730'], ink:'#fff' },
+
+      { n:3, href:'day3/', tag:'Teardown', cta:'Open the teardown →',
+        title:'Under the hood: how MindPal runs an agent',
+        blurb:'A black-box teardown of MindPal’s runtime harness — the execution engine, server-side model routing, three-tier memory, LLM-as-judge guardrails and human-in-the-loop — reconstructed entirely from network traces, decoded payloads and error states. Each claim tagged with its evidence.',
+        icon:'🔬', kicker:'MindPal — under the hood', grad:['#efe6fb','#0f1730'], ink:'#fff' },
+
+      { n:2, href:'day2/', tag:'Teardown', cta:'View both teardowns →',
+        title:'Two product teardowns: MindPal & PAM',
+        blurb:'Two unrelated products, reconstructed from the outside with no source access: MindPal (multi-agent automation, built around a public/login seam) and PAM (brand creative generation, with no public layer at all). Same method, two independent case studies.',
+        icon:'🗺️', kicker:'MindPal · PAM — 2 teardowns', grad:['#efe6fb','#0f1730'], ink:'#fff' },
+
+      { n:1, href:'day1/', tag:'GTM', cta:'View the deck →',
+        title:'MindPal for Revenue — pitch deck',
+        blurb:'A 15-slide investor-grade deck selling MindPal’s multi-agent AI workforce to a VP Sales/CRO: the problem in their language, value quantified with every formula shown, three agent use cases, and a 90-day rollout with a clear ask.',
+        img:'day1/pitch-thumb.png', alt:'MindPal for Revenue — pitch deck, title slide' },
+
+      { n:0, href:'#home', tag:'Web', cta:'You’re looking at it ↑', warmup:true,
+        title:'This portfolio site',
+        blurb:'Built from scratch with plain HTML, CSS and vanilla JS — no framework, no build step — and shipped to Vercel. The warm-up: get the build → deploy → submit loop working.',
+        icon:'</>', kicker:'gtc883.vercel.app', grad:['#fdece1','#efe6fb'], ink:'#111a3e' }
+    ];
+
+    (function(){
+      const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      const pad = n => String(n).padStart(2,'0');
+
+      const shot = d => d.img
+        ? `<div class="shot"><img src="${d.img}" alt="${esc(d.alt||'')}" loading="lazy"></div>`
+        : `<div class="shot" style="background:linear-gradient(135deg,${d.grad[0]},${d.grad[1]});display:grid;place-items:center">
+             <div style="font-family:ui-monospace,Consolas,monospace;font-size:.78rem;color:#d6deff;text-align:center;padding:16px">
+               ${esc(d.icon)}<br><strong style="color:${d.ink}">${esc(d.kicker)}</strong>
+             </div></div>`;
+
+      const card = d => `<a class="day" href="${d.href}">${shot(d)}
+        <div class="txt">
+          <span class="badge${d.warmup?'':' live'}">Day ${d.n} · ${d.warmup?'Warm-up':'Shipped'}</span>
+          <h3>${esc(d.title)}</h3><p>${esc(d.blurb)}</p>
+          <span class="go">${esc(d.cta)}</span>
+        </div></a>`;
+
+      const row = d => `<a class="row" href="${d.href}">
+        <span class="rn">${pad(d.n)}</span>
+        <span class="rt">${esc(d.title)}</span>
+        <span class="rtag">${esc(d.tag)}</span>
+        <span class="rar">→</span></a>`;
+
+      const sorted = DAYS.slice().sort((a,b) => b.n - a.n);
+      const top = sorted.slice(0, FEATURED), rest = sorted.slice(FEATURED);
+
+      document.getElementById('days').innerHTML = top.map(card).join('');
+
+      if (rest.length){
+        document.getElementById('rows').innerHTML = rest.map(row).join('');
+        document.getElementById('earlier').hidden = false;
+      }
+
+      const next = Math.max(...DAYS.map(d => d.n)) + 1;
+      const cells = [];
+      for (let i = next; i <= TOTAL; i++) cells.push(`<span>${i}</span>`);
+      document.getElementById('locked').innerHTML = cells.length
+        ? `<div class="lbl">Days ${next} – ${TOTAL} · coming up</div><div class="cells">${cells.join('')}</div>`
+        : `<div class="lbl">All ${TOTAL} days shipped 🎉</div>`;
+
+      document.getElementById('shipped').textContent = DAYS.length;
+      document.getElementById('bar').style.width = Math.min(100, DAYS.length / TOTAL * 100).toFixed(1) + '%';
+    })();
+    </script>
   </section>
 
   <!-- EXPERIENCE -->
@@ -677,5 +826,6 @@ acc <span class="num">0.94</span>  ·  loss <span class="num">0.08</span>
   })();
   </script>
 
+<script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

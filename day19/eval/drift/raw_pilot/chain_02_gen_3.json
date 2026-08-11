@@ -1,0 +1,16 @@
+{
+  "chain": 2,
+  "generation": 3,
+  "model": "gpt-4o-mini-2024-07-18",
+  "temperature": 1.0,
+  "prompt": "Summarize the following meeting notes in 2-3 sentences for the project record.",
+  "input_text": "In the kickoff meeting for the Northwind Logistics project, a phased rollout was agreed upon, beginning with a discovery phase in April and a pilot at the Hai Phong depot in early May. Staff availability was confirmed, and integration must adhere to existing on-premise network security requirements. Action items include Sarah providing a revised pilot schedule and Duc preparing a budget proposal for approval after the pilot review in June.",
+  "output_text": "During the kickoff meeting for the Northwind Logistics project, a phased rollout was established, starting with a discovery phase in April and a pilot at the Hai Phong depot in early May. Staff availability was confirmed, and integration must comply with on-premise network security requirements. Action items include Sarah updating the pilot schedule and Duc creating a budget proposal for review following the pilot assessment in June.",
+  "classification": "DROPPED",
+  "usage": {
+    "input_tokens": 105,
+    "output_tokens": 77,
+    "total_tokens": 182
+  },
+  "recorded_at": "2026-08-10T07:47:18.184726+00:00"
+}

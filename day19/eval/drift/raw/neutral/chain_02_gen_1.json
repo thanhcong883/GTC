@@ -1,0 +1,16 @@
+{
+  "chain": 2,
+  "generation": 1,
+  "model": "gpt-4o-mini-2024-07-18",
+  "temperature": 1.0,
+  "prompt": "Summarize the following meeting notes in 2-3 sentences for the project record.",
+  "input_text": "PROJECT KICKOFF — NORTHWIND LOGISTICS / RFP RESPONSE\nAttendees: Mai Tran (Client, VP Operations), Duc Le (Client, Finance),\n           Sarah Okonkwo (Vendor, Delivery Lead), Tom Rasmussen (Vendor, Solutions)\nRecorded: 14 March, 10:02–10:41\n\nSarah opened by walking through the proposed three-phase rollout: discovery in\nApril, a pilot at the Hai Phong depot in May, and a decision gate before any\nwider deployment. Mai confirmed the Hai Phong site is available for the pilot\nand that her operations team can allocate two coordinators part-time.\n\nTom asked about the integration surface. Mai said the warehouse management\nsystem is a 2019 on-premise install and that any connector would have to run\ninside their network. She was clear this is a hard requirement, not a\npreference — nothing that moves inventory data outside the perimeter will pass\ntheir security review.\n\nOn commercials, Duc said the finance committee has not met on this yet. He said\nwe may consider a budget of up to $50,000 for the initial phase, but stressed\nthat nothing is signed off until the committee reviews the pilot results in\nJune. Sarah acknowledged that and said the proposal would be structured so the\npilot can be scoped independently of the wider rollout.\n\nMai raised a concern about the timeline. The depot runs a seasonal peak from\nmid-May through June, and she does not want the pilot competing with peak\nstaffing. Sarah agreed to move the pilot window earlier, to the first two weeks\nof May, and to confirm that in writing.\n\nDuc asked whether training was included. Tom said onboarding for up to fifteen\nusers is included in the base scope and that anything beyond that would be\nquoted separately.\n\nAction items: Sarah to send a revised schedule with the earlier pilot window by\nFriday. Tom to document the on-premise connector approach. Duc to bring the\nproposal to the finance committee after the pilot review in June. Mai to confirm\nthe two coordinators by end of next week.\n",
+  "output_text": "During the kickoff meeting for the Northwind Logistics project, attendees discussed the proposed three-phase rollout, which includes discovery in April and a pilot at the Hai Phong depot in early May. Mai confirmed site availability and the allocation of two part-time coordinators, while emphasizing strict security requirements for data integration. Duc indicated a potential budget of $50,000 for the initial phase, pending finance committee approval after the pilot’s completion, and action items were assigned for follow-up documents and confirmations.",
+  "classification": "PRESERVED",
+  "usage": {
+    "input_tokens": 451,
+    "output_tokens": 97,
+    "total_tokens": 548
+  },
+  "recorded_at": "2026-08-10T07:53:20.177978+00:00"
+}

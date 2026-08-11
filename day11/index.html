@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Continuity — AI Video Generation Architecture | Giang Thanh Cong</title>
+  <meta name="description"
+    content="End-to-End AI Video Generation Architecture: from 10 MindPal Review Agents to Final Production." />
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --orange: #f9660e;
+      --orange-soft: #ffe7d6;
+      --navy: #111a3e;
+      --navy-soft: #5a6488;
+      --peach: #fdece1;
+      --lav: #efe6fb;
+      --purple: #8b5cf6;
+      --purple-soft: #eee9fb;
+      --blue: #2f6fed;
+      --blue-soft: #e2ecfd;
+      --green: #1e9257;
+      --green-soft: #e4f3ea;
+      --amber: #b0771a;
+      --amber-soft: #f7edda;
+      --red: #c64b3e;
+      --red-soft: #f8e6e3;
+      --bg: #f6f7fb;
+      --card: #fff;
+      --border: #e7e9f2;
+      --ink-dark: #0f1730;
+      --shadow: 0 18px 50px rgba(17, 26, 62, .12);
+      --shadow-sm: 0 6px 20px rgba(17, 26, 62, .08);
+      --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: "Plus Jakarta Sans", sans-serif;
+      background: var(--bg);
+      color: var(--navy);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Header */
+    header.top {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: rgba(246, 247, 251, .92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .bar {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .back {
+      font-family: var(--mono);
+      font-size: 12.5px;
+      color: var(--navy-soft);
+      white-space: nowrap;
+      transition: color 0.2s;
+    }
+
+    .back:hover {
+      color: var(--orange);
+    }
+
+    .meta {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .meta .tag {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--orange);
+    }
+
+    .meta h1 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .src {
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      background: var(--card);
+      white-space: nowrap;
+      transition: 0.2s;
+    }
+
+    .src:hover {
+      border-color: var(--orange);
+      color: var(--orange);
+    }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(180deg, var(--peach) 0%, var(--bg) 100%);
+      padding: 60px 0 44px;
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--orange);
+    }
+
+    .hero h2 {
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 800;
+      margin: 14px auto 0;
+      max-width: 25ch;
+      letter-spacing: -.025em;
+    }
+
+    .lede {
+      margin: 18px auto 0;
+      max-width: 70ch;
+      font-size: 17px;
+      color: var(--navy-soft);
+    }
+
+    /* Storyboard */
+    .storyboard {
+      padding: 40px 0;
+      border-bottom: 1px solid var(--border);
+      background: #fff;
+    }
+
+    .story-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 24px;
+      margin-top: 30px;
+    }
+
+    .story-step {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      background: var(--bg);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .story-step .step-num {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--orange);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .story-step .mockup {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 13px;
+      color: var(--navy);
+      margin-bottom: 16px;
+      flex-grow: 1;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .story-step .mockup p {
+      margin-bottom: 8px;
+    }
+
+    .story-step .mockup p:last-child {
+      margin-bottom: 0;
+    }
+
+    .story-step .action {
+      font-size: 13.5px;
+      color: var(--navy-soft);
+      font-weight: 500;
+    }
+
+    .story-step .latency-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-family: var(--mono);
+      font-size: 11px;
+      background: rgba(30, 146, 87, 0.1);
+      color: var(--green);
+      padding: 4px 8px;
+      border-radius: 99px;
+      margin-top: 12px;
+      width: fit-content;
+    }
+
+    .story-step .latency-badge.slow {
+      background: rgba(198, 75, 62, 0.1);
+      color: var(--red);
+    }
+
+    /* Workflow Layout */
+    .workflow {
+      padding: 60px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+
+    .stage {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+    }
+
+    .stage-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 2px dashed var(--border);
+    }
+
+    .stage-title .num {
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      background: var(--navy);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      flex: none;
+    }
+
+    .stage-title h3 {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--navy);
+    }
+
+    .stage-title .desc {
+      font-size: 15px;
+      color: var(--navy-soft);
+      margin-left: auto;
+    }
+
+    /* Nodes Grid */
+    .nodes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    .node-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      background: #fbfcfe;
+      color: var(--navy);
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .node-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-sm);
+      border-color: var(--blue-soft);
+    }
+
+    .node-card.top-tier {
+      border-top: 4px solid var(--purple);
+    }
+
+    .node-card.mid-tier {
+      border-top: 4px solid var(--blue);
+    }
+
+    .node-card.fast-tier {
+      border-top: 4px solid var(--green);
+    }
+
+    .node-card.system-tier {
+      border-top: 4px solid var(--orange);
+      background: var(--orange-soft);
+    }
+
+    .node-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .node-id {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--navy);
+      background: rgba(17, 26, 62, 0.06);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    .node-model {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--navy-soft);
+      border: 1px solid var(--border);
+      padding: 3px 8px;
+      border-radius: 99px;
+      background: #fff;
+    }
+
+    .node-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .node-desc {
+      font-size: 14px;
+      color: var(--navy-soft);
+      line-height: 1.5;
+      margin-bottom: 16px;
+      flex-grow: 1;
+    }
+
+    .tech-stack {
+      background: #f0f2f7;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 13px;
+      line-height: 1.6;
+      margin-bottom: 16px;
+      color: var(--navy);
+    }
+
+    .tech-item {
+      margin-bottom: 6px;
+      padding-left: 105px;
+      text-indent: -105px;
+    }
+
+    .tech-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .ti-label {
+      font-weight: 700;
+      color: var(--navy);
+      display: inline-block;
+      width: 105px;
+      text-indent: 0;
+      vertical-align: top;
+    }
+
+    .node-io {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: var(--mono);
+      font-size: 11.5px;
+      margin-top: auto;
+    }
+
+    .node-io .label {
+      color: var(--orange);
+      font-weight: 700;
+      margin-right: 6px;
+      text-transform: uppercase;
+      font-size: 10px;
+    }
+
+    .node-io p {
+      margin-bottom: 4px;
+    }
+
+    .node-io p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Arrows */
+    .down-arrow {
+      text-align: center;
+      font-size: 24px;
+      color: var(--navy-soft);
+      margin: -20px 0;
+      font-family: var(--mono);
+    }
+
+    /* Footer & References */
+    .references {
+      background: var(--ink-dark);
+      color: #fff;
+      padding: 60px 0;
+      font-size: 14px;
+      margin-top: 40px;
+    }
+
+    .references h4 {
+      color: var(--orange);
+      font-size: 16px;
+      margin-bottom: 20px;
+      font-family: var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .ref-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .ref-list li {
+      margin-bottom: 12px;
+      color: #aab4d4;
+    }
+
+    .ref-list a {
+      color: #fff;
+      text-decoration: underline;
+      text-decoration-color: var(--navy-soft);
+      text-underline-offset: 4px;
+    }
+
+    .ref-list a:hover {
+      color: var(--orange);
+    }
+
+    footer.bottom {
+      padding: 30px 0;
+      background: #080c1a;
+      color: var(--navy-soft);
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+
+    @media (max-width: 768px) {
+
+      .nodes-grid,
+      .story-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stage-title {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+
+      .stage-title .desc {
+        margin-left: 0;
+      }
+
+      .tech-item {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header class="top">
+    <div class="bar">
+      <a class="back" href="../index.html">← Portfolio</a>
+      <div class="meta">
+        <span class="tag">AI System Architecture</span>
+        <h1>Continuity End-to-End Workflow</h1>
+      </div>
+      <a class="src" href="cut.html">🎬 Open the Workbench</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div class="wrap">
+        <div class="eyebrow">Scientific Operational Flow</div>
+        <h2>AI Video Generation Architecture</h2>
+        <p class="lede">
+          Một luồng vận hành, tích hợp MindPal và hệ thống render video tất định.
+          Chi tiết kỹ thuật: Công nghệ sử dụng, phân tích chi phí, thời gian xử lý (latency), và nguồn dữ liệu thực tế.
+        </p>
+      </div>
+    </div>
+
+    <div class="wrap workflow">
+
+      <!-- STAGE 1 -->
+      <div class="stage">
+        <div class="stage-title">
+          <span class="num">1</span>
+          <h3>Planning & Composition</h3>
+          <span class="desc">Phân tích yêu cầu và sáng tạo kịch bản. Chi phí toàn bộ giai đoạn: ~$0.03 — rẻ hơn 100 lần
+            so với một lần render avatar sai.</span>
+        </div>
+
+        <div class="nodes-grid">
+          <div class="node-card fast-tier">
+            <div class="node-header">
+              <span class="node-id">N1</span>
+              <span class="node-model">Gemini 3.0 Flash · T:0.3</span>
+            </div>
+            <div class="node-title">📋 Intake</div>
+            <p class="node-desc">Đọc Brief và đưa ra <b>đúng 3 câu hỏi làm rõ</b>, mỗi câu kèm phương án mặc định để
+              người dùng chấp nhận bằng 1 click thay vì phải soạn câu trả lời. Giới hạn 3 câu vì một người bị hỏi 10 câu
+              sẽ đóng tab.</p>
+            <div class="tech-stack">
+              <div class="tech-item"><span class="ti-label">Chi phí:</span> ~2 credits ($0.001)</div>
+              <div class="tech-item"><span class="ti-label">Latency:</span> ~2 - 3s</div>
+              <div class="tech-item"><span class="ti-label">Tại sao Flash:</span> Tác vụ đơn giản (đọc hiểu, sinh 3 câu
+                hỏi). Không cần reasoning phức tạp — Opus 5 ở đây là lãng phí tiền.</div>
+              <div class="tech-item"><span class="ti-label">Phương pháp:</span> Few-shot prompting. Temp = 0.3 (hơi sáng
+                tạo để câu văn tự nhiên, nhưng không quá bất ngờ).</div>
+              <div class="tech-item"><span class="ti-label">Prompt cốt lõi:</span> "Produce exactly three questions. For
+                each, propose a sensible default so the user can accept in one click." Cụ thể hoá câu hỏi thường hữu
+                ích: tỷ lệ khung hình, có nhắc đến giá không, ai xuất hiện trên video.</div>
+            </div>
+            <div class="node-io">
+              <p><span class="label">In:</span> @brief</p>
+              <p><span class="label">Out:</span> 3 câu hỏi + defaults + danh sách giả định (để user phản bác nếu sai)
+              </p>
+            </div>
+          </div>
+
+          <div class="node-card top-tier">
+            <div class="node-header">
+              <span class="node-id">N2</span>
+              <span class="node-model">Claude Opus 5 · T:0.7</span>
+            </div>
+            <div class="node-title">✍️ Writer</div>
+            <p class="node-desc">Viết kịch bản lời thoại (~150 từ cho video 60s). Đây là <b>node duy nhất cần viết
+                hay</b>. Câu văn phải nghe tự nhiên khi đọc thành lời (spoken register), không phải văn viết (brochure).
+              Mỗi sự kiện phải trích dẫn được từ tài liệu nguồn. Nếu brief yêu cầu một claim mà nguồn không hỗ trợ, node
+              phải từ chối và ghi rõ thay vì bịa.</p>
+            <div class="tech-stack">
+              <div class="tech-item"><span class="ti-label">Chi phí:</span> ~8-12 credits ($0.01 - $0.02)</div>
+              <div class="tech-item"><span class="ti-label">Latency:</span> ~10 - 15s</div>
+              <div class="tech-item"><span class="ti-label">Tại sao Opus 5:</span> Chất lượng ngôn ngữ quyết định toàn
+                bộ video. Một kịch bản tệ sẽ khiến mọi review, render đều vô nghĩa. Đây là 1 trong 2 node bắt buộc dùng
+                model TOP (cùng N7).</div>
+              <div class="tech-item"><span class="ti-label">Phương pháp:</span> Roleplay Prompting — model đóng vai
+                Copywriter video ngắn. T = 0.7 là mức cao nhất trong toàn bộ luồng, cố tình để mở không gian sáng tạo từ
+                ngữ.</div>
+              <div class="tech-item"><span class="ti-label">Cấu trúc kịch bản:</span> Mở bằng vấn đề của người xem
+                (không phải sản phẩm). Mỗi câu 1 ý. Kết bằng 1 hành động cụ thể. Kèm bảng trích dẫn nguồn cho mỗi claim.
+              </div>
+            </div>
+            <div class="node-io">
+              <p><span class="label">In:</span> @brief, @N1, @sources</p>
+              <p><span class="label">Out:</span> Kịch bản tiếng Việt + word count + bảng claims→sources + danh sách
+                claims bị từ chối</p>
+            </div>
+          </div>
+
+          <div class="node-card mid-tier">
+            <div class="node-header">
+              <span class="node-id">N3</span>
+              <span class="node-model">GPT-5.1 · T:0.2</span>
+            </div>
+            <div class="node-title">🎬 Scene Planner</div>
+            <p class="node-desc">Phân mảnh lời thoại thành các scene, mỗi scene mang theo 3 quyết định bắt buộc: <b>(1)
+                Engine nào, và tại sao</b> — phải giải thích lý do chi tiền; <b>(2) Giá bao nhiêu</b> — viết phép tính
+              rõ ràng; <b>(3) Dữ liệu nào được khẳng định</b> — mọi con số phải khai báo trong claims[] kèm source.</p>
+            <div class="tech-stack">
+              <div class="tech-item"><span class="ti-label">Chi phí:</span> ~4-6 credits ($0.005)</div>
+              <div class="tech-item"><span class="ti-label">Latency:</span> ~8 - 12s</div>
+              <div class="tech-item"><span class="ti-label">Tại sao GPT-5.1:</span> Cần logic mạnh để tuân thủ cấu trúc
+                JSON nghiêm ngặt (sai 1 ký tự = hỏng toàn bộ pipeline), nhưng không cần hành văn mượt mà.</div>
+              <div class="tech-item"><span class="ti-label">Phương pháp:</span> Zero-shot JSON Mode. T = 0.2 (thấp để
+                đảm bảo tính ổn định cấu trúc). Prompt yêu cầu output là JSON thuần, không có prose hay code fences.
+              </div>
+              <div class="tech-item"><span class="ti-label">Bảng giá Engine:</span> heygen_avatar_v ($0.200/s) ·
+                seedance_video ($0.150/s) · hyperframes_html ($0.020/s) · text_card ($0.004/s). Mỗi scene phải có
+                downgrade_path[] liệt kê engine rẻ hơn để Checker đề xuất nếu vượt ngân sách.</div>
+            </div>
+            <div class="node-io">
+              <p><span class="label">In:</span> @N2, @sources, @brand_rules, @ceiling_usd</p>
+              <p><span class="label">Out:</span> The Cut — JSON Document hoàn chỉnh (≈200 dòng) theo cut-schema v1.0</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="down-arrow">↓</div>
+
+      <!-- STAGE 2 -->
+      <div class="stage" style="background: var(--ink-dark); color: #fff; border-color: var(--ink-dark);">
+        <div class="stage-title" style="border-bottom-color: rgba(255,255,255,0.2);">
+          <span class="num" style="background: var(--orange); color: #fff;">!</span>
+          <h3 style="color: #fff;">Deterministic Validation (cut.html)</h3>
+          <span class="desc" style="color: #aab4d4;">Tính toán chuẩn xác bằng Code, không dùng AI. Chi phí: $0. Latency:
+            < 50ms.</span>
+        </div>
+        <div class="nodes-grid" style="grid-template-columns: 1fr;">
+          <div class="node-card system-tier">
+            <div class="node-title">⚙️ Schema Validator & Cost Worksheet</div>
+            <p class="node-desc">Bắt buộc phải chạy qua bước này trước khi gửi cho bất kỳ Lens nào. Thực hiện 3 việc:
+            </p>
+            <div class="tech-stack" style="background: #fff;">
+              <div class="tech-item"><span class="ti-label">Việc 1:</span> <b>Schema Validation</b> — Kiểm tra 9 điều
+                kiện cấu trúc (version, scene IDs duy nhất, source_id tồn tại, engine hợp lệ, enum đúng giá trị...). Sai
+                1 cái = dừng ngay, không gửi cho MindPal.</div>
+              <div class="tech-item"><span class="ti-label">Việc 2:</span> <b>Tính lại ngân sách</b> — Dùng Price Book
+                cố định để tính giá thật từng scene. So sánh với giá AI N3 khai báo. Ví dụ VéXe: N3 khai $3.87 nhưng
+                tính lại ra $5.30 (sai $1.43). Đây là lý do tồn tại của Invariant I1: "totals là derived, không bao giờ
+                tin authored".</div>
+              <div class="tech-item"><span class="ti-label">Việc 3:</span> <b>Sinh Payload</b> — Tạo ra văn bản đầu vào
+                chuẩn cho 6 Lenses tiếp theo, đính kèm Cost Worksheet để Lens không phải tự tính toán.</div>
+              <div class="tech-item"><span class="ti-label">Tại sao Code:</span> AI làm toán kém và có khả năng "nói
+                dối" (giảm giá trên giấy để lách luật ngân sách). Script JavaScript là nguồn chân lý duy nhất (Single
+                Source of Truth). Hash SHA-1 cho từng scene để quản lý cache render.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="down-arrow">↓</div>
+
+      <!-- STAGE 3 -->
+      <div class="stage">
+        <div class="stage-title">
+          <span class="num">2</span>
+          <h3>Review Lenses (The 6 Guardrails)</h3>
+          <span class="desc">6 màng lọc AI. Nguyên tắc chung: <b>Chỉ phân tích, không bao giờ tự sửa</b>. Mỗi finding
+            bắt buộc phải trích dẫn verbatim từ Cut — không quote = không phải finding.</span>
+        </div>
+
+        <div class="nodes-grid">
+          <div class="node-card fast-tier">
+            <div class="node-header">
+              <span class="node-id">N4</span>
+              <span class="node-model">Gemini 3.0 Flash · T:0</span>
+            </div>
+            <div class="node-title">💰 Budget Lens</div>
+            <p class="node-desc">Kiểm tra tiền, và <b>chỉ tiền</b>. Đọc Cost Worksheet (do cut.html tính), so sánh với
+              trần ngân sách. Nếu vượt, đề xuất hạ cấp engine theo downgrade_path[] — chọn scene có gap chi phí lớn nhất
+              trước. Luôn ghi rõ hậu quả phụ (ví dụ: downgrade avatar → ratio khuôn mặt giảm).</p>
+            <div class="tech-stack">
+              <div class="tech-item"><span class="ti-label">Latency:</span> ~2 - 3s</div>
+              <div class="tech-item"><span class="ti-label">Phương pháp:</span> Rule-based verification. Temp = 0
+                (deterministic). N4 <b>KHÔNG tự tính toán</b> — nó chỉ <b>đọc và so sánh</b> worksheet. Nếu N4 tự làm
+                phép toán và ra số khác, đó là dấu hiệu thiết kế bị phá vỡ.</div>
+              <div class="tech-item"><span class="ti-label">Mã lỗi:</span> COST_MISPRICED (warn) · BUDGET_OVER_CEILING
+                (blocker) · UNKNOWN_ENGINE (blocker) · BUDGET_TIGHT (advisory)</div>
+            </div>
+            <div class="node-io">
+              <p><span class="label">In:</span> @N3 (Cut JSON) + Cost Worksheet</p>
+              <p><span class="label">Out:</span> Lens JSON {lens:"budget", verdict, findings[]}</p>
+            </div>
+          </div>
+
+          <div class="node-card fast-tier">
+            <div class="node-header">
+              <span class="node-id">N5</span>
+              <span class="node-model">Gemini 3.0 Flash · T:0</span>
+            </div>
+            <div class="node-title">🏷 Brand Lens</div>
+            <p class="node-desc">Quét từng dialogue_vi và on_screen_text tìm <b>từ cấm</b> (banned phrases), <b>xưng hô
+                sai</b> (ví dụ dùng "Bạn" khi brand rules yêu cầu "anh/chị"), và <b>disclaimer bị thiếu</b>. Mỗi lỗi kèm
+              theo offset chính xác (vị trí ký tự) để đề xuất sửa bằng phép ghép (splice) chứ không phải viết lại câu.
+            </p>
+            <div class="tech-stack">
+              <div class="tech-item"><span class="ti-label">Latency:</span> ~2 - 3s</div>
+              <div class="tech-item"><span class="ti-label">Phương pháp:</span> Exact Match Verification. Chuẩn hoá NFC
+                + lowercase nhưng <b>GIỮ dấu tiếng Việt</b> — "re nhat" ≠ "rẻ nhất". Bỏ dấu sẽ gây false positive hàng
+                loạt.</div>
+              <div class="tech-item"><span class="ti-label">Mã lỗi:</span> BANNED_PHRASE (blocker/warn tuỳ brand
+                profile) · ADDRESS_FORM (warn) · MISSING_DISCLAIMER (warn)</div>
+              <div class="tech-item"><span class="ti-label">Đặc biệt:</span> Character offsets là load-bearing. Chúng
+                cho phép sửa bằng splice thay vì rewrite — đây là lý do duy nhất một AI có thể đề xuất sửa text an toàn.
+              </div>
+            </div>
+            <div class="node-io">
+              <p><span class="label">In:</span> @N3 (Cut JSON), @brand_rules</p>
+              <p><span class="label">Out:</span> Lens JSON {lens:"brand", verdict, findings[]}</p>
+            </div>
+          </div>
+
+          <div class="node-card fast-tier">
+            <div class="node-header">
+              <span class="node-id">N6</span>
+              <span class="node-model">Gemini 3.0 Flash · T:0</span>
+            </div>
+            <div class="node-title">🎭 Ratio Lens</div>
+            <p class="node-desc">Kiểm tra tỷ lệ thời gian xuất hiện khuôn mặt (Talking-head ratio = giây avatar / tổng
+              giây). Đảm bảo video không quá nhiều mặt người (nhàm chán) hoặc quá ít (mất kết nối). Tỷ lệ phụ thuộc vào
+              tỷ lệ khung hình + mục tiêu video.</p>
+            <div class="tech-stack">
+              <div class="tech-item"><span class="ti-label">Latency:</span> ~2 - 3s</div>
+              <div class="tech-item"><span class="ti-label">Band chuẩn:</span> 9:16 install/conversion: 0.15 – 0.35 ·
+                9:16 awareness: 0.10 – 0.30 · 16:9 explain: 0.25 – 0.60 · 1:1 any: 0.15 – 0.40</div>
+              <div class="tech-item"><span class="ti-label">Mã lỗi:</span> RATIO_HIGH · RATIO_LOW · AVATAR_RUN_TOO_LONG
+                (>12s liên tục) · DURATION_DRIFT</div>
+              <div class="tech-item"><span class="ti-label">Đặc biệt:</span> Mọi finding của N6 chỉ ở mức
+                <b>advisory</b> (trừ DURATION_DRIFT = warn). Đây là lens về "taste", không phải "correctness". Một lens
+                về taste mà có quyền chặn sẽ bị tắt trong 1 tuần.</div>
+            </div>
+            <div class="node-io">
+              <p><span class="label">In:</span> @N3 (Cut JSON) + Ratio từ worksheet</p>
+              <p><span class="label">Out:</span> Lens JSON {lens:"ratio", verdict, findings[]}</p>
+            </div>
+          </div>
+
+          <div class="node-card top-tier">
+            <div class="node-header">
+              <span class="node-id">N7</span>
+              <span class="node-model">Claude Opus 5 · T:0</span>
+            </div>
+            <div class="node-title">📎 Claims Sourcing</div>
+            <p class="node-desc"><b>Node quan trọng nhất trong toàn bộ hệ thống.</b> Thực hiện 2 công việc: <b>Job 1</b>
+              — chấm điểm từng claim đã khai báo (SUPPORTED / PARTIAL / UNSOURCED / CONTRADICTED) bằng cách trích dẫn
+              verbatim từ source. <b>Job 2</b> — quét lại toàn bộ dialogue_vi để tìm claim <b>CHƯA khai báo</b>
+              (UNDECLARED). Job 2 quan trọng hơn Job 1 vì cách dễ nhất để tránh bị kiểm tra là không khai báo claim.</p>
+            <div class="tech-stack">
+              <div class="tech-item"><span class="ti-label">Chi phí:</span> ~8-12 credits ($0.01 - $0.02)</div>
+              <div class="tech-item"><span class="ti-label">Latency:</span> ~10 - 15s</div>
+              <div class="tech-item"><span class="ti-label">Tại sao Opus 5:</span> Rất dễ bị Hallucination. Cần model
+                thông minh nhất để đọc hiểu chéo tài liệu và đối chiếu ngữ nghĩa (semantic matching), không chỉ string
+                matching. Đây là 1 trong 2 node <b>không bao giờ được hạ cấp</b>.</div>
+              <div class="tech-item"><span class="ti-label">Phương pháp:</span> Chain-of-Verification. Bắt buộc trích
+                dẫn verbatim đoạn source chứng minh. "Nếu không thể quote, bạn không có finding, bạn chỉ có guess —
+                guess không được vào report."</div>
+              <div class="tech-item"><span class="ti-label">Mã lỗi:</span> CLAIM_SUPPORTED (advisory) · CLAIM_PARTIAL
+                (warn) · CLAIM_UNSOURCED (blocker) · CLAIM_CONTRADICTED (blocker) · CLAIM_UNDECLARED (blocker)</div>
+              <div class="tech-item"><span class="ti-label">Cấm tuyệt đối:</span> proposed_action LUÔN = "none". N7
+                không bao giờ đề xuất viết lại claim. Việc viết lại sẽ xoá cảnh báo nhưng giữ nguyên vấn đề.</div>
+            </div>
+            <div class="node-io">
+              <p><span class="label">In:</span> @N3 (Cut JSON), @sources</p>
+              <p><span class="label">Out:</span> Lens JSON {lens:"claims", verdict, findings[]} + evidence.claim_id,
+                source_id, source_quote</p>
+            </div>
+          </div>
+
+          <div class="node-card mid-tier">
+            <div class="node-header">
+              <span class="node-id">N8</span>
+              <span class="node-model">GPT-5.1 · T:0</span>
+            </div>
+            <div class="node-title">⚖️ Overclaim Lens</div>
+            <p class="node-desc">Đọc kịch bản dưới góc nhìn của <b>một cơ quan quản lý hoặc luật sư đối thủ</b>. Quét
+              tìm: từ tuyệt đối ("nhất", "duy nhất", "số 1"), cam kết không thể thực hiện ("cam kết 100%"), quảng cáo so
+              sánh trực tiếp đối thủ (rất nhạy cảm trong luật VN), và lời hứa về giá/tốc độ không có nguồn.</p>
+            <div class="tech-stack">
+              <div class="tech-item"><span class="ti-label">Latency:</span> ~5 - 8s</div>
+              <div class="tech-item"><span class="ti-label">Phương pháp:</span> Knowledge-Base (RAG). Luật Quảng cáo VN
+                được gắn cứng vào MindPal Knowledge Source — không gửi đi mỗi lần, tiết kiệm token. Mỗi finding phải
+                trích dẫn điều khoản luật cụ thể.</div>
+              <div class="tech-item"><span class="ti-label">Tại sao GPT-5.1:</span> Cần khả năng áp dụng quy tắc pháp lý
+                vào ngữ cảnh, nhưng không cần viết hay. Mid-tier là đủ.</div>
+              <div class="tech-item"><span class="ti-label">Mã lỗi:</span> OVERCLAIM_LEGAL (blocker) · COMPARATIVE_AD
+                (blocker) · OVERCLAIM_SOFT (warn)</div>
+              <div class="tech-item"><span class="ti-label">Cấm tuyệt đối:</span> proposed_action LUÔN = "none". N8 nêu
+                rủi ro và điều khoản luật; người viết quyết định cách nói an toàn. N8 không phải luật sư, và trang phải
+                nói rõ điều đó.</div>
+            </div>
+            <div class="node-io">
+              <p><span class="label">In:</span> @N3 (Cut JSON) + Knowledge Source: Luật QC VN</p>
+              <p><span class="label">Out:</span> Lens JSON {lens:"overclaim", verdict, findings[]} + evidence.provision
+              </p>
+            </div>
+          </div>
+
+          <div class="node-card top-tier" style="border-top-color: #8b5cf6; grid-column: 1 / -1;">
+            <div class="node-header">
+              <span class="node-id">N9</span>
+              <span class="node-model">Claude Opus 5 · T:0.4</span>
+            </div>
+            <div class="node-title">🕵️ Red Team</div>
+            <p class="node-desc">Đọc toàn bộ kết quả của 5 Lenses trên + Cut JSON gốc. Tìm kiếm lỗi mà <b>không lens nào
+                có thể thấy được</b> vì mỗi lens chỉ nhìn vào "làn" của mình. Các loại lỗi N9 chuyên bắt: sắp xếp scene
+              sai logic (ORDERING), hai scene mâu thuẫn nhau (CONTRADICTION_ACROSS_SCENES), hai claim đúng nhưng ghép
+              cạnh nhau gợi ý sai (MISLEADING_BY_SEQUENCE), và engine choice tệ không vi phạm quy tắc nào (A_BAD_CALL).
+            </p>
+            <div class="tech-stack">
+              <div class="tech-item"><span class="ti-label">Chi phí:</span> ~8-12 credits</div>
+              <div class="tech-item"><span class="ti-label">Latency:</span> ~12 - 15s (Chạy SAU khi N4-N8 đã xong)</div>
+              <div class="tech-item"><span class="ti-label">Tại sao Opus 5:</span> Context siêu dài (phải đọc Cut JSON +
+                5 Lens Reports cùng lúc). Cần khả năng xâu chuỗi sự kiện (multi-hop reasoning).</div>
+              <div class="tech-item"><span class="ti-label">Phương pháp:</span> Holistic Review. T = 0.4 (cao hơn các
+                Lens khác để mở khả năng "tưởng tượng" các edge cases). Chỉ có 2 outcome: Tìm thấy lỗi mới (OUTCOME A),
+                hoặc xác nhận không có gì sót (OUTCOME B = NO_RESIDUAL).</div>
+              <div class="tech-item"><span class="ti-label">Quy tắc:</span> Lặp lại finding của Lens khác = tạo ra số 0
+                (vô ích). Bịa rủi ro để tỏ ra hữu ích = phá hỏng lòng tin của người đọc báo cáo — "a false alarm here is
+                worse than silence."</div>
+            </div>
+            <div class="node-io">
+              <p><span class="label">In:</span> @N3, @N4, @N5, @N6, @N7, @N8</p>
+              <p><span class="label">Out:</span> Lens JSON {lens:"redteam", verdict, findings[]} hoặc NO_RESIDUAL</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="down-arrow">↓</div>
+
+      <!-- STAGE 4 -->
+      <div class="stage">
+        <div class="stage-title">
+          <span class="num">3</span>
+          <h3>Decision & Output</h3>
+          <span class="desc">Tổng hợp kết quả và lập Báo Cáo Xét Duyệt (Gate Report). Node có quyền lực cao nhất nhưng
+            bị giới hạn hành động khắt khe nhất.</span>
+        </div>
+        <div class="nodes-grid" style="grid-template-columns: 1fr;">
+          <div class="node-card mid-tier">
+            <div class="node-header">
+              <span class="node-id">N10</span>
+              <span class="node-model">GPT-5.1 · T:0</span>
+            </div>
+            <div class="node-title">🎯 Checker (The Gatekeeper)</div>
+            <p class="node-desc">Đọc 6 báo cáo Lens và thực hiện 4 bước: <b>Step 1</b> — Tra bảng Authority Table để
+              phân loại mỗi finding (BLOCK / PROPOSE FIX / ADVISE / FOLD). <b>Step 2</b> — Xử lý xung đột khi 2 đề xuất
+              mâu thuẫn (priority: truth > legal > budget > brand > editorial). Bên thua không bị xóa, mà được gắn nhãn
+              "deferred" kèm hậu quả. <b>Step 3</b> — Trình bày 3 tầng: Blockers (đỏ, ở trên cùng), Proposals (vàng, gấp
+              lại), Advisories (xám, ẩn). <b>Step 4</b> — Ghi audit entry cho mỗi đề xuất.</p>
+            <div class="tech-stack">
+              <div class="tech-item"><span class="ti-label">Chi phí:</span> ~4-6 credits</div>
+              <div class="tech-item"><span class="ti-label">Latency:</span> ~5 - 8s</div>
+              <div class="tech-item"><span class="ti-label">Tại sao GPT-5.1:</span> Nhiệm vụ là mapping (đối chiếu bảng)
+                chứ không phải phân tích logic. GPT-5.1 xử lý mapping tuyệt đối chính xác với giá rẻ hơn Opus 5.</div>
+              <div class="tech-item"><span class="ti-label">3 Cấm lệnh:</span> ① Không bao giờ tự sửa lời
+                thoại/claims/sources (xóa cảnh báo ≠ xóa vấn đề). ② Không bao giờ đề xuất tăng trần ngân sách (ngân sách
+                là của user). ③ Không bao giờ tự duyệt blocker (chỉ con người có quyền waive, và waive phải kèm lý do).
+              </div>
+              <div class="tech-item"><span class="ti-label">Triết lý:</span> "Một fabricated finding chỉ tốn 5 giây đọc.
+                Một silent edit sai tốn cả uy tín." — Bỏ quyền tự sửa khiến worst case giảm từ "đổi script mà user không
+                biết" xuống "tốn 1 lúc đọc báo cáo sai."</div>
+            </div>
+            <div class="node-io">
+              <p><span class="label">In:</span> @N3, @N4, @N5, @N6, @N7, @N8, @N9</p>
+              <p><span class="label">Out:</span> Gate Report (BLOCKED/READY) + Audit entries cho mọi proposal</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="down-arrow">↓</div>
+
+      <!-- STAGE 5 (VIDEO GENERATION) -->
+      <div class="stage" style="background: #e2ecfd; border-color: var(--blue);">
+        <div class="stage-title">
+          <span class="num" style="background: var(--blue);">4</span>
+          <h3 style="color: var(--navy);">Video Generation APIs & Assembly</h3>
+          <span class="desc">Chỉ chạy sau khi người dùng ĐÃ DUYỆT Gate Report. Bottleneck: Avatar render (~10 phút/1
+            phút video).</span>
+        </div>
+
+        <div class="nodes-grid">
+          <div class="node-card" style="border-left: 4px solid var(--blue);">
+            <div class="node-title">🔊 1. Voice Synthesis (The Master Clock)</div>
+            <p class="node-desc">Nhận dialogue_vi từ mỗi scene và sinh ra: (a) file audio .mp3, (b) mảng Word-Level
+              Timestamps [{word, start_s, end_s}]. <b>Timestamps này là "xương sống"</b> — quyết định khi nào avatar mấp
+              máy, khi nào phụ đề hiện lên, và khi nào scene tiếp theo bắt đầu. Audio đi trước vì thời gian nói không
+              thể ép được.</p>
+            <div class="tech-stack" style="background: #fff;">
+              <div class="tech-item"><span class="ti-label">Nền tảng:</span> ElevenLabs API (Flash v2.5 model)</div>
+              <div class="tech-item"><span class="ti-label">Chi phí:</span> $0.05 / 1,000 ký tự. Video 45s ≈ 300 ký tự ≈
+                $0.015</div>
+              <div class="tech-item"><span class="ti-label">Latency:</span> ~75ms inference, sub-500ms TTFB. Nhanh nhất
+                trong toàn pipeline</div>
+              <div class="tech-item"><span class="ti-label">API endpoint:</span> POST
+                /v1/text-to-speech/{voice_id}/with-timestamps</div>
+            </div>
+          </div>
+
+          <div class="node-card" style="border-left: 4px solid var(--purple);">
+            <div class="node-title">🧑 2. Avatar / Presenter Render</div>
+            <p class="node-desc">Nhận file audio (từ Step 1) làm control signal. Mô hình Diffusion tạo video avatar có
+              khẩu hình miệng khớp chính xác (lip-sync) với từng từ. Chỉ chạy cho scenes có engine = heygen_avatar_v.
+              Đây là bước đắt nhất và chậm nhất — nên luôn để cuối, sau khi mọi review đã xong.</p>
+            <div class="tech-stack" style="background: #fff;">
+              <div class="tech-item"><span class="ti-label">Nền tảng:</span> HeyGen API (Avatar V hoặc tương đương)
+              </div>
+              <div class="tech-item"><span class="ti-label">Chi phí:</span> ~$0.50 - $0.99 / credit. Ước tính $1-$3 /
+                phút video tuỳ model</div>
+              <div class="tech-item"><span class="ti-label">Latency:</span> ~10 phút / 1 phút video. Bottleneck lớn
+                nhất. Giải thích tại sao review trước render tiết kiệm hàng chục USD</div>
+              <div class="tech-item"><span class="ti-label">Concurrency:</span> 10 (Pay-As-You-Go) đến 20 (Enterprise)
+                video đồng thời</div>
+            </div>
+          </div>
+
+          <div class="node-card" style="border-left: 4px solid var(--green);">
+            <div class="node-title">🖼 3. Visuals & B-roll</div>
+            <p class="node-desc">Chạy song song với Avatar. 2 nhánh: (a) <b>AI Video</b> (Runway/Seedance) cho scenes
+              cần chuyển động điện ảnh, (b) <b>Hyperframes HTML</b> render DOM Canvas cho UI walkthrough, bảng số liệu,
+              text card — pixel-exact, không có gì để AI bịa.</p>
+            <div class="tech-stack" style="background: #fff;">
+              <div class="tech-item"><span class="ti-label">Runway API:</span> Credit-based ($0.01/credit). Model Router
+                tự chọn model tối ưu theo cost/latency/quality</div>
+              <div class="tech-item"><span class="ti-label">Hyperframes:</span> Render DOM thành video frames. ~$0.02/s
+                (compute). Rẻ gấp 10× avatar</div>
+              <div class="tech-item"><span class="ti-label">Latency:</span> AI Video: vài phút. HTML Render: vài giây.
+                Chiến lược: ưu tiên Hyperframes bất cứ khi nào có thể</div>
+            </div>
+          </div>
+
+          <div class="node-card" style="border-left: 4px solid var(--orange); grid-column: 1 / -1;">
+            <div class="node-title">🎞 4. Deterministic Assembly & Export</div>
+            <p class="node-desc">Ghép tất cả tracks lại với nhau. Assembly phải <b>tất định</b> (deterministic): cùng 1
+              Cut JSON → cùng 1 video byte-for-byte. Đây là yêu cầu bắt buộc để diff, cache, và audit có ý nghĩa.</p>
+            <div class="tech-stack" style="background: #fff;">
+              <div class="tech-item"><span class="ti-label">Công cụ:</span> FFmpeg (CLI) hoặc Remotion (React-based
+                renderer)</div>
+              <div class="tech-item"><span class="ti-label">Input tracks:</span> Audio (.mp3 từ TTS) + Video (Avatar
+                .mp4 + B-roll .mp4 + Hyperframes .webm) + Subtitles (.ass từ timestamps)</div>
+              <div class="tech-item"><span class="ti-label">Ghép nối:</span> Frame-exact seeking (-ss) theo duration_s
+                mỗi scene. Chuẩn hóa âm lượng −14 LUFS (tiêu chuẩn TikTok/Reels)</div>
+              <div class="tech-item"><span class="ti-label">Latency:</span> ~1-2 phút cho video 45s trên server tiêu
+                chuẩn</div>
+              <div class="tech-item"><span class="ti-label">Output:</span> MP4 (1080×1920 hoặc theo brief.aspect) +
+                Audit Ledger JSON (mọi quyết định waive/accept kèm tên, thời gian, lý do)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- VOICE → ASSEMBLY DEEP DIVE -->
+    <div class="wrap" style="padding-top:20px; padding-bottom:60px;">
+      <div class="stage"
+        style="background: linear-gradient(135deg, #0f1730 0%, #1a2555 100%); color: #fff; border-color: transparent;">
+        <div class="stage-title" style="border-bottom-color: rgba(255,255,255,0.15);">
+          <span class="num" style="background: var(--orange);">★</span>
+          <h3 style="color: #fff;">Deep Dive: Voice → Assembly Pipeline</h3>
+          <span class="desc" style="color: #aab4d4;">Tại sao Voice đi trước, và Word-Level Timestamps là "xương sống"
+            của video.</span>
+        </div>
+
+        <div class="nodes-grid" style="grid-template-columns: 1fr; gap: 16px;">
+          <div class="node-card"
+            style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #dfe5f5;">
+            <div class="node-title" style="color:#fff;">🔑 Nguyên tắc cốt lõi: Audio-First Assembly</div>
+            <p class="node-desc" style="color: #aab4d4;">Trong sản xuất video truyền thống, người ta quay hình trước rồi
+              lồng tiếng sau. Trong hệ thống này, thứ tự bị đảo ngược có chủ đích:</p>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap:12px;">
+              <div style="background:rgba(249,102,14,0.15); border-radius:10px; padding:14px;">
+                <p style="font-weight:700; color:#fff; margin-bottom:6px;">Bước 1: Text-to-Speech → Timestamps</p>
+                <p style="font-size:13px; color:#aab4d4;">API TTS (ElevenLabs) nhận <code
+                    style='background:rgba(255,255,255,0.1);padding:2px 4px;border-radius:3px;'>dialogue_vi</code> và
+                  trả về:<br>• File <b>.mp3</b> (tệp âm thanh)<br>• Mảng <b>Word-Level Timestamps</b>: mỗi từ kèm thời
+                  điểm bắt đầu và kết thúc (ms).</p>
+                <p style="font-size:12px; color:#aab4d4; margin-top:8px; font-family:var(--mono);">Ví dụ:
+                  [{"word":"Tết", "start":0.12, "end":0.45}, {"word":"năm", "start":0.48, "end":0.71}, ...]</p>
+              </div>
+              <div style="background:rgba(139,92,246,0.15); border-radius:10px; padding:14px;">
+                <p style="font-weight:700; color:#fff; margin-bottom:6px;">Bước 2: Timestamps → Avatar Lip-Sync</p>
+                <p style="font-size:13px; color:#aab4d4;">File audio được gửi cho HeyGen API làm <b>control signal</b>.
+                  Mô hình Diffusion sẽ tạo ra video avatar có khẩu hình miệng khớp chính xác với từng từ. Không cần
+                  timestamps riêng — audio chính là tín hiệu điều khiển.</p>
+              </div>
+              <div style="background:rgba(30,146,87,0.15); border-radius:10px; padding:14px;">
+                <p style="font-weight:700; color:#fff; margin-bottom:6px;">Bước 3: Timestamps → Subtitles</p>
+                <p style="font-size:13px; color:#aab4d4;">Word-Level Timestamps cho phép chèn phụ đề karaoke-style (từng
+                  từ sáng lên đúng lúc người nói). Đây là tiêu chuẩn TikTok/Reels hiện tại, giúp tăng tỷ lệ xem khi tắt
+                  tiếng (muted autoplay).</p>
+              </div>
+              <div style="background:rgba(47,111,237,0.15); border-radius:10px; padding:14px;">
+                <p style="font-weight:700; color:#fff; margin-bottom:6px;">Bước 4: FFmpeg Assembly (Deterministic)</p>
+                <p style="font-size:13px; color:#aab4d4;">FFmpeg nhận tất cả tracks:<br>• Audio track (từ TTS)<br>•
+                  Video tracks (Avatar + B-roll + Hyperframes)<br>• Subtitle track (.ass/.srt từ timestamps)<br>Ghép
+                  bằng <code style='background:rgba(255,255,255,0.1);padding:2px 4px;border-radius:3px;'>-ss</code>
+                  (frame-exact seeking) theo <code
+                    style='background:rgba(255,255,255,0.1);padding:2px 4px;border-radius:3px;'>duration_s</code> của
+                  mỗi scene trong Cut JSON. Cùng 1 JSON → cùng 1 video byte-for-byte.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="node-card"
+            style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #dfe5f5;">
+            <div class="node-title" style="color:#fff;">💡 Tại sao Audio phải đi trước?</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size:13px;">
+              <div style="color:#aab4d4;"><b style="color:var(--green);">✓ Voice quyết định timing.</b> Một câu thoại 6
+                giây không thể ép thành 4 giây bằng cách cắt video — nó phải được nói trong 6 giây. Do đó audio sinh ra
+                trước là "Master Clock" và mọi thứ khác phải khớp theo nó.</div>
+              <div style="color:#aab4d4;"><b style="color:var(--green);">✓ Cache invalidation rẻ.</b> Hash (I3) chỉ bao
+                gồm dialogue + engine + params. Nếu sửa lời thoại scene 3 → chỉ render lại scene 3. Các scene khác là
+                cache hit, không tốn tiền. Đây là lý do hệ thống có thể cho phép sửa từng cảnh mà không phải trả giá
+                render lại toàn bộ.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ORCHESTRATION: HOW IT'S LINKED -->
+    <section style="padding:44px 0; border-bottom:1px solid var(--border); background:var(--bg);">
+      <div class="wrap">
+        <div class="stage-title" style="border:none; padding:0; margin:0 0 28px 0;">
+          <h3>Orchestration: Điều phối các Node như thế nào?</h3>
+          <span class="desc">Giải pháp "Wiring" để kết nối 10 MindPal Agents, Code, và Render APIs thành một luồng duy
+            nhất.</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px;">
+
+          <div
+            style="background:#fff; border:1px solid var(--border); border-radius:12px; padding:20px; box-shadow:var(--shadow-sm);">
+            <div
+              style="font-family:var(--mono); font-size:12px; color:var(--blue); font-weight:700; margin-bottom:8px;">
+              LINK 1: MINDPAL WIRING (N1 → N2 → N3)</div>
+            <p style="font-weight:700; margin-bottom:8px; font-size:15px;">Truyền biến nội bộ (Internal Handoff)</p>
+            <p style="font-size:14px; color:var(--navy-soft); line-height:1.6;">Trong MindPal, các Agent được nối với
+              nhau qua tính năng <b>Task Wiring</b>. Đầu ra của N1 (Context) tự động trở thành biến <code
+                style='background:#f1f3f8;padding:2px 4px;border-radius:3px;'>@N1_Output</code> nạp vào Prompt của N2.
+              N2 sinh ra kịch bản, tự động chảy vào <code
+                style='background:#f1f3f8;padding:2px 4px;border-radius:3px;'>@N2_Script</code> cho N3. Việc này diễn ra
+              trên server MindPal, không cần code gõ API thủ công.</p>
+          </div>
+
+          <div
+            style="background:#fff; border:1px solid var(--orange); border-radius:12px; padding:20px; box-shadow: 0 4px 12px rgba(249,102,14,0.1);">
+            <div
+              style="font-family:var(--mono); font-size:12px; color:var(--orange); font-weight:700; margin-bottom:8px;">
+              LINK 2: THE AIR GAP (N3 → LENSES)</div>
+            <p style="font-weight:700; margin-bottom:8px; font-size:15px;">Cầu nối lai (Manual Bridge / Webhook)</p>
+            <p style="font-size:14px; color:var(--navy-soft); line-height:1.6;">Lý tưởng nhất là N3 tự động gọi <code
+                style='background:#f1f3f8;padding:2px 4px;border-radius:3px;'>cut.html</code> qua webhook. Tuy nhiên, do
+              giới hạn paywall API, giải pháp thực tế của hệ thống này là <b>Air Gap</b>. User copy JSON từ N3 dán vào
+              giao diện <code style='background:#f1f3f8;padding:2px 4px;border-radius:3px;'>cut.html</code>. Script chạy
+              tính toán, sau đó tạo payload chuẩn bị sẵn để dán ngược lại MindPal cho các Lenses chạy.</p>
+          </div>
+
+          <div
+            style="background:#fff; border:1px solid var(--border); border-radius:12px; padding:20px; box-shadow:var(--shadow-sm);">
+            <div
+              style="font-family:var(--mono); font-size:12px; color:var(--purple); font-weight:700; margin-bottom:8px;">
+              LINK 3: GENERATION PIPELINE</div>
+            <p style="font-weight:700; margin-bottom:8px; font-size:15px;">Script tự động (Node.js / Python)</p>
+            <p style="font-size:14px; color:var(--navy-soft); line-height:1.6;">Sau khi Gate Report duyệt (Cut đã sạch),
+              1 script điều phối (như file <code
+                style='background:#f1f3f8;padding:2px 4px;border-radius:3px;'>voice-demo.js</code>) sẽ đọc file Cut
+              JSON. Script này gọi tuần tự:<br>1. ElevenLabs API lấy audio+timestamps.<br>2. Bắn Async HeyGen & Runway
+              API.<br>3. Kích hoạt FFmpeg CLI ghép nối cục bộ.</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <section class="storyboard">
+      <div class="wrap">
+        <div class="stage-title" style="border:none; padding:0; margin:0;">
+          <h3>User Journey Storyboard</h3>
+          <span class="desc">Trải nghiệm thực tế: cả Happy Path lẫn Error Path (khi hệ thống bắt lỗi).</span>
+        </div>
+
+        <div class="story-grid">
+          <div class="story-step">
+            <span class="step-num">Step 1: Briefing</span>
+            <div class="mockup">
+              <p><b>User:</b> "Tạo video 60s quảng cáo VéXe Tết, có số liệu chứng minh."</p>
+              <p style="font-size:11px;color:var(--navy-soft);">📎 Đính kèm: báo cáo Q4, khảo sát khách hàng</p>
+            </div>
+            <p class="action">Người dùng gửi brief + tài liệu nguồn + brand rules + trần ngân sách ($4.00).</p>
+            <span class="latency-badge">⏱ ~3s (LLM N1)</span>
+          </div>
+
+          <div class="story-step">
+            <span class="step-num">Step 2: Clarification</span>
+            <div class="mockup">
+              <p><b>AI:</b> 3 câu hỏi làm rõ:</p>
+              <p style="font-size:12px;">1. Giọng nam hay nữ? → <i>Mặc định: Nữ</i></p>
+              <p style="font-size:12px;">2. Tỷ lệ 9:16 hay 16:9? → <i>Mặc định: 9:16</i></p>
+              <p style="font-size:12px;">3. Có nhắc đến giá vé không? → <i>Mặc định: Không</i></p>
+              <p><button
+                  style="background:var(--blue);color:#fff;border:none;border-radius:4px;padding:4px 8px;font-size:11px;margin-top:6px;">✓
+                  Chấp nhận mặc định</button></p>
+            </div>
+            <p class="action">N2 (Writer) viết kịch bản ~150 từ. N3 (Scene Planner) chia thành 8 cảnh JSON.</p>
+            <span class="latency-badge">⏱ ~15 - 30s (N2+N3)</span>
+          </div>
+
+          <div class="story-step" style="border-color:var(--red); background: var(--red-soft);">
+            <span class="step-num" style="color:var(--red);">Step 3a: Blocker Found! ⛔</span>
+            <div class="mockup" style="border-left: 3px solid var(--red);">
+              <p><b>🔴 BLOCKED (2)</b></p>
+              <p style="font-size:12px;">sc-06 · <b>CLAIM_CONTRADICTED</b><br>"Tiết kiệm đến 40%" — nguồn S1 không chứa
+                con số này.</p>
+              <p style="font-size:12px;">sc-07 · <b>CLAIM_UNDECLARED</b><br>"Hơn 500 nhà xe" — không có trong claims[].
+              </p>
+              <p><b>🟡 PROPOSALS (3)</b></p>
+              <p style="font-size:12px;">sc-03 · "Bạn" → "Anh chị" · Budget downgrade ×2</p>
+            </div>
+            <p class="action">Gate Report chặn 2 lỗi nghiêm trọng. Không thể render cho đến khi con người xử lý.</p>
+            <span class="latency-badge">⏱ ~20s (6 Lenses)</span>
+          </div>
+
+          <div class="story-step" style="border-color:var(--amber); background: var(--amber-soft);">
+            <span class="step-num" style="color:var(--amber);">Step 3b: Human Decision</span>
+            <div class="mockup" style="border-left: 3px solid var(--amber);">
+              <p style="font-size:12px;"><b>sc-06:</b> Người dùng chọn <b style="color:var(--red);">Waive</b></p>
+              <p style="font-size:11px;color:var(--navy-soft);">Lý do: "Số 40% lấy từ slide cũ, sẽ xác minh sau."</p>
+              <p style="font-size:12px;"><b>sc-07:</b> Người dùng chọn <b style="color:var(--green);">Edit</b> → quay
+                lại N2</p>
+              <p style="font-size:11px;color:var(--navy-soft);">↻ Viết lại cảnh 7, chạy lại lenses chỉ cho scene đó.</p>
+              <p style="font-size:12px; margin-top:8px;"><b>3 Proposals:</b> <span style="color:var(--green);">✓ Accept
+                  all</span></p>
+            </div>
+            <p class="action">Mọi quyết định được ghi vào Audit Ledger kèm tên, thời gian, lý do. Không thể xóa.</p>
+            <span class="latency-badge">⏱ Tùy người dùng</span>
+          </div>
+
+          <div class="story-step" style="border-color:var(--green);">
+            <span class="step-num" style="color:var(--green);">Step 3c: Approved ✓</span>
+            <div class="mockup" style="border-left: 3px solid var(--green);">
+              <p><b>✅ GATE REPORT: READY</b></p>
+              <p style="font-size:12px;">0 blockers · 0 proposals pending</p>
+              <p style="font-size:12px;">Budget: $3.14 / $4.00</p>
+              <p style="font-size:11px; color:var(--navy-soft);">1 waived finding (recorded in audit)</p>
+              <button
+                style="width:100%;background:var(--green);color:#fff;border:none;border-radius:4px;padding:6px;margin-top:8px;font-weight:bold;">▶
+                Bắt đầu Render</button>
+            </div>
+            <p class="action">Cut đã sạch. Hệ thống chuyển sang giai đoạn Generation.</p>
+            <span class="latency-badge">⏱ Ngay lập tức</span>
+          </div>
+
+          <div class="story-step">
+            <span class="step-num">Step 4: Generation</span>
+            <div class="mockup"
+              style="display:flex; align-items:center; justify-content:center; flex-direction:column; color:var(--navy-soft);">
+              <div style="font-size:24px; margin-bottom:8px;">⏳</div>
+              <p style="font-size:12px;">✓ ElevenLabs TTS — xong (2s)</p>
+              <p style="font-size:12px;">◐ HeyGen Avatar — 60%...</p>
+              <p style="font-size:12px;">✓ Hyperframes HTML — xong (5s)</p>
+            </div>
+            <p class="action">Voice tạo trước (Master Clock). Avatar và B-roll chạy song song. FFmpeg ghép cuối cùng.
+            </p>
+            <span class="latency-badge slow">⏱ ~10 - 15 phút (bottleneck: HeyGen)</span>
+          </div>
+
+          <div class="story-step">
+            <span class="step-num">Step 5: Export</span>
+            <div class="mockup" style="background:var(--ink-dark); color:#fff; text-align:center;">
+              <p>▶️ <b>vexe_tet_final.mp4</b></p>
+              <p style="font-size:11px; color:#aab4d4; margin-top:8px;">45s · 1080×1920 · $3.14</p>
+              <p style="font-size:10px; color:#aab4d4; margin-top:8px;">📄 Audit: 1 waive + 3 accepts</p>
+            </div>
+            <p class="action">MP4 + Phụ đề tự động + Audit Ledger. Sẵn sàng upload TikTok/Reels.</p>
+            <span class="latency-badge">⏱ Ngay lập tức</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- WHAT MAKES THIS DIFFERENT -->
+    <section style="padding:44px 0; border-bottom:1px solid var(--border); background:#fff;">
+      <div class="wrap">
+        <div class="stage-title" style="border:none; padding:0; margin:0 0 28px 0;">
+          <h3>Thiết kế Review trên MindPal: Khác gì so với cách làm thông thường?</h3>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; font-size:14px; line-height:1.65;">
+
+          <div style="background:var(--red-soft); border:1px solid #e8c7c3; border-radius:14px; padding:22px;">
+            <p style="font-weight:800; color:var(--red); margin-bottom:14px; font-size:15px;">❌ Cách làm phổ biến</p>
+            <p style="margin-bottom:10px;"><b>1 agent review tất cả.</b> Gửi toàn bộ script cho 1 con AI "review", nhận
+              lại 1 danh sách lỗi. Không ai biết nó kiểm tra theo tiêu chí nào, bỏ sót gì, và tại sao.</p>
+            <p style="margin-bottom:10px;"><b>AI tự sửa.</b> Agent thấy lỗi → tự sửa luôn. Nghe tiện nhưng cực kỳ nguy
+              hiểm: cảnh báo biến mất, vấn đề vẫn còn, và không ai biết script đã bị đổi.</p>
+            <p style="margin-bottom:10px;"><b>AI tự tính toán.</b> Hỏi LLM "tổng chi phí bao nhiêu?" và tin kết quả. LLM
+              làm toán kém, và có thể "bịa" con số để khớp ngân sách.</p>
+            <p style="margin-bottom:10px;"><b>Không có audit.</b> Sau khi review xong, không ai biết finding nào đã bị
+              bỏ qua, ai quyết định, và vì sao. Nếu video gặp sự cố, không có gì để tra cứu lại.</p>
+            <p><b>Không thể test.</b> Không thể viết trước "expected findings" để kiểm tra xem hệ thống review có chạy
+              đúng không.</p>
+          </div>
+
+          <div style="background:var(--green-soft); border:1px solid #b8d9c5; border-radius:14px; padding:22px;">
+            <p style="font-weight:800; color:var(--green); margin-bottom:14px; font-size:15px;">✅ Thiết kế Continuity
+              (MindPal)</p>
+            <p style="margin-bottom:10px;"><b>6 Lenses chuyên biệt + 1 Red Team.</b> Mỗi lens chỉ kiểm tra đúng 1 lĩnh
+              vực (tiền / thương hiệu / tỷ lệ / dữ kiện / luật / rủi ro ẩn). Bắt buộc trích dẫn verbatim — không quote
+              được thì không phải finding. Mỗi lens có mã lỗi riêng (COST_MISPRICED, CLAIM_UNDECLARED, ...), có thể đo
+              đạc và đánh giá recall/precision theo từng loại.</p>
+            <p style="margin-bottom:10px;"><b>"Propose, never act."</b> Checker (N10) chỉ được phép ĐỀ XUẤT, không bao
+              giờ được tự sửa. Worst case giảm từ "AI âm thầm đổi script" xuống "AI tốn 5 giây đọc của bạn." Mọi fix đều
+              là splice (ghép văn bản có sẵn tại offset chính xác), không phải rewrite.</p>
+            <p style="margin-bottom:10px;"><b>Toán do Code làm (cut.html).</b> LLM không bao giờ tính tiền. Script
+              JavaScript tính lại toàn bộ từ Price Book cố định → so sánh với số AI khai. Ví dụ: AI khai $3.87, Code
+              tính ra $5.30. Invariant I1 bắt ngay.</p>
+            <p style="margin-bottom:10px;"><b>Audit Ledger append-only.</b> Mỗi quyết định (accept/reject/waive) được
+              ghi kèm tên, thời gian, lý do. Đặc biệt: waive (bỏ qua blocker) bắt buộc phải có lý do — đây là dòng
+              chuyển trách nhiệm sang đúng người.</p>
+            <p><b>Testable by design.</b> Viết "Expected Findings" trước khi chạy (VéXe có 6 seeded defects). Sau khi
+              chạy, đối chiếu để biết hệ thống bắt được bao nhiêu / bỏ sót bao nhiêu. Phần "What went wrong" là phần có
+              giá trị nhất.</p>
+          </div>
+        </div>
+
+        <div
+          style="margin-top:22px; background:var(--lav); border-radius:12px; padding:18px 22px; font-size:14px; color:var(--navy);">
+          <b style="color:var(--purple);">💡 Tóm gọn bằng 1 câu:</b> Hệ thống này không cố làm cho AI thông minh hơn —
+          nó cố làm cho <b>hậu quả của AI sai</b> nhỏ nhất có thể, bằng cách tách biệt "ai phân tích" (AI), "ai tính
+          toán" (Code), và "ai quyết định" (Con người).
+        </div>
+      </div>
+    </section>
+
+    <!-- 2026 MARKET VALIDATION -->
+    <section
+      style="padding:60px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); background: linear-gradient(to bottom, #fff, var(--bg));">
+      <div class="wrap">
+        <div class="stage-title"
+          style="border:none; padding:0; margin:0 0 28px 0; justify-content: center; text-align: center;">
+          <h3 style="font-size: 26px;">Nghiên Cứu Thị Trường 2026: Kiến trúc này có tối ưu không?</h3>
+        </div>
+        <p style="text-align: center; color: var(--navy-soft); max-width: 800px; margin: 0 auto 40px; font-size: 15px;">
+          Theo các nghiên cứu mới nhất về sản xuất Video AI doanh nghiệp (Giữa năm 2026): Việc gõ Prompt thẳng vào một
+          model "All-in-one" (như Sora hay Gen-4) đã lỗi thời vì chi phí đắt đỏ và thiếu tính nhất quán. Tiêu chuẩn
+          ngành hiện tại là <b>"Agentic Workflow Architecture"</b>. Hệ thống Continuity của chúng ta hoàn toàn khớp với
+          chuẩn mực này.
+        </p>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:24px;">
+          <div
+            style="background:#fff; border:1px solid var(--border); border-radius:12px; padding:24px; box-shadow:var(--shadow-sm);">
+            <div
+              style="font-family:var(--mono); font-size:11px; color:var(--blue); font-weight:700; margin-bottom:8px; letter-spacing:0.05em; text-transform:uppercase;">
+              Trend 1: Multi-Model Routing</div>
+            <p style="font-weight:800; font-size:16px; margin-bottom:10px;">Phân rã tác vụ (Task Decomposition)</p>
+            <p style="font-size:13.5px; color:var(--navy-soft); line-height:1.6;"><b>Thị trường:</b> Không dùng 1 model
+              duy nhất. Phải tách Audio, Lip-sync, và B-roll cho các engine chuyên biệt để tối ưu
+              ROI.<br><br><b>Continuity:</b> Áp dụng triệt để. Tách TTS (ElevenLabs), Avatar (HeyGen), và B-roll tĩnh
+              (Hyperframes). Giảm giá thành render từ $2.00/scene xuống còn $0.02/scene ở những cảnh không cần Avatar.
+            </p>
+          </div>
+
+          <div
+            style="background:#fff; border:1px solid var(--border); border-radius:12px; padding:24px; box-shadow:var(--shadow-sm);">
+            <div
+              style="font-family:var(--mono); font-size:11px; color:var(--orange); font-weight:700; margin-bottom:8px; letter-spacing:0.05em; text-transform:uppercase;">
+              Trend 2: The Judge Agents</div>
+            <p style="font-weight:800; font-size:16px; margin-bottom:10px;">Chặn lỗi trước khi Render</p>
+            <p style="font-size:13.5px; color:var(--navy-soft); line-height:1.6;"><b>Thị trường:</b> Chi phí render AI
+              Avatar vẫn rất đắt (lên tới $1-$3/phút). Các hệ thống lớn (như MLflow/LangChain) đang chuộng "Judge
+              Agents" để duyệt (QA) kịch bản trước khi chi tiền render.<br><br><b>Continuity:</b> Vượt chuẩn với 6
+              Lenses độc lập (Budget, Brand, Ratio, Claims, Legal) + 1 Red Team + 1 Gatekeeper xử lý xung đột chéo. Bắt
+              mọi rủi ro với logic "Propose, never act".</p>
+          </div>
+
+          <div
+            style="background:#fff; border:1px solid var(--border); border-radius:12px; padding:24px; box-shadow:var(--shadow-sm);">
+            <div
+              style="font-family:var(--mono); font-size:11px; color:var(--green); font-weight:700; margin-bottom:8px; letter-spacing:0.05em; text-transform:uppercase;">
+              Trend 3: Human-in-the-loop</div>
+            <p style="font-weight:800; font-size:16px; margin-bottom:10px;">Con người duyệt, AI thực thi</p>
+            <p style="font-size:13.5px; color:var(--navy-soft); line-height:1.6;"><b>Thị trường:</b> Doanh nghiệp không
+              tin tưởng giao AI publish video 100% (nguy cơ khủng hoảng truyền thông). Phải có chốt chặn pháp lý và
+              audit.<br><br><b>Continuity:</b> Hệ thống dừng cứng tại Gate Report. Người dùng phải click Waive (kèm lý
+              do) hoặc Accept Edit. Mọi quyết định đổ vào <b>Audit Ledger</b> để tra cứu trách nhiệm sau này.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <section class="references">
+    <div class="wrap">
+      <h4>Nguồn Dữ Liệu Thực Tế (Tham Khảo Tháng 07/2026)</h4>
+      <ul class="ref-list">
+        <li><strong>HeyGen API Pricing & Latency:</strong> Chi phí tính theo Credit System, khoảng $0.50-$0.99/credit
+          đối với các gói Pay-As-You-Go/Pro. Thời gian render trung bình mất khoảng 10 phút xử lý cho mỗi 1 phút video
+          trên server tiêu chuẩn. Dữ liệu từ <a href="https://www.heygen.com/pricing" target="_blank">HeyGen Pricing</a>
+          & <a href="https://docs.heygen.com" target="_blank">HeyGen API Docs</a>.</li>
+        <li><strong>ElevenLabs API Text-To-Speech:</strong> Sử dụng model Flash v2.5 cho API. Chi phí $0.05 trên mỗi
+          1,000 ký tự. Latency đạt mức siêu thấp (Khoảng 75ms độ trễ inference, Time-To-First-Byte dưới 500ms). Dữ liệu
+          từ <a href="https://elevenlabs.io/pricing" target="_blank">ElevenLabs Pricing</a>.</li>
+        <li><strong>Runway API (Visuals):</strong> API Runway tính theo hệ thống tín chỉ (Credit-based, mua với giá
+          $0.01/credit). Chi phí thực tế dựa trên model (Veo/Gen-4). Latency không cố định, phụ thuộc vào Model Router
+          và mức độ tối ưu, thường mất vài phút. Dữ liệu từ <a href="https://www.runwayml.com/developers"
+            target="_blank">Runway Developer Portal</a>.</li>
+        <li><strong>LLM Providers:</strong> Mức giá và độ trễ của Claude Opus và Gemini Flash được tham chiếu từ bảng
+          giá chính thức của Anthropic và Google Cloud (Tháng 7/2026).</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer class="bottom">
+    <div class="wrap">
+      Designed for AI Video Gen Architecture Assignment · <a href="../index.html">Back to portfolio</a>
+    </div>
+  </footer>
+
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/assets/comments.js" data-page="day11"></script>
+</body>
+
+</html>

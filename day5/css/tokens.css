@@ -1,0 +1,53 @@
+/* tokens.css
+   Design tokens. Light is the base; dark is a separately chosen and validated
+   palette, not an inversion. Nothing else in the CSS may hardcode a colour. */
+
+:root{
+  --page:#FAFAFB; --surface:#FFFFFF;
+  --ink:#15161C; --ink-2:#4A4D5C; --muted:#6B6E7E; --faint:#9B9EAE;
+  --line:#E7E7EE; --line-soft:#F2F2F7;
+  /* brand — validated as a chart hue: chroma PASS, contrast PASS on white */
+  --brand:#5B50E8; --brand-deep:#4F46E5; --brand-soft:#EEEDFD;
+  --brand-track:#DCD9FA; --brand-lite:#A49DF2;
+  /* status ramp — validated: normal ΔE 16.9, CVD ΔE 8.0, all ≥3:1 on white */
+  --good:#157F5B; --warn:#A16207; --bad:#9F1239; --warn-soft:#FAF3E3;
+  --sans:"Plus Jakarta Sans",-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --hover:#FCFCFD; --tip-bg:#15161C; --tip-fg:#F5F5F7;
+  --done-bg:#F0FAF5; --done-line:#CFEADF; --src-bg:#EAF7F1;
+  --shadow-card:0 2px 10px rgba(91,80,232,.06); --shadow-seg:0 1px 2px rgba(21,22,28,.07);
+  /* Model series. Fixed order — slot 0 is always Gemini 3.0 Flash, whatever a
+     filter hides. Validated categorical on both surfaces: lightness band,
+     chroma floor, CVD separation and contrast all pass. */
+  --m0:#5B50E8; --m1:#0891B2; --m2:#DB2777; --m3:#65A30D;
+  /* Gradients for bar fills. Height still carries the value — the gradient only
+     adds material, so it cannot distort what the bar says. */
+  --grad-brand:linear-gradient(180deg,#7B72EE 0%,#5B50E8 62%,#4A40C9 100%);
+  --grad-m0:linear-gradient(180deg,#7B72EE 0%,#5B50E8 62%,#4A40C9 100%);
+  --grad-m1:linear-gradient(180deg,#22A7C9 0%,#0891B2 62%,#077A96 100%);
+  --grad-m2:linear-gradient(180deg,#EC4B92 0%,#DB2777 62%,#B81F63 100%);
+  --grad-m3:linear-gradient(180deg,#7DBB1F 0%,#65A30D 62%,#53870A 100%);
+  --tip-bad:#D98A98;   /* failure text inside a dark tooltip */
+  --on-brand:#FFFFFF;  /* text/icons on a brand-filled surface */
+  --avatar:#E8543A;   /* identity colour — deliberately constant across themes */
+  --r:12px; --r-s:8px;
+  /* gutter grows with the viewport instead of locking to a pixel value,
+     so the layout keeps its proportions at any zoom or screen size */
+  --gut:clamp(16px,3vw,80px);
+}
+/* Dark is a chosen palette, not an inverted one. Every hue is re-stepped for the dark
+   surface and re-validated: lightness band, chroma, CVD separation and contrast all PASS
+   against #16181F — see the note in the footer of the Usage view. */
+:root[data-theme="dark"]{
+  --page:#0F1014; --surface:#16181F;
+  --ink:#EDEEF2; --ink-2:#B4B7C4; --muted:#8A8E9C; --faint:#666A7A;
+  --line:#262A34; --line-soft:#1D2029;
+  --brand:#8B83F0; --brand-deep:#A49DF5; --brand-soft:#22203A;
+  --brand-track:#302D52; --brand-lite:#5F57B8;
+  --good:#2FA876; --warn:#BE8A28; --bad:#D45170; --warn-soft:#2A2317;
+  --hover:#1B1E27; --tip-bg:#2A2E3A; --tip-fg:#F2F3F7;
+  --done-bg:#132119; --done-line:#22402F; --src-bg:#12261D;
+  --shadow-card:0 2px 12px rgba(0,0,0,.35); --shadow-seg:0 1px 2px rgba(0,0,0,.4);
+}
+html{color-scheme:light}
+html[data-theme="dark"]{color-scheme:dark}

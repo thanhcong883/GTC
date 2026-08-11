@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 8 — The Parallel-Execution Teardown | Giang Thanh Cong</title>
+  <meta name="description" content="A UX teardown of MindPal: its multi-agent workflows run every node one at a time, so a seven-lens fan-out that looks parallel takes 3m21s. Where that feels bad, when it doesn't, and an end-to-end redesign. Day 8 of a 30-day build challenge." />
+  <meta property="og:title" content="Day 8 — The Parallel-Execution Teardown" />
+  <meta property="og:description" content="MindPal runs workflow nodes serially — seven independent reviewers queue for 119s. A measured diagnosis and a redesign that hands back two minutes, honestly 2.5x, not 8x." />
+  <meta property="og:type" content="article" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --orange:#f9660e; --orange-soft:#ffe7d6;
+      --navy:#111a3e; --navy-soft:#5a6488;
+      --peach:#fdece1; --lav:#efe6fb; --purple:#8b5cf6; --purple-soft:#eee9fb;
+      --blue:#2f6fed; --blue-soft:#e2ecfd;
+      --green:#1e9257; --green-soft:#e4f3ea;
+      --amber:#b0771a; --amber-soft:#f7edda;
+      --red:#c64b3e; --red-soft:#f8e6e3;
+      --bg:#f6f7fb; --card:#fff; --border:#e7e9f2; --ink-dark:#0f1730;
+      --shadow:0 18px 50px rgba(17,26,62,.12);
+      --shadow-sm:0 6px 20px rgba(17,26,62,.08);
+      --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+      background:var(--bg);color:var(--navy);line-height:1.6;-webkit-font-smoothing:antialiased}
+    a{text-decoration:none;color:inherit}
+    .wrap{max-width:1000px;margin:0 auto;padding:0 24px}
+    h1,h2,h3{line-height:1.15;letter-spacing:-.015em}
+    .accent{color:var(--orange)}
+    code,.mono{font-family:var(--mono)}
+    svg{max-width:100%}
+
+    /* --- language toggle: two versions live in the DOM, one is hidden --- */
+    .t{display:contents}
+    html[data-lang="en"] .t.vi{display:none}
+    html[data-lang="vi"] .t.en{display:none}
+    html[data-lang="en"] .sv-vi{display:none}
+    html[data-lang="vi"] .sv-en{display:none}
+    .langtog{display:inline-flex;border:1px solid var(--border);border-radius:20px;overflow:hidden;background:#fff}
+    .langtog button{border:0;background:transparent;font-family:inherit;font-weight:800;font-size:.74rem;
+      letter-spacing:.04em;padding:6px 12px;cursor:pointer;color:var(--navy-soft);transition:background .15s}
+    .langtog button.on{background:var(--navy);color:#fff}
+
+    header.top{background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+    .bar{display:flex;align-items:center;justify-content:space-between;gap:16px;height:64px;max-width:1000px;margin:0 auto;padding:0 24px}
+    .back{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:.92rem}
+    .back:hover{color:var(--orange)}
+    .meta{text-align:center;flex:1;min-width:0}
+    .meta .tag{display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:.68rem;
+      font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:20px}
+    .meta h1{font-size:1rem;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;
+      text-overflow:ellipsis;margin-top:2px}
+    .rightgrp{display:inline-flex;align-items:center;gap:10px}
+    .src{display:inline-flex;align-items:center;gap:7px;background:var(--navy);color:#fff;font-weight:700;
+      font-size:.85rem;padding:9px 16px;border-radius:24px;white-space:nowrap}
+    .src:hover{background:var(--orange)}
+    @media(max-width:720px){ .meta h1{font-size:.8rem} .src span{display:none} }
+
+    .hero{padding:56px 0 34px;background:
+      radial-gradient(120% 130% at 88% -10%, var(--lav) 0%, transparent 46%),
+      linear-gradient(180deg,var(--peach) 0%, #fdf4ee 55%, var(--bg) 100%)}
+    .eyebrow{color:var(--orange);font-weight:700;text-transform:uppercase;letter-spacing:.14em;font-size:.76rem;margin-bottom:12px}
+    .hero h2{font-size:clamp(2rem,4.8vw,3rem);font-weight:800;max-width:19ch}
+    .hero p.lede{color:var(--navy-soft);max-width:64ch;margin-top:16px;font-size:1.04rem}
+    .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
+    .btn{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:.9rem;padding:12px 20px;border-radius:26px}
+    .btn.pri{background:var(--orange);color:#fff}
+    .btn.pri:hover{background:var(--navy)}
+    .btn.sec{background:#fff;border:1px solid var(--border);color:var(--navy)}
+    .btn.sec:hover{border-color:var(--orange);color:var(--orange)}
+
+    .tldr{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:30px}
+    .tl{background:#fff;border-radius:16px;padding:16px 18px;box-shadow:var(--shadow-sm);border-top:3px solid var(--c,var(--orange))}
+    .tl .ic{font-size:22px;line-height:1}
+    .tl .n{font-weight:800;font-size:1.32rem;margin-top:8px;letter-spacing:-.02em}
+    .tl .l{font-size:.75rem;color:var(--navy-soft);font-weight:600;margin-top:2px}
+    @media(max-width:720px){.tldr{grid-template-columns:repeat(2,1fr)}}
+
+    section{padding:44px 0}
+    /* .wrap sets padding:0 24px and outranks the section rule above, zeroing the vertical
+       padding — restore it with a more specific selector so sections aren't cramped */
+    section.wrap{padding-top:40px;padding-bottom:40px}
+    .shead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+    .shead .n{font-family:var(--mono);font-weight:700;font-size:.74rem;color:var(--orange);
+      background:rgba(249,102,14,.1);padding:3px 9px;border-radius:6px}
+    h3.title{font-size:clamp(1.35rem,2.8vw,1.7rem);font-weight:800}
+    .lede{color:var(--navy-soft);max-width:70ch;margin-bottom:26px;font-size:.98rem}
+    .subh{font-size:1.06rem;font-weight:800;margin-top:30px;margin-bottom:8px}
+
+    .figframe{background:#fff;border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow-sm);padding:22px;overflow-x:auto}
+    .figframe.tint{background:linear-gradient(170deg,#fbf7ff,#fff)}
+    svg.chart{display:block;min-width:640px;width:100%;height:auto}
+
+    /* problem list */
+    .qgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:8px}
+    .q{background:#fff;border:1px solid var(--border);border-radius:14px;padding:15px 17px;box-shadow:var(--shadow-sm)}
+    .q b{font-size:.92rem;font-weight:800;display:block}
+    .q span{font-size:.82rem;color:var(--navy-soft)}
+    .note{border-left:3px solid var(--amber);background:var(--amber-soft);padding:12px 16px;border-radius:0 10px 10px 0;margin-top:18px;font-size:.9rem;color:var(--navy)}
+    .note.red{border-left-color:var(--red);background:var(--red-soft)}
+    .note.green{border-left-color:var(--green);background:var(--green-soft)}
+    .note b{color:var(--navy)}
+
+    /* before/after */
+    .ba{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media(max-width:720px){.ba{grid-template-columns:1fr}}
+    .col{border-radius:16px;padding:20px 22px}
+    .col.before{background:#fff;border:1px solid var(--border)}
+    .col.after{background:var(--ink-dark);color:#e7ecff}
+    .col h4{font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+    .col.before h4{color:var(--navy-soft)}
+    .col.after h4{color:#ffb27d}
+    .col ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+    .col li{font-size:.88rem;display:flex;gap:9px;align-items:flex-start;line-height:1.5}
+    .col.before li:before{content:"✕";color:var(--red);font-weight:800;flex:none}
+    .col.after li:before{content:"✓";color:#3fb950;font-weight:800;flex:none}
+    .col.after li span{color:#a9b3d6}
+
+    /* committee cards */
+    .lenses{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:6px}
+    .lens{background:#fff;border:1px solid var(--border);border-radius:14px;padding:15px 16px;box-shadow:var(--shadow-sm);border-top:3px solid var(--c)}
+    .lens .ic{font-size:22px}
+    .lens b{display:block;font-size:.92rem;font-weight:800;margin-top:7px}
+    .lens span{font-size:.8rem;color:var(--navy-soft);line-height:1.5}
+
+    /* the verdict — the money shot */
+    .verdict{background:var(--ink-dark);border-radius:20px;box-shadow:0 20px 44px rgba(17,26,62,.22);overflow:hidden;margin-top:6px}
+    .verdict .vbar{display:flex;align-items:center;gap:10px;padding:12px 18px;background:#0b1226;border-bottom:1px solid #1e2a4d}
+    .verdict .vbar i{width:11px;height:11px;border-radius:50%;display:block}
+    .verdict .vbar .r{background:#ff5f57}.verdict .vbar .y{background:#febc2e}.verdict .vbar .g{background:#28c840}
+    .verdict .vbar span{margin-left:6px;color:#7c89b4;font-size:.76rem;font-weight:700;font-family:var(--mono)}
+    .verdict .vbody{padding:22px 24px}
+    .ruling{display:inline-flex;align-items:center;gap:10px;background:rgba(198,75,62,.16);border:1px solid rgba(198,75,62,.4);
+      color:#ff8b7d;font-weight:800;font-size:1.05rem;padding:8px 16px;border-radius:12px;font-family:var(--mono)}
+    .verdict .oneline{color:#d6deff;font-size:1rem;margin-top:14px;max-width:70ch;line-height:1.55}
+    .scorecard{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:8px;margin-top:20px}
+    .sc{background:#182350;border:1px solid #2a3765;border-radius:11px;padding:11px 13px}
+    .sc .fn{font-size:.82rem;font-weight:700;color:#fff;display:flex;align-items:center;gap:6px}
+    .sc .st{font-family:var(--mono);font-size:.68rem;font-weight:700;margin-top:5px;padding:2px 8px;border-radius:20px;display:inline-block}
+    .sc .st.ready{background:var(--green-soft);color:var(--green)}
+    .sc .st.gaps{background:var(--amber-soft);color:var(--amber)}
+    .sc .st.blocker{background:var(--red-soft);color:var(--red)}
+    .blindspot{margin-top:20px;padding:16px 18px;background:#241b0c;border:1px solid #c9932f;border-radius:12px}
+    .blindspot .bl{font-family:var(--mono);font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#f0c069}
+    .blindspot h4{color:#fff;font-size:1.02rem;font-weight:800;margin-top:6px}
+    .blindspot p{color:#d6deff;font-size:.9rem;margin-top:7px;line-height:1.6}
+    .ifyou{margin-top:14px;font-size:.86rem;color:#f19189;font-style:italic;line-height:1.55}
+    .caption{font-size:.78rem;color:var(--navy-soft);margin-top:12px;font-family:var(--mono)}
+
+    /* full run transcript (expandable) */
+    .report{margin-top:16px;border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow-sm);overflow:hidden}
+    .report>summary{cursor:pointer;list-style:none;padding:15px 20px;font-weight:800;font-size:.92rem;
+      display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:linear-gradient(170deg,#fbf7ff,#fff)}
+    .report>summary::-webkit-details-marker{display:none}
+    .report>summary .chev{color:var(--orange);transition:transform .2s;font-family:var(--mono)}
+    .report[open]>summary .chev{transform:rotate(90deg)}
+    .report>summary .m2{font-family:var(--mono);font-weight:600;font-size:.7rem;color:var(--navy-soft);margin-left:auto}
+    .rpt-body{padding:4px 22px 24px}
+    .rpt-in{background:#f6f7fb;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin:16px 0;font-size:.85rem;line-height:1.6;color:var(--navy)}
+    .rpt-in .lbl{font-family:var(--mono);font-size:.66rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--orange);display:block;margin-bottom:6px}
+    .agentblk{border-top:1px dashed var(--border);padding-top:15px;margin-top:15px}
+    .agentblk .ah{font-weight:800;font-size:.92rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .agentblk .stt{font-family:var(--mono);font-size:.62rem;font-weight:800;padding:2px 8px;border-radius:20px;text-transform:uppercase}
+    .agentblk .stt.gaps{background:var(--amber-soft);color:var(--amber)}
+    .agentblk .stt.blocker{background:var(--red-soft);color:var(--red)}
+    .agentblk .stt.verd{background:var(--navy);color:#fff}
+    .agentblk .lead{font-size:.85rem;color:var(--navy-soft);line-height:1.6;margin-top:7px;font-style:italic}
+    .agentblk h6{font-size:.76rem;font-weight:800;margin-top:12px;color:var(--navy);letter-spacing:.01em}
+    .agentblk p{font-size:.85rem;color:var(--navy-soft);line-height:1.6;margin-top:5px}
+    .agentblk ul{margin:5px 0 0 18px;font-size:.85rem;color:var(--navy-soft);line-height:1.55}
+    .agentblk li{margin-top:4px}
+    .agentblk li b,.agentblk p b{color:var(--navy)}
+    .agentblk.verdictblk{background:var(--ink-dark);border-radius:14px;border-top:0;padding:18px 20px;margin-top:18px}
+    .agentblk.verdictblk .ah,.agentblk.verdictblk h6{color:#fff}
+    .agentblk.verdictblk p,.agentblk.verdictblk ul{color:#c2c9dd}
+    .agentblk.verdictblk p b,.agentblk.verdictblk li b{color:#ffb27d}
+
+    /* decisions / why */
+    .dd{display:flex;flex-direction:column;gap:14px}
+    .ddrow{background:#fff;border-radius:16px;box-shadow:var(--shadow-sm);padding:18px 20px;display:grid;grid-template-columns:38px 1fr;gap:15px}
+    .ddrow .num{width:38px;height:38px;border-radius:11px;background:var(--orange-soft);color:var(--orange);
+      display:grid;place-items:center;font-weight:800;font-size:.98rem}
+    .ddrow h5{font-size:.96rem;font-weight:800;margin-bottom:5px}
+    .ddrow p{font-size:.86rem;color:var(--navy-soft);line-height:1.6}
+    .ddrow p.why{margin-top:7px;padding-top:7px;border-top:1px dashed var(--border)}
+    .ddrow p.why b{color:var(--navy)}
+    @media(max-width:600px){.ddrow{grid-template-columns:1fr}}
+
+    /* ROI */
+    .roi{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .rc{background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow-sm)}
+    .rc .k{font-size:.66rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--navy-soft)}
+    .rc .v{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin-top:5px}
+    .rc .s{font-size:.8rem;color:var(--navy-soft);margin-top:5px;line-height:1.5}
+
+    .limits{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+    .lim{background:#fff;border-radius:14px;padding:16px 18px;box-shadow:var(--shadow-sm);border:1px dashed #c7cce0}
+    .lim h5{font-size:.9rem;font-weight:800;margin-bottom:5px}
+    .lim p{font-size:.8rem;color:var(--navy-soft);line-height:1.55}
+
+    footer{padding:44px 0 60px;border-top:1px solid var(--border);margin-top:20px}
+    footer p{color:var(--navy-soft);font-size:.84rem;text-align:center}
+    footer a{color:var(--orange);font-weight:700}
+
+    /* ============ DAY 7 ADDITIONS ============ */
+    .subh2{font-size:1.06rem;font-weight:800;margin:28px 0 10px}
+    .when{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media(max-width:720px){.when{grid-template-columns:1fr}}
+    .wcol{background:#fff;border:1px solid var(--border);border-radius:16px;padding:16px 18px;box-shadow:var(--shadow-sm)}
+    .wcol>h5{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px}
+    .wcol.hurt>h5{color:var(--red)} .wcol.ok>h5{color:var(--green)}
+    .wcol .r{padding:8px 0;border-top:1px dashed var(--border)}
+    .wcol .r:first-of-type{border-top:0}
+    .wcol .r b{font-size:.86rem;font-weight:800;display:block}
+    .wcol .r span{font-size:.8rem;color:var(--navy-soft);line-height:1.5}
+
+    /* gantt */
+    .gantt{--lbl:172px;min-width:660px;font-family:var(--mono);margin-bottom:6px}
+    @media(max-width:600px){.gantt{--lbl:120px}}
+    .gaxis{position:relative;height:20px;margin-left:var(--lbl);border-bottom:1px solid var(--border)}
+    .gtick{position:absolute;top:0;transform:translateX(-50%);font-size:10px;color:var(--navy-soft)}
+    .gwrap{position:relative;padding-top:4px}
+    .gvlines{position:absolute;left:var(--lbl);right:0;top:0;bottom:0;pointer-events:none;z-index:0}
+    .gvl{position:absolute;top:0;bottom:0;width:1px;background:#eef0f6}
+    .gfloor{position:absolute;top:0;bottom:6px;border-left:1.5px dashed var(--blue)}
+    .greclaim{position:absolute;top:0;bottom:6px;background:var(--green-soft);border-left:1.5px dashed var(--green)}
+    .glab{position:absolute;transform:translateX(-50%);top:2px;font-size:9.5px;padding:2px 6px;border-radius:5px;white-space:nowrap;z-index:2}
+    .glab.blue{color:var(--blue);background:var(--blue-soft)}
+    .glab.green{color:var(--green);background:var(--green-soft)}
+    .glab.red{color:var(--red);background:var(--red-soft)}
+    .ghd{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--navy-soft);margin:14px 0 6px;position:relative;z-index:1}
+    .ghd .gd{width:9px;height:9px;border-radius:3px;flex:none}
+    .ghd b{color:var(--navy);font-weight:700}
+    .ghd .gbadge{margin-left:auto;font-size:9.5px;padding:2px 8px;border-radius:20px;background:var(--green-soft);color:var(--green)}
+    .grow{display:flex;align-items:center;height:26px;position:relative;z-index:1}
+    .grow .glbl{width:var(--lbl);flex:none;padding-right:12px;font-size:11.5px;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;gap:7px}
+    .grow .glbl .gn{color:var(--navy-soft)}
+    .gtrk{position:relative;flex:1;height:100%}
+    .gbar{position:absolute;top:50%;transform:translateY(-50%);height:14px;border-radius:4px;display:flex;align-items:center;box-shadow:0 1px 2px rgba(17,26,62,.14)}
+    .gbar .gd2{font-size:9.5px;padding:0 5px;color:#fff}
+    .gbar.input{background:var(--navy-soft)}
+    .gbar.lens{background:var(--blue)}
+    .gbar.tail{background:var(--amber)}
+    .grow.lane .gtrk{background:linear-gradient(90deg,transparent var(--la),var(--blue-soft) var(--la),var(--blue-soft) var(--lb),transparent var(--lb))}
+    .glegend{display:flex;flex-wrap:wrap;gap:14px 20px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+    .glegend .lg{display:flex;align-items:center;gap:7px;font-size:.78rem;color:var(--navy-soft)}
+    .glegend .sw{width:13px;height:13px;border-radius:4px;flex:none}
+
+    /* wireframe cards */
+    .wfg{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:6px}
+    @media(max-width:720px){.wfg{grid-template-columns:1fr}}
+    .wcard{border:1px solid var(--border);border-radius:16px;overflow:hidden;background:#fff;box-shadow:var(--shadow-sm)}
+    .wcard .wc{display:flex;align-items:center;gap:9px;padding:12px 16px;border-bottom:1px solid var(--border);background:linear-gradient(170deg,#fbf7ff,#fff)}
+    .wcard .wc .wn{font-family:var(--mono);font-size:11px;color:#fff;background:var(--orange);border-radius:6px;padding:2px 7px;font-weight:800;flex:none}
+    .wcard .wc h5{font-size:.92rem;font-weight:800}
+    .wcard .wb{padding:16px}
+    .wmock{border:1.5px dashed #c7cce0;border-radius:12px;padding:14px;background:var(--bg);font-family:var(--mono);font-size:12px}
+    .whint{display:flex;gap:9px;align-items:flex-start;background:var(--orange-soft);border-radius:9px;padding:11px 12px;color:var(--navy);line-height:1.5}
+    .whint b{color:var(--orange)}
+    .wbtns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+    .wbtn{font-size:11px;border-radius:20px;padding:7px 13px;border:1px solid var(--border);background:#fff;color:var(--navy);font-family:var(--mono)}
+    .wbtn.pri{background:var(--orange);color:#fff;border-color:transparent;font-weight:700}
+    .wkv{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px dashed var(--border)}
+    .wkv:last-child{border-bottom:0}
+    .wkv .wv{color:var(--navy)} .wkv .wv.warn{color:var(--amber)}
+    .wopt{display:flex;gap:9px;align-items:center;padding:6px 0;color:var(--navy-soft)}
+    .wopt .wr{width:13px;height:13px;border-radius:50%;border:1.5px solid var(--navy-soft);flex:none}
+    .wopt.sel{color:var(--navy)} .wopt.sel .wr{border-color:var(--green);box-shadow:inset 0 0 0 3px var(--green)}
+    .wlane{display:flex;align-items:center;gap:8px;padding:3px 0}
+    .wlane .wnm{width:66px;font-size:10.5px;color:var(--navy-soft)}
+    .wlane .wp{flex:1;height:8px;border-radius:5px;background:var(--border);overflow:hidden;position:relative}
+    .wlane .wp i{position:absolute;left:0;top:0;bottom:0;background:var(--blue);border-radius:5px}
+    .wlane.done .wp i{background:var(--green)}
+    .wlane .wst{width:34px;text-align:right;font-size:10px;color:var(--navy-soft)}
+    .fixrow{display:flex;align-items:center;gap:8px;margin-top:13px;flex-wrap:wrap;font-size:12px}
+    .fixrow .fl{font-family:var(--mono);font-size:10px;color:var(--navy-soft);letter-spacing:.05em}
+    .fchip{font-family:var(--mono);font-size:10.5px;padding:3px 9px;border-radius:20px;display:inline-flex;gap:6px;align-items:center}
+    .fchip .cd{width:6px;height:6px;border-radius:50%}
+    .fchip.conf{background:var(--blue-soft);color:var(--blue)} .fchip.conf .cd{background:var(--blue)}
+    .fchip.dead{background:var(--red-soft);color:var(--red)} .fchip.dead .cd{background:var(--red)}
+    .fchip.fric{background:var(--amber-soft);color:var(--amber)} .fchip.fric .cd{background:var(--amber)}
+
+    /* rationale table */
+    .rtabwrap{overflow-x:auto;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-sm);margin-top:8px}
+    .rtab{width:100%;border-collapse:collapse;font-size:.86rem;min-width:640px;background:#fff}
+    .rtab th,.rtab td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+    .rtab tr:last-child td{border-bottom:0}
+    .rtab th{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--navy-soft);font-weight:700}
+    .rtab td b{font-weight:800}
+    .rtab .bf{color:var(--red);font-family:var(--mono);font-size:11px}
+    .rtab .af{color:var(--green);font-family:var(--mono);font-size:11px}
+
+    /* embedded live demo */
+    .demoframe{border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-sm);background:var(--card);margin-top:6px;
+      width:min(1320px,96vw);position:relative;left:50%;transform:translateX(-50%)}
+    .demoframe iframe{display:block;width:100%;height:640px;border:0}
+    @media(max-width:600px){.demoframe iframe{height:600px}}
+
+  </style>
+</head>
+<body>
+
+  <header class="top">
+    <div class="bar">
+      <a class="back" href="../index.html"><span class="t en">← Portfolio</span></a>
+      <div class="meta">
+        <span class="tag"><span class="t en">Day 8 · 30 Day Challenge</span></span>
+        <h1><span class="t en">The Parallel-Execution Teardown</span></h1>
+      </div>
+      <div class="rightgrp">
+        <a class="src" href="#after">⚡ <span><span class="t en">See the redesign</span></span></a>
+      </div>
+    </div>
+  </header>
+
+<main>
+    <div class="hero">
+      <div class="wrap">
+        <div class="eyebrow"><span class="t en">A UX teardown of MindPal · build → run</span></div>
+        <h2>
+          <span class="t en">The graph promises parallel. The runtime delivers a <span class="accent">staircase.</span></span>
+          
+        </h2>
+        <p class="lede">
+          <span class="t en">MindPal fans one brief out to seven independent reviewers — then runs them
+            <b>one at a time</b>. Three minutes twenty-one seconds, and nothing in the product tells you why.
+            This is that flow taken apart: exactly where it feels bad, honestly when it doesn't, and a
+            redesign that hands back two minutes without pretending the win is bigger than it is.</span>
+          
+        </p>
+        <div class="tldr">
+          <div class="tl" style="--c:var(--red)"><div class="ic">⏱️</div><div class="n">3:21</div><div class="l"><span class="t en">wall-clock, 10 nodes serial</span></div></div>
+          <div class="tl" style="--c:var(--blue)"><div class="ic">🚦</div><div class="n">119s</div><div class="l"><span class="t en">7 lenses queued for nothing</span></div></div>
+          <div class="tl" style="--c:var(--green)"><div class="ic">⚡</div><div class="n">~1:20</div><div class="l"><span class="t en">after parallel — −2:06</span></div></div>
+          <div class="tl" style="--c:var(--orange)"><div class="ic">📈</div><div class="n">2.5×</div><div class="l"><span class="t en">honest speedup, not 8×</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 01 · THE PROBLEM -->
+    <section class="wrap" id="problem">
+      <div class="shead"><span class="n">01</span><h3 class="title"><span class="t en">The problem: no two nodes ever run at once</span></h3></div>
+      <p class="lede">
+        <span class="t en">Stated precisely, because it changes how credible the critique is: MindPal has
+          <b>no intra-run node concurrency</b>. Inside a single workflow, nodes always run nose-to-tail — even
+          when the canvas draws a fan-out. It <em>does</em> run many <em>separate</em> runs at once (Bulk Run,
+          Background Mode) — so the infrastructure can parallelize; the gap is specifically the independent
+          branches <em>inside</em> one run. That framing matters: this isn't "MindPal can't", it's "MindPal
+          doesn't, in the one place it would help most."</span>
+        
+      </p>
+      <p class="lede" style="margin-top:-14px">
+        <span class="t en">The consequence is a single rule of thumb: the value of adding parallelism is
+          proportional to how big the independent fan-out is. So the honest question is never "is parallel
+          good?" — it's "how much of <em>this</em> workflow is an independent fan-out?"</span>
+        
+      </p>
+
+      <div class="when">
+        <div class="wcol hurt">
+          <h5><span class="t en">When missing it hurts</span></h5>
+          <div class="r"><b><span class="t en">Scatter–gather / fan-out</span></b><span><span class="t en">A panel, a jury, an ensemble of critics. Time = <em>sum</em> of N, not the slowest.</span></span></div>
+          <div class="r"><b><span class="t en">Multi-source enrichment</span></b><span><span class="t en">Call several APIs / knowledge bases, then merge. Serial = every network wait added up.</span></span></div>
+          <div class="r"><b><span class="t en">Broadcast / variants</span></b><span><span class="t en">One input → 5 languages, 5 ad variants. Embarrassingly parallel.</span></span></div>
+          <div class="r"><b><span class="t en">Ensemble / voting · independent loops</span></b><span><span class="t en">Run N models on one input; iterate a list of unrelated items.</span></span></div>
+        </div>
+        <div class="wcol ok">
+          <h5><span class="t en">When it doesn't matter</span></h5>
+          <div class="r"><b><span class="t en">Linear chains</span></b><span><span class="t en">Draft → edit → format → publish. Each step eats the last — can't and needn't parallelize.</span></span></div>
+          <div class="r"><b><span class="t en">Short workflows (1–3 nodes)</span></b><span><span class="t en">Latency is already low; coordination overhead outweighs the gain.</span></span></div>
+          <div class="r"><b><span class="t en">The synthesis tail</span></b><span><span class="t en">A node that gathers results is defined by waiting for them. Never parallel.</span></span></div>
+          <div class="r"><b><span class="t en">Ordered side-effects</span></b><span><span class="t en">Webhook / Payment / writes to the same record. Here serial is a <em>safety feature</em>.</span></span></div>
+        </div>
+      </div>
+
+      <div class="note red">
+        <span class="t en"><b>The deepest harm isn't speed — it's design distortion.</b> Because fan-out is slow,
+          users avoid it: they collapse seven specialist agents into one mega-prompt to dodge the wait, losing
+          the independent reasoning that multi-agent exists for. The missing feature quietly lowers the quality
+          of what people build, not just how fast it runs.</span>
+        
+      </div>
+      <div class="note">
+        <span class="t en"><b>A pocket formula for severity:</b>
+          <span class="mono" style="color:var(--navy)">harm ≈ fan-out width × per-node latency × run frequency × user-facing-ness.</span>
+          When all four stack, it's a disaster; when only one does, ignore it.</span>
+        
+      </div>
+    </section>
+
+    <!-- 02 · CURRENT STATE -->
+    <section class="wrap" id="before">
+      <div class="shead"><span class="n">02</span><h3 class="title"><span class="t en">Current state — what actually runs</span></h3></div>
+      <p class="lede">
+        <span class="t en">Here is a real run — the Launch Committee from Day 6, on my own product. Ten nodes on
+          a true time axis, every duration read straight from the export. On the canvas it's a fan-out; on the
+          clock it's a staircase. The seven independent lenses are forced into a single-file, 119-second queue
+          for no dependency reason at all.</span>
+        
+      </p>
+
+      <div class="figframe">
+        <div style="overflow-x:auto"><div class="gantt" id="ganttBefore"></div></div>
+        <div class="glegend">
+          <span class="lg"><span class="sw" style="background:var(--navy-soft)"></span><span class="t en">Input</span></span>
+          <span class="lg"><span class="sw" style="background:var(--blue)"></span><span class="t en">Independent lens — parallelizable</span></span>
+          <span class="lg"><span class="sw" style="background:var(--amber)"></span><span class="t en">Synthesis — serial tail</span></span>
+        </div>
+        <div class="gcap"><span class="t en">Source: “Launch Committee · VietGuide AI”, completed run · 3m 21s · measured, not cited.</span></div>
+      </div>
+
+      <div class="roi" style="margin-top:16px">
+        <div class="rc"><div class="k"><span class="t en">LLM compute</span></div><div class="v">160s</div><div class="s"><span class="t en">sum of node durations</span></div></div>
+        <div class="rc"><div class="k"><span class="t en">Overhead</span></div><div class="v">41s <span style="font-size:.8rem;color:var(--navy-soft)">~20%</span></div><div class="s"><span class="t en">node transitions — parallelism can't remove this</span></div></div>
+        <div class="rc"><div class="k"><span class="t en">Compute floor</span></div><div class="v">60s</div><div class="s"><span class="t en">lens 19 + Red Team 24 + Chair 17 — unbeatable</span></div></div>
+      </div>
+
+      <div class="note">
+        <span class="t en"><b>The wait nobody flags.</b> You can watch each node tick by — the engine isn't
+          hiding anything. What it never tells you is that these seven branches are independent, and it never
+          offers to run them together. The wait is real and avoidable, and the product simply never says so.</span>
+        
+      </div>
+    </section>
+
+    <!-- 03 · THE REDESIGN -->
+    <section class="wrap" id="after">
+      <div class="shead"><span class="n">03</span><h3 class="title"><span class="t en">The redesign — let the seven run together</span></h3></div>
+      <p class="lede">
+        <span class="t en">One change carries it: the seven independent reviewers move into a single parallel
+          lane and collapse to their slowest member (Finance, 19s). Red Team and Chair stay sequential — they
+          must, they synthesise everything before them. Same axis as above; the shaded stretch on the right is
+          time handed back.</span>
+        
+      </p>
+
+      <div class="figframe tint">
+        <div style="overflow-x:auto"><div class="gantt" id="ganttAfter"></div></div>
+        <div class="gcap"><span class="t en">Modelled from the measured run: lane = slowest lens 19s · tail = 24s + 17s · ~15s overhead across 3 stages → ~1:15.</span></div>
+      </div>
+
+      <div class="ba" style="margin-top:22px">
+        <div class="col before">
+          <h4><span class="t en">Before</span></h4>
+          <ul>
+            <li><span class="t en">Canvas draws parallel, engine runs serial — nothing says so</span></li>
+            <li><span class="t en">7 independent lenses forced into a 119s queue</span></li>
+            <li><span class="t en">No way to opt out of the wait — the run just takes 3× longer than it needs to</span></li>
+          </ul>
+        </div>
+        <div class="col after">
+          <h4><span class="t en">After</span></h4>
+          <ul>
+            <li><span class="t en">A parallel lane you opt into — the product states the truth <span>and asks first</span></span></li>
+            <li><span class="t en">Lane collapses 119s → 19s; run drops to ~1:15 <span>(2.5×)</span></span></li>
+            <li><span class="t en">Cost shown before the burst; a defined policy when a branch fails <span>keep control</span></span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="subh2"><span class="t en">The three changes — wireframes</span></div>
+      <p class="lede">
+        <span class="t en">Speed comes from change 1. Changes 2–3 exist because going parallel <em>takes away</em>
+          two things serial gave for free: a natural point to cancel before spending, and a clear failure.
+          Each card names the pain it repays.</span>
+        
+      </p>
+
+      <div class="wfg">
+        <!-- 1 -->
+        <div class="wcard">
+          <div class="wc"><span class="wn">01</span><h5><span class="t en">Parallel suggestion — opt-in, not silent</span></h5></div>
+          <div class="wb">
+            <div class="wmock">
+              <div class="whint"><span>⚡</span><div><b><span class="t en">7 branches here are independent.</span></b> <span class="t en">They read only the brief, never each other. Run together? Est. 3:21 → ~1:15.</span></div></div>
+              <div class="wbtns"><span class="wbtn pri"><span class="t en">Run in parallel</span></span><span class="wbtn"><span class="t en">Keep sequential</span></span></div>
+            </div>
+            <div class="fixrow"><span class="fl">FIXES →</span><span class="fchip conf"><span class="cd"></span><span class="t en">the silent lie</span></span><span class="fchip fric"><span class="cd"></span><span class="t en">119s queue</span></span></div>
+          </div>
+        </div>
+        <!-- 2 -->
+        <div class="wcard">
+          <div class="wc"><span class="wn">02</span><h5><span class="t en">Cost preview before Run</span></h5></div>
+          <div class="wb">
+            <div class="wmock">
+              <div class="wkv"><span><span class="t en">This run</span></span><span class="wv">~18 credits</span></div>
+              <div class="wkv"><span><span class="t en">Fires at once</span></span><span class="wv warn"><span class="t en">7 parallel calls</span></span></div>
+              <div class="wkv"><span><span class="t en">No mid-run cancel window</span></span><span class="wv warn"><span class="t en">breakdown ›</span></span></div>
+              <div class="wbtns"><span class="wbtn pri">Run</span><span class="wbtn"><span class="t en">Change models</span></span></div>
+            </div>
+            <div class="fixrow"><span class="fl">FIXES →</span><span class="fchip dead"><span class="cd"></span><span class="t en">lost circuit-breaker</span></span></div>
+          </div>
+        </div>
+        <!-- 3 -->
+        <div class="wcard">
+          <div class="wc"><span class="wn">03</span><h5><span class="t en">If a branch fails — you decide</span></h5></div>
+          <div class="wb">
+            <div class="wmock">
+              <div style="color:var(--navy-soft);margin-bottom:6px"><span class="t en">On the Red Team (merge) node:</span></div>
+              <div class="wopt sel"><span class="wr"></span><span><span class="t en">Deliver with a <b style="color:var(--navy)">gap flag</b> — “6 of 7 reported”</span></span></div>
+              <div class="wopt"><span class="wr"></span><span><span class="t en">Stop the whole run</span></span></div>
+              <div class="wopt"><span class="wr"></span><span><span class="t en">Wait &amp; retry the failed branch once</span></span></div>
+            </div>
+            <div class="fixrow"><span class="fl">FIXES →</span><span class="fchip dead"><span class="cd"></span><span class="t en">silent 6-of-7 synthesis</span></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="subh2"><span class="t en">Every change → the pain it repays</span></div>
+      <div class="rtabwrap">
+        <table class="rtab">
+          <thead><tr>
+            <th><span class="t en">Change</span></th>
+            <th><span class="t en">Pain in current state</span></th>
+            <th><span class="t en">Failure mode</span></th>
+            <th><span class="t en">Before → After</span></th>
+          </tr></thead>
+          <tbody>
+            <tr>
+              <td><b><span class="t en">Parallel lane (opt-in)</span></b></td>
+              <td><span class="t en">7 independent lenses single-file; canvas draws parallel, engine runs serial, nothing says so</span></td>
+              <td><span class="fchip conf"><span class="cd"></span>confusion</span> <span class="fchip fric"><span class="cd"></span>friction</span></td>
+              <td><span class="bf">119s</span> → <span class="af">19s</span></td>
+            </tr>
+            <tr>
+              <td><b><span class="t en">Cost preview</span></b></td>
+              <td><span class="t en">Serial let you watch node 3 and cancel; parallel spends 7 credits before you can react</span></td>
+              <td><span class="fchip dead"><span class="cd"></span>dead-end</span></td>
+              <td><span class="bf"><span class="t en">surprise</span></span> → <span class="af"><span class="t en">shown up front</span></span></td>
+            </tr>
+            <tr>
+              <td><b><span class="t en">Partial-failure policy</span></b></td>
+              <td><span class="t en">One lens dies, Red Team synthesises “all seven” from six — a silently wrong verdict</span></td>
+              <td><span class="fchip dead"><span class="cd"></span>dead-end</span></td>
+              <td><span class="bf"><span class="t en">silent gap</span></span> → <span class="af"><span class="t en">flagged</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note green">
+        <span class="t en"><b>Deliberately not done: silent auto-parallel.</b> Change 1 is a suggestion, never
+          automatic. Side-effect races, rate-limit 429s and credit bursts must not happen without the user's
+          intent — that is the one trade-off this redesign refuses to make.</span>
+        
+      </div>
+    </section>
+
+    <!-- 04 · LIVE DEMO -->
+    <section class="wrap" id="demo">
+      <div class="shead"><span class="n">04</span><h3 class="title">Try it — the redesign, running</h3></div>
+      <p class="lede">A working concept of the parallel mode, dropped into a MindPal-style builder. Toggle <b>Serial ↔ Parallel</b> and the workflow redraws itself — a straight chain (today) versus a fan-out (proposed) — then hit <b>Run</b> to watch it execute. Latency is simulated (the measured node times, sped up), but the scheduler, the concurrency limit and the dependency-aware join are the real thing.</p>
+      <div class="demoframe">
+        <iframe src="parallel-demo.html" title="MindPal parallel-run concept" loading="lazy"></iframe>
+      </div>
+      <div class="gcap">Concept mockup — not the actual MindPal product. Serial vs parallel differ by one line: the semaphore's limit.</div>
+    </section>
+  </main>
+
+  <script>
+  (function(){
+    var TOTAL=201, GAPB=41/9;
+    var NODES=[
+      {n:'01',nm:'Ideal',dur:0,g:'input'},
+      {n:'02',nm:'Engineering',dur:17,g:'lens'},
+      {n:'03',nm:'Product & UX',dur:16,g:'lens'},
+      {n:'04',nm:'Go-to-Market',dur:18,g:'lens'},
+      {n:'05',nm:'Customer Support',dur:15,g:'lens'},
+      {n:'06',nm:'Legal & Comp.',dur:17,g:'lens'},
+      {n:'07',nm:'Security & Data',dur:17,g:'lens'},
+      {n:'08',nm:'Finance',dur:19,g:'lens'},
+      {n:'09',nm:'Red Team',dur:24,g:'tail'},
+      {n:'10',nm:'The Chair',dur:17,g:'tail'}
+    ];
+    function pct(s){return s/TOTAL*100;}
+    function fmt(s){var m=Math.floor(s/60),ss=String(s%60).padStart(2,'0');return m+':'+ss;}
+    function t(en,vi){return en;}
+
+    function axisAndGrid(gantt, extras){
+      var ax=document.createElement('div'); ax.className='gaxis';
+      var wrap=document.createElement('div'); wrap.className='gwrap';
+      var vl=document.createElement('div'); vl.className='gvlines';
+      [0,30,60,90,120,150,180,201].forEach(function(s){
+        var tk=document.createElement('div'); tk.className='gtick'; tk.style.left=pct(s)+'%'; if(s===201){tk.style.transform='translateX(-100%)';} tk.textContent=fmt(s); ax.appendChild(tk);
+        var g=document.createElement('div'); g.className='gvl'; g.style.left=pct(s)+'%'; vl.appendChild(g);
+      });
+      if(extras) extras(vl);
+      wrap.appendChild(vl);
+      var rows=document.createElement('div'); rows.className='grows';
+      wrap.appendChild(rows);
+      gantt.appendChild(ax); gantt.appendChild(wrap);
+      return rows;
+    }
+    function grpHead(rows,cls,dotvar,label,badge){
+      var h=document.createElement('div'); h.className='ghd';
+      h.innerHTML='<span class="gd" style="background:'+dotvar+'"></span><span>'+label+'</span>'+(badge?'<span class="gbadge">'+badge+'</span>':'');
+      rows.appendChild(h);
+    }
+    function bar(rows,num,nm,start,dur,g){
+      var r=document.createElement('div'); r.className='grow'+(g==='lane'?' lane':'');
+      r.innerHTML='<div class="glbl"><span class="gn">'+num+'</span><span>'+nm+'</span></div>';
+      var trk=document.createElement('div'); trk.className='gtrk';
+      var b=document.createElement('div'); b.className='gbar '+(g==='lane'?'lens':g);
+      b.style.left=pct(start)+'%'; b.style.width=Math.max(dur?pct(dur):0.6,dur?2.2:0.6)+'%';
+      b.innerHTML='<span class="gd2">'+dur+'s</span>';
+      trk.appendChild(b); r.appendChild(trk); rows.appendChild(r);
+    }
+
+    // ---- BEFORE (serial staircase) ----
+    var gb=document.getElementById('ganttBefore');
+    if(gb){
+      var FLOOR=78;
+      var rows=axisAndGrid(gb,function(vl){
+        var f=document.createElement('div'); f.className='gfloor'; f.style.left=pct(FLOOR)+'%'; vl.appendChild(f);
+        var fl=document.createElement('div'); fl.className='glab blue'; fl.style.left=pct(FLOOR)+'%'; fl.innerHTML=t('parallel floor ~1:20','sàn song song ~1:20'); vl.appendChild(fl);
+        var el=document.createElement('div'); el.className='glab red'; el.style.left=pct(201)+'%'; el.style.transform='translateX(-92%)'; el.innerHTML=t('actual 3:21','thực tế 3:21'); vl.appendChild(el);
+      });
+      var tt=0;
+      NODES.forEach(function(nd,i){ nd.bs=tt; tt+=nd.dur; if(i<NODES.length-1) tt+=GAPB; });
+      grpHead(rows,'lens','var(--navy-soft)',t('Input — the launch brief','Đầu vào — bản brief'));
+      bar(rows,'01','Ideal',NODES[0].bs,0,'input');
+      grpHead(rows,'lens','var(--blue)',t('Independent reviewers — <b>run one at a time</b> · 119s queued','Người review độc lập — <b>chạy từng người</b> · xếp hàng 119s'));
+      for(var i=1;i<=7;i++) bar(rows,NODES[i].n,NODES[i].nm,NODES[i].bs,NODES[i].dur,'lens');
+      grpHead(rows,'tail','var(--amber)',t('Synthesis — <b>serial tail</b> · 41s, cannot parallelize','Tổng hợp — <b>đuôi tuần tự</b> · 41s, không song song được'));
+      bar(rows,'09','Red Team',NODES[8].bs,24,'tail');
+      bar(rows,'10','The Chair',NODES[9].bs,17,'tail');
+    }
+
+    // ---- AFTER (parallel lane) ----
+    var ga=document.getElementById('ganttAfter');
+    if(ga){
+      var G=5, laneStart=G, laneMax=19, laneEnd=laneStart+laneMax; // 24
+      var rtS=laneEnd+G, chS=rtS+24+G, END=chS+17; // 29,58,75
+      ga.style.setProperty('--la',pct(laneStart)+'%');
+      ga.style.setProperty('--lb',pct(laneEnd)+'%');
+      var rows2=axisAndGrid(ga,function(vl){
+        var rc=document.createElement('div'); rc.className='greclaim'; rc.style.left=pct(END)+'%'; rc.style.right='0'; rc.style.width=pct(TOTAL-END)+'%'; vl.appendChild(rc);
+        var rl=document.createElement('div'); rl.className='glab green'; rl.style.left=pct((END+TOTAL)/2)+'%'; rl.innerHTML=t('reclaimed −2:06','trả lại −2:06'); vl.appendChild(rl);
+        var nl=document.createElement('div'); nl.className='glab green'; nl.style.left=pct(END)+'%'; nl.style.top='20px'; nl.innerHTML=t('done ~1:15','xong ~1:15'); vl.appendChild(nl);
+      });
+      grpHead(rows2,'lens','var(--navy-soft)',t('Input — the launch brief','Đầu vào — bản brief'));
+      bar(rows2,'01','Ideal',0,0,'input');
+      grpHead(rows2,'lens','var(--blue)',t('Independent reviewers — <b>run together</b>','Người review độc lập — <b>chạy cùng nhau</b>'),t('all 7 · start 0:05','cả 7 · bắt đầu 0:05'));
+      for(var j=1;j<=7;j++) bar(rows2,NODES[j].n,NODES[j].nm,laneStart,NODES[j].dur,'lane');
+      grpHead(rows2,'tail','var(--amber)',t('Synthesis — serial tail, unchanged','Tổng hợp — đuôi tuần tự, giữ nguyên'));
+      bar(rows2,'09','Red Team',rtS,24,'tail');
+      bar(rows2,'10','The Chair',chS,17,'tail');
+    }
+  })();
+  </script>
+
+
+  <footer>
+    <div class="wrap">
+      <p>
+        <span class="t en">A working multi-agent launch-readiness committee, built and hosted on MindPal ·
+          <a href="../index.html">← back to the portfolio</a></span>
+        
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    function setLang(l){
+      document.documentElement.setAttribute('data-lang', l);
+      document.documentElement.setAttribute('lang', l === 'vi' ? 'vi' : 'en');
+      try{ localStorage.setItem('day8lang', l); }catch(e){}
+      document.querySelectorAll('.langtog button').forEach(function(b){
+        b.classList.toggle('on', b.dataset.l === l);
+      });
+    }
+    (function(){
+      var saved;
+      try{ saved = localStorage.getItem('day8lang'); }catch(e){}
+      setLang(saved === 'vi' ? 'vi' : 'en');
+    })();
+  </script>
+
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/assets/comments.js" data-page="day8"></script>
+</body>
+</html>

@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Cut workbench — Continuity | Giang Thanh Cong</title>
+<meta name="description" content="Validate a Cut, price it deterministically, build the payloads for ten MindPal agents, and merge their findings through a fixed authority table. Day 11 of a 30-day build challenge." />
+<meta property="og:title" content="The Cut workbench — Continuity" />
+<meta property="og:description" content="Paste a Cut. It gets validated, priced, and turned into paste-ready payloads for ten agents — then their findings are merged through an authority table you can read." />
+<meta property="og:type" content="article" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --orange:#f9660e; --orange-soft:#ffe7d6;
+    --navy:#111a3e; --navy-soft:#5a6488;
+    --peach:#fdece1; --lav:#efe6fb; --purple:#8b5cf6; --purple-soft:#eee9fb;
+    --blue:#2f6fed; --blue-soft:#e2ecfd; --green:#1e9257; --green-soft:#e4f3ea;
+    --amber:#b0771a; --amber-soft:#f7edda; --red:#c64b3e; --red-soft:#f8e6e3;
+    --bg:#f6f7fb; --card:#fff; --border:#e7e9f2; --ink-dark:#0f1730;
+    --shadow:0 18px 50px rgba(17,26,62,.12); --shadow-sm:0 6px 20px rgba(17,26,62,.08);
+    --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg);color:var(--navy);line-height:1.6;-webkit-font-smoothing:antialiased}
+  a{text-decoration:none;color:inherit}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 24px}
+  h1,h2,h3{line-height:1.15;letter-spacing:-.015em}
+  .accent{color:var(--orange)}
+  code,.mono{font-family:var(--mono)}
+  button{font-family:inherit}
+  :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+  /* header */
+  header.top{position:sticky;top:0;z-index:40;background:rgba(246,247,251,.92);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+  .bar{max-width:1000px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:16px}
+  .back{font-family:var(--mono);font-size:12.5px;color:var(--navy-soft);white-space:nowrap}
+  .back:hover{color:var(--orange)}
+  .meta{flex:1;min-width:0}
+  .meta .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--orange)}
+  .meta h1{font-size:15px;font-weight:700;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .src{font-family:var(--mono);font-size:12px;padding:6px 12px;border:1px solid var(--border);
+    border-radius:99px;background:var(--card);white-space:nowrap}
+  .src:hover{border-color:var(--orange);color:var(--orange)}
+
+  /* hero */
+  .hero{padding:34px 0 8px}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--orange)}
+  .hero h2{font-size:clamp(24px,4vw,34px);font-weight:800;margin-top:10px;max-width:24ch}
+  .lede{margin-top:12px;max-width:70ch;color:var(--navy-soft);font-size:16.5px}
+
+  /* steps */
+  .step{background:var(--card);border:1px solid var(--border);border-radius:14px;
+    box-shadow:var(--shadow-sm);margin-top:20px;overflow:hidden}
+  .shead{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+  .shead .n{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--navy);
+    width:24px;height:24px;border-radius:7px;display:grid;place-items:center;flex:none}
+  .shead h3{font-size:16px;font-weight:700;flex:1;min-width:140px}
+  .shead .hint{font-family:var(--mono);font-size:11.5px;color:var(--navy-soft)}
+  .sbody{padding:18px 20px}
+
+  textarea{width:100%;min-height:150px;font-family:var(--mono);font-size:12px;line-height:1.55;
+    padding:12px;border:1px solid var(--border);border-radius:10px;background:#fbfcfe;color:var(--navy);resize:vertical}
+  textarea:focus{outline:none;border-color:var(--blue)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .btn{font-family:var(--mono);font-size:12.5px;padding:9px 15px;border-radius:9px;border:1px solid var(--border);
+    background:var(--card);color:var(--navy);cursor:pointer;transition:.14s}
+  .btn:hover{border-color:var(--navy-soft)}
+  .btn.pri{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .btn.pri:hover{background:#1c2a5c}
+  .btn.sm{padding:5px 10px;font-size:11.5px}
+  .btn[disabled]{opacity:.4;cursor:not-allowed}
+
+  /* messages */
+  .msg{font-family:var(--mono);font-size:12.5px;padding:11px 14px;border-radius:10px;margin-top:12px;line-height:1.6}
+  .msg.ok{background:var(--green-soft);color:#14603a}
+  .msg.err{background:var(--red-soft);color:#8f3125}
+  .msg.warn{background:var(--amber-soft);color:#7d5410}
+  .msg ul{margin:6px 0 0 16px}
+  .msg li{margin-top:3px}
+
+  /* worksheet */
+  .sheet{font-family:var(--mono);font-size:12px;line-height:1.75;background:var(--ink-dark);color:#dfe5f5;
+    padding:16px 18px;border-radius:11px;overflow-x:auto;white-space:pre}
+  .sheet .g{color:#7ee0a8}.sheet .r{color:#ff9d8f}.sheet .y{color:#ffd483}.sheet .d{color:#8892b8}
+
+  /* payloads */
+  .pay{border:1px solid var(--border);border-radius:11px;margin-top:10px;overflow:hidden}
+  .pay-h{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fbfcfe;border-bottom:1px solid var(--border);flex-wrap:wrap}
+  .pay-h .nm{font-family:var(--mono);font-size:12.5px;font-weight:700;flex:1;min-width:120px}
+  .pay-h .mdl{font-family:var(--mono);font-size:10.5px;padding:2px 8px;border-radius:99px;background:var(--blue-soft);color:#1c4bb0}
+  .pay-h .tmp{font-family:var(--mono);font-size:10.5px;color:var(--navy-soft)}
+  .pay pre{font-family:var(--mono);font-size:11.5px;line-height:1.55;padding:12px 14px;max-height:190px;
+    overflow:auto;white-space:pre-wrap;word-break:break-word;color:var(--navy-soft)}
+
+  /* report */
+  .tier{border-radius:12px;padding:14px 16px;margin-top:12px}
+  .tier.block{background:var(--red-soft);border:1px solid #eab8b0}
+  .tier.prop{background:var(--amber-soft);border:1px solid #e5cf9e}
+  .tier.adv{background:#f2f4f9;border:1px solid var(--border)}
+  .tier h4{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+  .tier.block h4{color:#8f3125}.tier.prop h4{color:#7d5410}.tier.adv h4{color:var(--navy-soft)}
+  .item{background:rgba(255,255,255,.7);border-radius:9px;padding:11px 13px;margin-top:8px;font-size:14px}
+  .item .id{font-family:var(--mono);font-size:11px;color:var(--navy-soft)}
+  .item .q{font-family:var(--mono);font-size:12.5px;background:rgba(17,26,62,.06);padding:6px 9px;
+    border-radius:7px;margin:6px 0;display:block;line-height:1.5}
+  .item .why{font-size:13.5px;color:var(--navy-soft)}
+  .item .def{font-family:var(--mono);font-size:11.5px;color:#7d5410;margin-top:6px;padding-top:6px;border-top:1px dashed rgba(125,84,16,.3)}
+  .ba{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:7px;font-family:var(--mono);font-size:11.5px}
+  .ba div{padding:7px 9px;border-radius:7px}
+  .ba .b{background:rgba(198,75,62,.1)}.ba .a{background:rgba(30,146,87,.12)}
+  details.fold summary{cursor:pointer;font-family:var(--mono);font-size:12.5px;padding:4px 0}
+  .verdict{font-family:var(--mono);font-size:13px;padding:12px 15px;border-radius:11px;
+    background:var(--ink-dark);color:#dfe5f5;line-height:1.8;white-space:pre-wrap}
+
+  .note{font-family:var(--mono);font-size:12px;line-height:1.7;color:var(--navy-soft);
+    background:#fbfcfe;border:1px dashed var(--border);border-radius:10px;padding:12px 14px;margin-top:14px}
+  .note b{color:var(--navy)}
+
+  footer{margin-top:44px;padding:24px 0 44px;border-top:1px solid var(--border);
+    font-family:var(--mono);font-size:12px;color:var(--navy-soft)}
+  @media(max-width:640px){ .ba{grid-template-columns:1fr} .bar{gap:10px} .meta h1{font-size:13.5px} }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="bar">
+    <a class="back" href="../index.html">← Portfolio</a>
+    <div class="meta">
+      <span class="tag">Day 11 · 30 Day Challenge</span>
+      <h1>The Cut workbench</h1>
+    </div>
+    <a class="src" href="index.html">📄 Design doc</a>
+  </div>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <div class="eyebrow">Continuity · the deterministic half</div>
+    <h2>Paste a Cut. Get it priced, checked, and turned into ten payloads.</h2>
+    <p class="lede">
+      Ten agents review a video before it is rendered. This page is the part between them that
+      is <b>not</b> an agent: it validates the Cut against the schema, recomputes every cost
+      from a fixed price book, builds the paste-ready payload for each node, and merges the
+      findings back through an authority table you can read.
+    </p>
+  </div>
+
+  <div class="wrap">
+
+    <!-- STEP 1 -->
+    <section class="step">
+      <div class="shead"><span class="n">1</span><h3>The Cut</h3>
+        <span class="hint">JSON · schema v1.0</span></div>
+      <div class="sbody">
+        <textarea id="cutIn" spellcheck="false" placeholder="Paste the JSON that node N3 produced…"></textarea>
+        <div class="row">
+          <button class="btn pri" data-act="validate">Validate &amp; price</button>
+          <button class="btn" data-act="example">Load the VéXe example</button>
+          <button class="btn" data-act="clear">Clear</button>
+        </div>
+        <div id="valMsg"></div>
+      </div>
+    </section>
+
+    <!-- STEP 2 -->
+    <section class="step" id="stepSheet" hidden>
+      <div class="shead"><span class="n">2</span><h3>Cost worksheet</h3>
+        <span class="hint">recomputed — the authored numbers are not trusted</span></div>
+      <div class="sbody">
+        <div class="sheet" id="sheet"></div>
+        <div class="note">
+          <b>Why this is printed rather than hidden.</b> The three lenses that check numbers run on
+          a language model. Handing them a finished worksheet turns their job from <i>doing
+          arithmetic</i> into <i>checking arithmetic that is already on the page</i> — which is a much
+          easier job, and one you can audit yourself by reading the same lines.
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 3 -->
+    <section class="step" id="stepPay" hidden>
+      <div class="shead"><span class="n">3</span><h3>Payloads</h3>
+        <span class="hint">one per node · paste into MindPal</span></div>
+      <div class="sbody">
+        <div id="pays"></div>
+        <div class="note">
+          MindPal's Public API is behind a paywall, so this hop is manual: copy each payload into
+          its node, run the workflow, then bring the six lens outputs back to step 4.
+          <b>Check every <code>@variable</code> renders purple before you run</b> — a hand-typed
+          reference does not bind, and the run fails without telling you.
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 4 -->
+    <section class="step" id="stepMerge" hidden>
+      <div class="shead"><span class="n">4</span><h3>Merge the findings</h3>
+        <span class="hint">contract check → authority table → gate report</span></div>
+      <div class="sbody">
+        <textarea id="lensIn" spellcheck="false" placeholder="Paste the six lens outputs (N4–N9). One JSON object per lens — paste them one after another, or as a JSON array."></textarea>
+        <div class="row">
+          <button class="btn pri" data-act="merge">Build the gate report</button>
+          <button class="btn" data-act="demoFindings">Load a sample set of findings</button>
+        </div>
+        <div id="mergeMsg"></div>
+        <div id="report"></div>
+      </div>
+    </section>
+
+    <div class="note" style="margin-top:22px">
+      <b>What this page is not.</b> It is not a lens — it makes no judgement about the video.
+      It validates, it does arithmetic, and it applies a lookup table. Every judgement in
+      Continuity is made by one of the ten agents. The gate report below is what the authority
+      table says <i>should</i> happen; node N10 says what it <i>decided</i>. If the two differ,
+      that is a finding about the Checker.
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    Day 11 of a 30-day build challenge · <a href="../index.html" style="text-decoration:underline">back to the portfolio</a>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ─────────────────────────── data tables ─────────────────────────── */
+
+  // Rates are ASSUMED, not vendor quotes. Every figure the page shows derives from here.
+  var PRICE_BOOK = {
+    heygen_avatar_v : { usd_per_s: 0.200, label: "avatar",      confidence: "assumed" },
+    seedance_video  : { usd_per_s: 0.150, label: "video-gen",   confidence: "assumed" },
+    hyperframes_html: { usd_per_s: 0.020, label: "hyperframes", confidence: "assumed" },
+    text_card       : { usd_per_s: 0.004, label: "text card",   confidence: "assumed" }
+  };
+  var AVATAR_ENGINES = { heygen_avatar_v: true };
+
+  var RATIO_BANDS = {
+    "9:16": { install:{min:.15,max:.35}, conversion:{min:.15,max:.35}, awareness:{min:.10,max:.30}, explain:{min:.20,max:.45} },
+    "16:9": { install:{min:.20,max:.50}, conversion:{min:.20,max:.50}, awareness:{min:.15,max:.45}, explain:{min:.25,max:.60} },
+    "1:1" : { install:{min:.15,max:.40}, conversion:{min:.15,max:.40}, awareness:{min:.15,max:.40}, explain:{min:.15,max:.40} }
+  };
+
+  // The authority table from checker.md §2, as data.
+  var AUTHORITY = {
+    CLAIM_UNSOURCED     : { action:"BLOCK",    why:"Only the author can resolve this — find the source or change the sentence." },
+    CLAIM_UNDECLARED    : { action:"BLOCK",    why:"A checkable assertion that was never declared." },
+    CLAIM_CONTRADICTED  : { action:"BLOCK",    why:"The source says otherwise." },
+    OVERCLAIM_LEGAL     : { action:"BLOCK",    why:"Legal exposure belongs to the user." },
+    COMPARATIVE_AD      : { action:"BLOCK",    why:"Comparative advertising is never handled automatically." },
+    UNKNOWN_ENGINE      : { action:"BLOCK",    why:"An engine that cannot be named cannot be priced." },
+    BANNED_PHRASE       : { action:"PROPOSE_FIX", why:"Replacement text comes from the brand table, written by a human.", blockIfNoFix:true },
+    ADDRESS_FORM        : { action:"PROPOSE_FIX", why:"Table lookup, and visible to every viewer." },
+    MISSING_DISCLAIMER  : { action:"PROPOSE_FIX", why:"The exact required text is in the brand profile." },
+    BUDGET_OVER_CEILING : { action:"PROPOSE_DOWNGRADE", why:"An engine swap is reversible and content-neutral — but a person signs off." },
+    COST_MISPRICED      : { action:"PROPOSE_NUMBER",    why:"Arithmetic, not content — but often how an over-budget plan hid itself." },
+    TOTALS_MISMATCH     : { action:"PROPOSE_NUMBER",    why:"Derived totals must match the recomputation." },
+    CLAIM_PARTIAL       : { action:"ADVISE",   why:"Whether a half-supported claim is honest enough is the author's call." },
+    OVERCLAIM_SOFT      : { action:"ADVISE",   why:"Risky but not clearly unlawful." },
+    DURATION_DRIFT      : { action:"ADVISE",   why:"Often deliberate." },
+    RATIO_HIGH          : { action:"FOLD",     why:"Taste. A taste lens that can stop the line gets switched off." },
+    RATIO_LOW           : { action:"FOLD",     why:"Taste." },
+    AVATAR_RUN_TOO_LONG : { action:"FOLD",     why:"Taste." },
+    BUDGET_TIGHT        : { action:"FOLD",     why:"Under the ceiling is under the ceiling." },
+    CLAIM_SUPPORTED     : { action:"FOLD",     why:"Recorded, not surfaced." },
+    NO_RESIDUAL         : { action:"RECORD",   why:"Useful in the log, noise in the report." }
+  };
+
+  var PRIORITY = { claims:5, overclaim:4, budget:3, brand:2, ratio:1, redteam:1 };
+
+  var NODES = [
+    { id:"N4", icon:"💰", name:"L1 Budget",         lens:"budget",    model:"Gemini 3.0 Flash", temp:"0",   sheet:true  },
+    { id:"N5", icon:"🏷", name:"L2 Brand",          lens:"brand",     model:"Gemini 3.0 Flash", temp:"0",   brand:true  },
+    { id:"N6", icon:"🎭", name:"L3 Ratio",          lens:"ratio",     model:"Gemini 3.0 Flash", temp:"0",   ratio:true  },
+    { id:"N7", icon:"📎", name:"L4 Claim sourcing", lens:"claims",    model:"Claude Opus 5",    temp:"0",   sources:true },
+    { id:"N8", icon:"⚖️", name:"L5 Overclaim",      lens:"overclaim", model:"GPT-5.1",          temp:"0"   },
+    { id:"N9", icon:"🕵️", name:"Red team",           lens:"redteam",   model:"Claude Opus 5",    temp:"0.4", after:true  }
+  ];
+
+  /* ─────────────────────────── helpers ─────────────────────────── */
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+  function r2(n){ return Math.round(n*100)/100; }
+  function usd(n){ return "$" + n.toFixed(2); }
+  function pad(s,n){ s=String(s); while(s.length<n) s+=" "; return s; }
+  function lpad(s,n){ s=String(s); while(s.length<n) s=" "+s; return s; }
+
+  // The schema specifies sha1. This workbench uses FNV-1a so hashing can happen
+  // synchronously during render — same content-addressing property, different function.
+  function hash(str){
+    var h = 0x811c9dc5, i;
+    for(i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = (h + ((h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24))) >>> 0; }
+    return ("0000000" + h.toString(16)).slice(-8);
+  }
+  function canonical(o){
+    if(o===null || typeof o!=="object") return JSON.stringify(o);
+    if(Array.isArray(o)) return "[" + o.map(canonical).join(",") + "]";
+    return "{" + Object.keys(o).sort().map(function(k){
+      return JSON.stringify(k)+":"+canonical(o[k]); }).join(",") + "}";
+  }
+  function sceneHash(s){
+    return hash(String(s.dialogue_vi) + " " + String(s.engine && s.engine.id) + " " + canonical((s.engine&&s.engine.params)||{}));
+  }
+
+  /* ─────────────────────────── validation ─────────────────────────── */
+
+  var ENUMS = {
+    objective: ["install","awareness","conversion","explain"],
+    language : ["vi","en"],
+    aspect   : ["9:16","16:9","1:1"],
+    stage    : ["gate1","animatic","gate2","upgrade"],
+    role     : ["hook","problem","turn","demo","proof","benefit","reassure","cta"],
+    state    : ["pending","approved","blocked","waived"],
+    ctype    : ["statistic","product_fact","comparative","legal"],
+    conf     : ["priced","assumed"]
+  };
+
+  function validate(cut){
+    var e = [], i, s, c, ids = {}, cids = {}, srcIds = {};
+
+    if(!cut || typeof cut!=="object") return ["Root is not an object."];
+    if(cut.cut_version !== "1.0") e.push("cut_version must be \"1.0\" (got " + JSON.stringify(cut.cut_version) + ").");
+
+    ["cut_id","revision","brief","budget","brand","sources","scenes","totals"].forEach(function(k){
+      if(cut[k] === undefined) e.push("Missing top-level key: " + k + ".");
+    });
+    if(e.length) return e;
+
+    if(ENUMS.objective.indexOf(cut.brief.objective)<0) e.push("brief.objective must be one of " + ENUMS.objective.join(", ") + ".");
+    if(ENUMS.aspect.indexOf(cut.brief.aspect)<0)       e.push("brief.aspect must be one of " + ENUMS.aspect.join(", ") + ".");
+    if(ENUMS.language.indexOf(cut.brief.language)<0)   e.push("brief.language must be vi or en.");
+    if(ENUMS.stage.indexOf(cut.budget.stage)<0)        e.push("budget.stage must be one of " + ENUMS.stage.join(", ") + ".");
+    if(typeof cut.budget.ceiling_usd !== "number")     e.push("budget.ceiling_usd must be a number.");
+    if(!cut.budget.stage_ceilings_usd || typeof cut.budget.stage_ceilings_usd[cut.budget.stage] !== "number")
+      e.push("budget.stage_ceilings_usd." + cut.budget.stage + " is missing.");
+
+    if(!Array.isArray(cut.sources)) e.push("sources must be an array.");
+    else cut.sources.forEach(function(x,k){
+      if(!x.id) e.push("sources[" + k + "].id is missing.");
+      else if(srcIds[x.id]) e.push("Duplicate source id: " + x.id + ".");
+      else srcIds[x.id] = true;
+    });
+
+    if(!Array.isArray(cut.scenes) || !cut.scenes.length) { e.push("scenes must be a non-empty array."); return e; }
+
+    for(i=0;i<cut.scenes.length;i++){
+      s = cut.scenes[i];
+      var at = "scenes[" + i + "]";
+      if(!s.id){ e.push(at + ".id is missing."); continue; }
+      at = "scene " + s.id;
+      if(ids[s.id]) e.push("Duplicate scene id: " + s.id + "."); else ids[s.id] = true;
+      if(s.order !== i+1) e.push(at + ".order should be " + (i+1) + " (got " + s.order + ") — order must be 1-based and contiguous.");
+      if(typeof s.duration_s !== "number" || s.duration_s <= 0) e.push(at + ".duration_s must be a positive number.");
+      if(ENUMS.role.indexOf(s.role)<0) e.push(at + ".role is not a listed value.");
+      if(typeof s.dialogue_vi !== "string") e.push(at + ".dialogue_vi must be a string.");
+
+      if(!s.engine || !s.engine.id) e.push(at + ".engine.id is missing.");
+      else if(!PRICE_BOOK[s.engine.id]) e.push(at + ".engine.id \"" + s.engine.id + "\" is not in the price book.");
+      if(!s.engine || !s.engine.why || !String(s.engine.why).trim())
+        e.push(at + ".engine.why is empty — an engine choice with no stated reason is not allowed.");
+      if(s.engine && !Array.isArray(s.engine.downgrade_path))
+        e.push(at + ".engine.downgrade_path must be an array (may be empty).");
+
+      if(!s.cost || typeof s.cost.estimate_usd !== "number") e.push(at + ".cost.estimate_usd must be a number.");
+      if(s.cost && ENUMS.conf.indexOf(s.cost.confidence)<0) e.push(at + ".cost.confidence must be priced or assumed.");
+
+      if(!Array.isArray(s.claims)) e.push(at + ".claims must be an array.");
+      else s.claims.forEach(function(cl){
+        if(!cl.id){ e.push(at + " has a claim with no id."); return; }
+        if(cids[cl.id]) e.push("Duplicate claim id: " + cl.id + "."); else cids[cl.id] = true;
+        if(ENUMS.ctype.indexOf(cl.type)<0) e.push("claim " + cl.id + ".type is not a listed value.");
+        if(cl.source_id !== null && !srcIds[cl.source_id])
+          e.push("claim " + cl.id + ".source_id \"" + cl.source_id + "\" does not resolve to any entry in sources[].");
+      });
+
+      if(!s.approval || ENUMS.state.indexOf(s.approval.state)<0) e.push(at + ".approval.state is not a listed value.");
+      else if(s.approval.state === "waived" && !String(s.approval.note||"").trim())
+        e.push(at + " is waived but approval.note is empty — a waiver must carry a reason.");
+    }
+    return e;
+  }
+
+  /* ─────────────────────────── worksheet ─────────────────────────── */
+
+  function worksheet(cut){
+    var rows = [], total = 0, authored = 0, dur = 0, avatar = 0, claims = 0, sourced = 0;
+
+    cut.scenes.forEach(function(s){
+      var p = PRICE_BOOK[s.engine.id];
+      var exact = r2(p.usd_per_s * s.duration_s);
+      var auth  = s.cost.estimate_usd;
+      total += exact; authored += auth; dur += s.duration_s;
+      if(AVATAR_ENGINES[s.engine.id]) avatar += s.duration_s;
+      (s.claims||[]).forEach(function(c){ claims++; if(c.source_id) sourced++; });
+      var dp = (s.engine.downgrade_path||[])[0];
+      rows.push({
+        id:s.id, engine:s.engine.id, dur:s.duration_s, rate:p.usd_per_s,
+        exact:exact, authored:auth, ok:Math.abs(exact-auth) <= 0.01,
+        downgrade: dp || null,
+        saving: dp && PRICE_BOOK[dp] ? r2(exact - r2(PRICE_BOOK[dp].usd_per_s * s.duration_s)) : 0,
+        hash: sceneHash(s), storedHash: s.hash || "",
+        cached: !!(s.render && s.render.last_hash && s.render.last_hash === s.hash)
+      });
+    });
+
+    total = r2(total); authored = r2(authored); dur = r2(dur); avatar = r2(avatar);
+    var ceiling = cut.budget.stage_ceilings_usd[cut.budget.stage];
+    var band = (RATIO_BANDS[cut.brief.aspect]||{})[cut.brief.objective] || {min:0,max:1};
+    var ratio = dur ? Math.round(avatar/dur*1000)/1000 : 0;
+
+    // Which downgrades, in order, bring the total under the ceiling
+    var plan = [], running = total, planAvatar = avatar;
+    rows.slice().sort(function(a,b){ return b.saving - a.saving; }).forEach(function(r){
+      if(running > ceiling && r.saving > 0){
+        plan.push(r); running = r2(running - r.saving);
+        // downgrading an avatar scene removes its seconds from the talking-head total
+        if(AVATAR_ENGINES[r.engine] && !AVATAR_ENGINES[r.downgrade]) planAvatar = r2(planAvatar - r.dur);
+      }
+    });
+    // The consequence of accepting the plan — this is what lets the Checker attribute
+    // an editorial advisory to the budget action that caused it.
+    var planRatio = dur ? Math.round(planAvatar/dur*1000)/1000 : 0;
+
+    return { rows:rows, total:total, authored:authored, ceiling:ceiling, over:r2(total-ceiling),
+             dur:dur, avatar:avatar, ratio:ratio, band:band, claims:claims, sourced:sourced,
+             plan:plan, planTotal:running, planAvatar:planAvatar, planRatio:planRatio,
+             planBreaksRatio: plan.length > 0 && (planRatio < band.min || planRatio > band.max),
+             stage:cut.budget.stage,
+             target:cut.brief.target_duration_s, drift:Math.abs(dur-cut.brief.target_duration_s) > 0.1*cut.brief.target_duration_s };
+  }
+
+  function renderSheet(w){
+    var L = [], i;
+    for(i=0;i<w.rows.length;i++){
+      var r = w.rows[i];
+      var line = "  " + pad(r.id,7) + pad(r.engine,18) +
+        lpad(r.dur.toFixed(1)+"s",6) + " × " + lpad("$"+r.rate.toFixed(3),7) + "/s = " + lpad(usd(r.exact),7);
+      if(r.ok) line += "    <span class='d'>authored " + usd(r.authored) + "</span>  <span class='g'>ok</span>";
+      else     line += "    <span class='d'>authored</span> <span class='r'>" + usd(r.authored) +
+                       "</span>  <span class='r'>off by " + usd(Math.abs(r.exact-r.authored)) + "</span>";
+      L.push(line);
+    }
+    L.push("");
+    L.push("  " + pad("",25) + lpad("RECOMPUTED",21) + " = " + lpad(usd(w.total),7));
+    L.push("  " + pad("",25) + lpad("AUTHORED",21)   + " = " + lpad("<span class='" + (Math.abs(w.total-w.authored)<=0.01?"d":"r") + "'>" + usd(w.authored) + "</span>",7));
+    L.push("  " + pad("",25) + lpad("CEILING ("+w.stage+")",21) + " = " + lpad(usd(w.ceiling),7));
+    if(w.over > 0){
+      L.push("  " + pad("",25) + lpad("OVER",21) + " = <span class='r'>" + lpad(usd(w.over),7) + "</span>");
+      if(w.plan.length){
+        L.push("");
+        L.push("  <span class='y'>To fit, downgrade in this order:</span>");
+        w.plan.forEach(function(r){
+          L.push("    " + pad(r.id,7) + r.engine + " → " + r.downgrade + "   saves " + usd(r.saving));
+        });
+        L.push("    " + pad("",7) + "new total " + usd(w.planTotal) +
+               (w.planTotal <= w.ceiling ? "  <span class='g'>fits</span>" : "  <span class='r'>still over</span>"));
+        if(w.planBreaksRatio){
+          L.push("");
+          L.push("  <span class='y'>Consequence of accepting that plan:</span>");
+          L.push("    talking-head ratio " + w.ratio.toFixed(3) + " → <span class='r'>" + w.planRatio.toFixed(3) +
+                 "</span>   (band " + w.band.min.toFixed(2) + " – " + w.band.max.toFixed(2) + ")");
+          L.push("    <span class='d'>the cheapest scenes to downgrade are the avatar ones, so clearing</span>");
+          L.push("    <span class='d'>the budget takes the presenter out of the video</span>");
+        }
+      }
+    } else {
+      L.push("  " + pad("",25) + lpad("HEADROOM",21) + " = <span class='g'>" + lpad(usd(-w.over),7) + "</span>");
+    }
+    L.push("");
+    L.push("  duration            " + w.dur.toFixed(1) + " s   (target " + w.target + " s" +
+           (w.drift ? " — <span class='y'>drift over 10%</span>" : "") + ")");
+    L.push("  avatar seconds      " + w.avatar.toFixed(1) + " s");
+    var rc = (w.ratio > w.band.max || w.ratio < w.band.min) ? "y" : "g";
+    L.push("  talking-head ratio  <span class='" + rc + "'>" + w.ratio.toFixed(3) + "</span>   (band " +
+           w.band.min.toFixed(2) + " – " + w.band.max.toFixed(2) + ")");
+    L.push("  claims              " + w.claims + " total, " + w.sourced + " with a source, " +
+           (w.claims-w.sourced) + " null");
+    L.push("");
+    L.push("  <span class='d'>rates are ASSUMED, not vendor quotes — swap the price book to use your own</span>");
+    return L.join("\n");
+  }
+
+  /* ─────────────────────────── payloads ─────────────────────────── */
+
+  function plainSheet(w){
+    var L = ["COST WORKSHEET (computed deterministically, outside the model)"];
+    w.rows.forEach(function(r){
+      L.push("  " + pad(r.id,7) + pad(r.engine,18) + lpad(r.dur.toFixed(1)+"s",6) + " × $" +
+             r.rate.toFixed(3) + "/s = " + lpad(usd(r.exact),7) + "   authored " + usd(r.authored) +
+             (r.ok ? "  ok" : "  MISMATCH"));
+    });
+    L.push("  RECOMPUTED TOTAL = " + usd(w.total));
+    L.push("  AUTHORED TOTAL   = " + usd(w.authored));
+    L.push("  CEILING (" + w.stage + ") = " + usd(w.ceiling));
+    L.push(w.over > 0 ? "  OVER BY = " + usd(w.over) : "  HEADROOM = " + usd(-w.over));
+    if(w.plan.length){
+      L.push("  Cheapest downgrades, largest saving first: " + w.plan.map(function(r){
+        return r.id + " " + r.engine + "→" + r.downgrade + " (saves " + usd(r.saving) + ")"; }).join(", "));
+      L.push("  Total after those downgrades = " + usd(w.planTotal) + (w.planTotal <= w.ceiling ? " (fits)" : " (still over)"));
+      if(w.planBreaksRatio){
+        L.push("  CONSEQUENCE: accepting that plan moves the talking-head ratio " +
+               w.ratio.toFixed(3) + " → " + w.planRatio.toFixed(3) +
+               ", outside the band " + w.band.min.toFixed(2) + "–" + w.band.max.toFixed(2) + ".");
+        L.push("  Say so in your finding: the editorial cost belongs to the budget action that caused it.");
+      }
+    }
+    return L.join("\n");
+  }
+  function ratioLines(cut, w){
+    var L = ["RATIO WORKSHEET",
+      "  avatar " + w.avatar.toFixed(1) + "s / total " + w.dur.toFixed(1) + "s = " + w.ratio.toFixed(3),
+      "  band for " + cut.brief.aspect + " / " + cut.brief.objective + " = " +
+        w.band.min.toFixed(2) + " – " + w.band.max.toFixed(2),
+      "  target duration " + w.target + "s, actual " + w.dur.toFixed(1) + "s"];
+    if(w.plan.length){
+      L.push("  If the budget lens's downgrade plan is accepted, this ratio becomes " + w.planRatio.toFixed(3) + ".");
+    }
+    return L.join("\n");
+  }
+
+  function buildPayloads(cut, w){
+    var cutJson = JSON.stringify(cut, null, 2);
+    return NODES.map(function(n){
+      var body = "THE CUT\n" + cutJson;
+      if(n.sheet)   body += "\n\n" + plainSheet(w);
+      if(n.ratio)   body += "\n\n" + ratioLines(cut, w);
+      if(n.brand)   body += "\n\nBRAND RULES\n" + JSON.stringify(cut.brand, null, 2);
+      if(n.sources) body += "\n\nSOURCE DOCUMENTS\n" + JSON.stringify(cut.sources, null, 2);
+      if(n.after)   body += "\n\n(Also attach the five lens outputs via @N4 … @N8.)";
+      return { node:n, text:body };
+    });
+  }
+
+  /* ─────────────────────────── merge ─────────────────────────── */
+
+  function parseLensBlobs(raw){
+    var txt = raw.trim(), out = [], err = [];
+    if(!txt) return { out:out, err:["Nothing pasted."] };
+    // Try a single array first
+    try {
+      var arr = JSON.parse(txt);
+      if(Array.isArray(arr)) return { out:arr, err:[] };
+      return { out:[arr], err:[] };
+    } catch(e){ /* fall through to multi-object scan */ }
+    var depth = 0, start = -1, i, ch;
+    for(i=0;i<txt.length;i++){
+      ch = txt[i];
+      if(ch === "{"){ if(depth === 0) start = i; depth++; }
+      else if(ch === "}"){ depth--; if(depth === 0 && start >= 0){
+        try { out.push(JSON.parse(txt.slice(start, i+1))); }
+        catch(e2){ err.push("Could not parse the object starting at character " + start + "."); }
+        start = -1;
+      } }
+    }
+    if(!out.length && !err.length) err.push("No JSON object found.");
+    return { out:out, err:err };
+  }
+
+  function checkContract(o, idx){
+    var e = [], where = "output " + (idx+1) + (o && o.lens ? " (" + o.lens + ")" : "");
+    if(!o || typeof o !== "object") return [where + ": not an object."];
+    if(!o.lens) e.push(where + ": missing \"lens\".");
+    if(["pass","warn","fail"].indexOf(o.verdict) < 0) e.push(where + ": verdict must be pass, warn or fail.");
+    if(!Array.isArray(o.findings)) { e.push(where + ": findings must be an array."); return e; }
+    o.findings.forEach(function(f, k){
+      var at = where + " finding " + (k+1);
+      if(!f.code) e.push(at + ": missing code.");
+      if(["blocker","warn","advisory"].indexOf(f.severity) < 0) e.push(at + ": severity must be blocker, warn or advisory.");
+      if(!f.evidence || !String(f.evidence.quote||"").trim())
+        e.push(at + " (" + (f.code||"?") + "): no evidence.quote — a finding with nothing quoted is a guess, and guesses are dropped.");
+      if(f.code && !authorityFor(f.code) && !isRedteam(f.code))
+        e.push(at + ": code \"" + f.code + "\" is not in the authority table.");
+    });
+    return e;
+  }
+
+  function isRedteam(code){ return String(code||"").indexOf("REDTEAM_") === 0; }
+  function authorityFor(code){ return AUTHORITY[code] || null; }
+
+  function mapAction(f){
+    // The red team invents its own slugs, so its codes are matched by prefix. It may
+    // raise an alarm at any severity; it may never propose an edit.
+    if(isRedteam(f.code)){
+      return f.severity === "blocker"
+        ? { action:"BLOCK",  why:"Red team raised a blocker. One unvalidated pass may stop the line — it may not edit anything." }
+        : { action:"ADVISE", why:"Red team finding. It may raise an alarm; it may never propose an edit." };
+    }
+    var row = authorityFor(f.code);
+    if(!row) return { action:"ADVISE", why:"Unrecognised code — surfaced so it is not lost." };
+    if(row.blockIfNoFix && (!f.proposed_action || f.proposed_action === "none"))
+      return { action:"BLOCK", why:"No approved replacement exists, so there is nothing safe to propose." };
+    return row;
+  }
+
+  function buildReport(cut, w, blobs){
+    var blockers = [], proposals = [], advisories = [], recorded = [], audit = [], seq = 1;
+
+    blobs.forEach(function(b){
+      var lensPri = PRIORITY[b.lens] || 0;
+      (b.findings||[]).forEach(function(f){
+        var m = mapAction(f);
+        var entry = { f:f, lens:b.lens, pri:lensPri, why:m.why, action:m.action };
+        if(m.action === "BLOCK") blockers.push(entry);
+        else if(m.action.indexOf("PROPOSE") === 0) proposals.push(entry);
+        else if(m.action === "ADVISE") advisories.push(entry);
+        else if(m.action === "RECORD") recorded.push(entry);
+        else advisories.push(entry); // FOLD
+      });
+    });
+
+    // conflict resolution: one proposal per scene, highest-priority lens wins
+    var byScene = {}, kept = [];
+    proposals.sort(function(a,b){ return b.pri - a.pri; });
+    proposals.forEach(function(p){
+      var sid = (p.f.scene_ids||["*"])[0];
+      if(byScene[sid]){ byScene[sid].deferred.push(p); }
+      else { p.deferred = []; byScene[sid] = p; kept.push(p); }
+    });
+
+    kept.forEach(function(p){
+      audit.push({ seq:seq++, code:p.f.code, lens:p.lens, scene:(p.f.scene_ids||[]).join(","),
+                   action:p.action, note:p.f.proposed_action || "none" });
+    });
+
+    return { blockers:blockers, proposals:kept, advisories:advisories, recorded:recorded, audit:audit };
+  }
+
+  function renderReport(cut, w, R){
+    var H = [];
+    var decision = R.blockers.length ? "BLOCKED — " + R.blockers.length + " blocker" + (R.blockers.length>1?"s":"")
+                 : (R.proposals.length ? "READY — pending " + R.proposals.length + " proposal" + (R.proposals.length>1?"s":"") : "READY");
+
+    H.push('<div class="verdict">═══ GATE REPORT ═══\nSTAGE:       ' + esc(w.stage) +
+           '\nDECISION:    ' + esc(decision) +
+           '\nRECOMPUTED:  ' + usd(w.total) + ' of ' + usd(w.ceiling) +
+           (w.over > 0 ? '  (over by ' + usd(w.over) + ')' : '  (headroom ' + usd(-w.over) + ')') + '</div>');
+
+    if(R.blockers.length){
+      H.push('<div class="tier block"><h4>🔴 Blocked · ' + R.blockers.length + '</h4>');
+      R.blockers.forEach(function(b){
+        H.push('<div class="item"><span class="id">' + esc((b.f.scene_ids||[]).join(", ") || "whole cut") +
+          ' · ' + esc(b.f.code) + ' · ' + esc(b.lens) + '</span>' +
+          '<span class="q">' + esc(b.f.evidence && b.f.evidence.quote) + '</span>' +
+          '<div class="why">' + esc(b.f.message || "") + '</div>' +
+          '<div class="why" style="margin-top:5px;font-size:12.5px"><b>Why it blocks:</b> ' + esc(b.why) + '</div></div>');
+      });
+      H.push('</div>');
+    }
+
+    if(R.proposals.length){
+      H.push('<div class="tier prop"><h4>🟡 Proposals · ' + R.proposals.length + ' — accept, reject or edit each</h4>');
+      R.proposals.forEach(function(p){
+        var pa = p.f.proposed_action || "none";
+        H.push('<div class="item"><span class="id">' + esc((p.f.scene_ids||[]).join(", ") || "whole cut") +
+          ' · ' + esc(p.f.code) + ' · ' + esc(p.action.replace("PROPOSE_","").toLowerCase()) + '</span>' +
+          '<span class="q">' + esc(p.f.evidence && p.f.evidence.quote) + '</span>' +
+          '<div class="ba"><div class="b">now &nbsp;' + esc(p.f.message||"—") + '</div><div class="a">proposed &nbsp;' + esc(pa) + '</div></div>' +
+          (p.deferred && p.deferred.length
+            ? '<div class="def">Deferred: ' + p.deferred.map(function(d){
+                return esc(d.f.code) + " — displaced by " + esc(p.f.code) + " (" + esc(d.lens) + " ranks below " + esc(p.lens) + ")"; }).join("; ") + '</div>'
+            : '') +
+          '</div>');
+      });
+      H.push('</div>');
+    }
+
+    if(R.advisories.length){
+      var byCode = {};
+      R.advisories.forEach(function(a){ (byCode[a.f.code] = byCode[a.f.code] || []).push(a); });
+      H.push('<div class="tier adv"><h4>⚪ Advisories · ' + R.advisories.length + '</h4><details class="fold"><summary>show</summary>');
+      Object.keys(byCode).forEach(function(code){
+        H.push('<div class="item"><span class="id">' + esc(code) + ' · ' + byCode[code].length + '</span><div class="why">' +
+          esc(byCode[code][0].f.message || byCode[code][0].why) + '</div></div>');
+      });
+      H.push('</details></div>');
+    }
+
+    if(R.audit.length){
+      H.push('<div class="tier adv"><h4>📋 Audit</h4><div class="sheet" style="font-size:11.5px">' +
+        R.audit.map(function(a){
+          return "  " + lpad(a.seq,2) + "  " + pad(a.code,22) + pad(a.lens,11) + pad(a.scene||"—",9) + pad(a.action,20) + esc(a.note);
+        }).join("\n") + '</div></div>');
+    }
+
+    H.push('<div class="note">This is what the authority table in <code>checker.md</code> says should happen, ' +
+      'computed here rather than decided by a model. Node <b>N10</b> produces its own version of the same report. ' +
+      '<b>If the two differ, that is a finding about the Checker</b> — and it is the reason this page renders one at all.</div>');
+    return H.join("");
+  }
+
+  /* ─────────────────────────── the VéXe example ─────────────────────────── */
+
+  var EXAMPLE = {
+    cut_version:"1.0", cut_id:"vexe-tet-2026", revision:3,
+    brief:{ client:"VéXe", one_line:"App đặt vé xe khách — chiến dịch cao điểm Tết 2026",
+      objective:"install", audience:"Người đi làm xa quê, 22–40 tuổi, TP.HCM và Hà Nội",
+      language:"vi", target_duration_s:45, aspect:"9:16" },
+    budget:{ ceiling_usd:4.00, stage:"gate2",
+      stage_ceilings_usd:{ gate1:0.50, animatic:0.60, gate2:4.00, upgrade:12.00 } },
+    brand:{ profile_id:"vexe-v1", address_form_required:"anh/chị",
+      address_forms_forbidden:["bạn","các bạn","mày"],
+      banned_phrases:[
+        { phrase:"rẻ nhất", replacement:null, severity:"blocker" },
+        { phrase:"số 1 Việt Nam", replacement:null, severity:"blocker" },
+        { phrase:"cam kết 100%", replacement:null, severity:"blocker" },
+        { phrase:"duy nhất", replacement:"một trong số ít", severity:"warn" }],
+      required_disclaimers:["Giá vé do nhà xe niêm yết"] },
+    sources:[
+      { id:"S1", title:"VéXe — báo cáo vận hành nội bộ Q4/2025", kind:"user_doc",
+        excerpt:"Trong quý 4/2025, 41.200 vé được đặt thành công qua ứng dụng VéXe. Tỉ lệ hoàn tất thanh toán đạt 92,4%. Thời gian đặt vé trung bình đo được trên toàn bộ đơn thành công: 48 giây." },
+      { id:"S2", title:"Khảo sát người dùng VéXe, 12/2025, n=612", kind:"user_doc",
+        excerpt:"38% người được hỏi cho biết đã từng không mua được vé xe về quê dịp Tết trong 2 năm gần nhất. 61% cho biết đã phải ra bến xếp hàng trực tiếp." }],
+    scenes:[
+      { id:"sc-01", order:1, track:"A", role:"hook",
+        dialogue_vi:"Tết năm ngoái, cứ mười người về quê thì gần bốn người không mua nổi tấm vé.",
+        on_screen_text:"38% không mua được vé Tết", duration_s:6.0,
+        engine:{ id:"heygen_avatar_v", why:"Câu mở đầu cần một khuôn mặt người để tạo đồng cảm; thẻ chữ ở giây đầu làm rớt tỉ lệ xem 3 giây trên TikTok.",
+          params:{ avatar_id:"av_vn_female_02", voice_id:"vi_south_warm", resolution:"1080x1920" },
+          downgrade_path:["hyperframes_html","text_card"] },
+        cost:{ estimate_usd:1.20, basis:"avatar 0.200 $/s × 6.0 s", confidence:"assumed" },
+        claims:[{ id:"c1", text:"38% người dùng từng không mua được vé xe dịp Tết", type:"statistic",
+          source_id:"S2", quote:"38% người được hỏi cho biết đã từng không mua được vé xe về quê dịp Tết trong 2 năm gần nhất.", verified:null }],
+        approval:{ state:"approved", gate:"gate1", by:"cong", at:"2026-07-30T09:12:00+07:00", note:"" },
+        hash:"", render:{ last_hash:null, asset_uri:null, cached:false } },
+
+      { id:"sc-02", order:2, track:"A", role:"problem",
+        dialogue_vi:"Xếp hàng từ năm giờ sáng ở bến, để rồi nghe đúng một câu quen thuộc: hết vé rồi.",
+        on_screen_text:"", duration_s:5.5,
+        engine:{ id:"hyperframes_html", why:"Ảnh tư liệu bến xe cho chạy hiệu ứng — không cần mặt người, và rẻ hơn avatar mười lần.",
+          params:{ template:"kenburns-photo", asset:"benxe-01.jpg", fps:30 }, downgrade_path:["text_card"] },
+        cost:{ estimate_usd:0.11, basis:"hyperframes 0.020 $/s × 5.5 s", confidence:"assumed" },
+        claims:[], approval:{ state:"approved", gate:"gate1", by:"cong", at:"2026-07-30T09:12:00+07:00", note:"" },
+        hash:"", render:{ last_hash:null, asset_uri:null, cached:false } },
+
+      { id:"sc-03", order:3, track:"A", role:"turn",
+        dialogue_vi:"Năm nay thì khác. Bạn chỉ cần mở VéXe.",
+        on_screen_text:"", duration_s:4.5,
+        engine:{ id:"heygen_avatar_v", why:"Câu chuyển ý — quay lại mặt người để đánh dấu bước ngoặt của kịch bản.",
+          params:{ avatar_id:"av_vn_female_02", voice_id:"vi_south_warm", resolution:"1080x1920" },
+          downgrade_path:["hyperframes_html","text_card"] },
+        cost:{ estimate_usd:0.90, basis:"avatar 0.200 $/s × 4.5 s", confidence:"assumed" },
+        claims:[], approval:{ state:"pending", gate:"gate2", by:null, at:null, note:"" },
+        hash:"", render:{ last_hash:null, asset_uri:null, cached:false } },
+
+      { id:"sc-04", order:4, track:"A", role:"demo",
+        dialogue_vi:"Chọn tuyến, chọn ghế, thanh toán. Trung bình bốn mươi tám giây là xong.",
+        on_screen_text:"48 giây", duration_s:7.0,
+        engine:{ id:"hyperframes_html", why:"Đây là giao diện thật của ứng dụng; dựng từ HTML ra đúng từng điểm ảnh và không có gì để một mô hình bịa ra.",
+          params:{ template:"phone-walkthrough", fps:30, resolution:"1080x1920" }, downgrade_path:["text_card"] },
+        cost:{ estimate_usd:0.14, basis:"hyperframes 0.020 $/s × 7.0 s", confidence:"assumed" },
+        claims:[
+          { id:"c2", text:"Thời gian đặt vé trung bình 48 giây", type:"statistic", source_id:"S1",
+            quote:"Thời gian đặt vé trung bình đo được trên toàn bộ đơn thành công: 48 giây.", verified:null },
+          { id:"c3", text:"Vé điện tử được gửi vào ứng dụng", type:"product_fact", source_id:null, quote:null, verified:null }],
+        approval:{ state:"pending", gate:"gate2", by:null, at:null, note:"" },
+        hash:"", render:{ last_hash:null, asset_uri:null, cached:false } },
+
+      { id:"sc-05", order:5, track:"A", role:"proof",
+        dialogue_vi:"Hơn bốn mươi mốt nghìn chuyến đi đã bắt đầu từ đây, chỉ trong ba tháng cuối năm.",
+        on_screen_text:"41.200 vé · Q4/2025", duration_s:5.0,
+        engine:{ id:"hyperframes_html", why:"Một con số lớn hiện lên bằng chữ mạnh hơn bất cứ hình minh họa nào, và tốn gần như không đồng nào.",
+          params:{ template:"number-reveal", fps:30 }, downgrade_path:["text_card"] },
+        cost:{ estimate_usd:0.10, basis:"hyperframes 0.020 $/s × 5.0 s", confidence:"assumed" },
+        claims:[{ id:"c4", text:"41.200 vé đặt qua ứng dụng trong quý 4/2025", type:"statistic", source_id:"S1",
+          quote:"Trong quý 4/2025, 41.200 vé được đặt thành công qua ứng dụng VéXe.", verified:null }],
+        approval:{ state:"pending", gate:"gate2", by:null, at:null, note:"" },
+        hash:"", render:{ last_hash:null, asset_uri:null, cached:false } },
+
+      { id:"sc-06", order:6, track:"A", role:"benefit",
+        dialogue_vi:"Đặt trước cả tháng, tiết kiệm đến bốn mươi phần trăm so với mua tại bến.",
+        on_screen_text:"Tiết kiệm đến 40%", duration_s:6.0,
+        engine:{ id:"seedance_video", why:"Cảnh cao trào cần chuyển động điện ảnh để đổi nhịp trước khi vào lời kêu gọi.",
+          params:{ prompt:"cinematic dolly, family boarding a coach at dawn, warm light", resolution:"1080x1920" },
+          downgrade_path:["hyperframes_html","text_card"] },
+        cost:{ estimate_usd:0.12, basis:"hyperframes 0.020 $/s × 6.0 s", confidence:"assumed" },
+        claims:[{ id:"c5", text:"Đặt trước tiết kiệm đến 40% so với mua tại bến", type:"comparative",
+          source_id:"S1", quote:null, verified:null }],
+        approval:{ state:"pending", gate:"gate2", by:null, at:null, note:"" },
+        hash:"", render:{ last_hash:null, asset_uri:null, cached:false } },
+
+      { id:"sc-07", order:7, track:"A", role:"reassure",
+        dialogue_vi:"Hơn năm trăm nhà xe trên toàn quốc, vé điện tử gửi thẳng vào máy, không lo nhầm chuyến.",
+        on_screen_text:"", duration_s:5.0,
+        engine:{ id:"seedance_video", why:"Cảnh dựng bản đồ tuyến toàn quốc, cần chuyển động máy quay rộng.",
+          params:{ prompt:"aerial pull-back over Vietnam highway network at dusk", resolution:"1080x1920" },
+          downgrade_path:["hyperframes_html","text_card"] },
+        cost:{ estimate_usd:0.10, basis:"hyperframes 0.020 $/s × 5.0 s", confidence:"assumed" },
+        claims:[], approval:{ state:"pending", gate:"gate2", by:null, at:null, note:"" },
+        hash:"", render:{ last_hash:null, asset_uri:null, cached:false } },
+
+      { id:"sc-08", order:8, track:"A", role:"cta",
+        dialogue_vi:"Tải VéXe, đặt vé Tết ngay hôm nay. Giá vé do nhà xe niêm yết.",
+        on_screen_text:"Tải VéXe", duration_s:6.0,
+        engine:{ id:"heygen_avatar_v", why:"Lời kêu gọi cuối cần một người nói trực tiếp vào ống kính — đây là chỗ tỉ lệ chuyển đổi phản ứng mạnh nhất với mặt người.",
+          params:{ avatar_id:"av_vn_female_02", voice_id:"vi_south_warm", resolution:"1080x1920" },
+          downgrade_path:["hyperframes_html","text_card"] },
+        cost:{ estimate_usd:1.20, basis:"avatar 0.200 $/s × 6.0 s", confidence:"assumed" },
+        claims:[], approval:{ state:"pending", gate:"gate2", by:null, at:null, note:"" },
+        hash:"", render:{ last_hash:null, asset_uri:null, cached:false } }
+    ],
+    totals:{ duration_s:45.0, estimated_usd:3.87, avatar_s:16.5, talking_head_ratio:0.367,
+      claims_total:5, claims_sourced:4 },
+    audit:[]
+  };
+
+  var DEMO_FINDINGS = [
+    { lens:"budget", lens_version:"1.0", verdict:"fail", findings:[
+      { code:"COST_MISPRICED", severity:"warn", scene_ids:["sc-06"],
+        evidence:{ quote:"hyperframes 0.020 $/s × 6.0 s", numbers:{ authored:0.12, exact:0.90 } },
+        message:"Priced as hyperframes but the engine is seedance_video — $0.12 authored against $0.90 actual.",
+        proposed_action:"none" },
+      { code:"COST_MISPRICED", severity:"warn", scene_ids:["sc-07"],
+        evidence:{ quote:"hyperframes 0.020 $/s × 5.0 s", numbers:{ authored:0.10, exact:0.75 } },
+        message:"Same mismatch: seedance_video priced at the hyperframes rate.",
+        proposed_action:"none" },
+      { code:"BUDGET_OVER_CEILING", severity:"blocker", scene_ids:["sc-01","sc-08"],
+        evidence:{ quote:"\"stage\": \"gate2\"", numbers:{ recomputed:5.30, ceiling:4.00, over:1.30, after:3.14 } },
+        message:"Recomputed total $5.30 against a $4.00 gate2 ceiling — the authored $3.87 rested on the two mispriced scenes. The cheapest fix is sc-01 and sc-08 (avatar → hyperframes, $1.08 each), bringing the total to $3.14. Consequence: that removes 12s of presenter, moving the talking-head ratio 0.367 → 0.100, below the 0.15 floor.",
+        proposed_action:"downgrade:sc-01:hyperframes_html" }]},
+    { lens:"brand", lens_version:"1.0", verdict:"warn", findings:[
+      { code:"ADDRESS_FORM", severity:"warn", scene_ids:["sc-03"],
+        evidence:{ quote:"Năm nay thì khác. Bạn chỉ cần mở VéXe.", numbers:{ start:19, end:22 } },
+        message:"Uses \"Bạn\" where the vexe-v1 profile requires \"anh/chị\".",
+        proposed_action:"replace:sc-03:19:22:Anh chị" }]},
+    { lens:"ratio", lens_version:"1.0", verdict:"warn", findings:[
+      { code:"RATIO_HIGH", severity:"advisory", scene_ids:["sc-01","sc-03","sc-08"],
+        evidence:{ quote:"\"aspect\": \"9:16\"", numbers:{ ratio:0.367, max:0.35 } },
+        message:"Talking head is 0.367 of runtime, just over the 0.15–0.35 band for a 9:16 install video.",
+        proposed_action:"downgrade:sc-08:hyperframes_html" }]},
+    { lens:"claims", lens_version:"1.0", verdict:"fail", findings:[
+      { code:"CLAIM_CONTRADICTED", severity:"blocker", scene_ids:["sc-06"],
+        evidence:{ quote:"Đặt trước cả tháng, tiết kiệm đến bốn mươi phần trăm so với mua tại bến.",
+          claim_id:"c5", source_id:"S1", source_quote:"Trong quý 4/2025, 41.200 vé được đặt thành công qua ứng dụng VéXe. Tỉ lệ hoàn tất thanh toán đạt 92,4%. Thời gian đặt vé trung bình đo được trên toàn bộ đơn thành công: 48 giây." },
+        message:"Claim c5 cites S1, but S1 contains no figure about savings at all — it covers volume, payment completion and booking time.",
+        proposed_action:"none" },
+      { code:"CLAIM_UNDECLARED", severity:"blocker", scene_ids:["sc-07"],
+        evidence:{ quote:"Hơn năm trăm nhà xe trên toàn quốc", claim_id:null, source_id:null, source_quote:null },
+        message:"\"Hơn năm trăm nhà xe\" is a checkable statistic with no entry in claims[] and no source.",
+        proposed_action:"none" },
+      { code:"CLAIM_SUPPORTED", severity:"advisory", scene_ids:["sc-01","sc-04","sc-05"],
+        evidence:{ quote:"38% người được hỏi cho biết đã từng không mua được vé xe về quê dịp Tết trong 2 năm gần nhất." },
+        message:"c1, c2 and c4 are each quotable from the source named.", proposed_action:"none" }]},
+    { lens:"overclaim", lens_version:"1.0", verdict:"warn", findings:[
+      { code:"OVERCLAIM_SOFT", severity:"warn", scene_ids:["sc-06"],
+        evidence:{ quote:"tiết kiệm đến bốn mươi phần trăm", provision:"Luật Quảng cáo — quảng cáo phải trung thực, chính xác" },
+        message:"A specific saving stated as fact. Legal only if the figure is substantiated; the claim lens says it is not.",
+        proposed_action:"none" }]},
+    { lens:"redteam", lens_version:"1.0", verdict:"warn", findings:[
+      { code:"REDTEAM_misleading_sequence", severity:"warn", scene_ids:["sc-04","sc-05"],
+        evidence:{ quote:"Trung bình bốn mươi tám giây là xong. … Hơn bốn mươi mốt nghìn chuyến đi đã bắt đầu từ đây" },
+        message:"Both claims are true and sourced, but placed back to back they imply the 48-second average was measured across all 41,200 bookings. The source measures it across successful orders only — a different denominator. No single-claim check can see this.",
+        proposed_action:"none" }]}
+  ];
+
+  /* ─────────────────────────── state + wiring ─────────────────────────── */
+
+  var S = { cut:null, w:null };
+
+  function show(id, on){ var el = $(id); if(el) el.hidden = !on; }
+  function msg(where, cls, html){ $(where).innerHTML = '<div class="msg ' + cls + '">' + html + '</div>'; }
+
+  function doValidate(){
+    var raw = $("cutIn").value.trim();
+    if(!raw){ msg("valMsg","err","Nothing to validate — paste a Cut, or load the example."); return; }
+    var cut;
+    try { cut = JSON.parse(raw); }
+    catch(e){ msg("valMsg","err","<b>Not valid JSON.</b><br>" + esc(e.message) +
+      "<br><br>If this came from node N3, the model wrapped it in prose or a code fence. That is the failure this step exists to catch.");
+      show("stepSheet",false); show("stepPay",false); show("stepMerge",false); return; }
+
+    var errs = validate(cut);
+    if(errs.length){
+      msg("valMsg","err","<b>" + errs.length + " structural problem" + (errs.length>1?"s":"") +
+        ".</b> The run stops here — MindPal would happily process this and return something plausible.<ul>" +
+        errs.map(function(x){ return "<li>" + esc(x) + "</li>"; }).join("") + "</ul>");
+      show("stepSheet",false); show("stepPay",false); show("stepMerge",false); return;
+    }
+
+    S.cut = cut;
+    S.w = worksheet(cut);
+    var notes = [];
+    if(Math.abs(S.w.total - S.w.authored) > 0.01)
+      notes.push("Authored total " + usd(S.w.authored) + " does not match the recomputation " + usd(S.w.total) +
+                 " — <b>the authored figure is not trusted</b>, and the difference is itself a finding.");
+    if(S.w.over > 0) notes.push("Over the " + S.w.stage + " ceiling by " + usd(S.w.over) + ".");
+    if(S.w.ratio > S.w.band.max) notes.push("Talking-head ratio " + S.w.ratio.toFixed(3) + " is above the band.");
+    var nullClaims = S.w.claims - S.w.sourced;
+    if(nullClaims) notes.push(nullClaims + " claim" + (nullClaims>1?"s have":" has") + " no source_id — that is for the claim lens to judge, not a schema error.");
+
+    msg("valMsg", notes.length ? "warn" : "ok",
+      "<b>Schema valid.</b> " + cut.scenes.length + " scenes, " + S.w.dur.toFixed(1) + "s." +
+      (notes.length ? "<ul>" + notes.map(function(n){ return "<li>" + n + "</li>"; }).join("") + "</ul>" : " Nothing flagged."));
+
+    $("sheet").innerHTML = renderSheet(S.w);
+    show("stepSheet",true);
+
+    var pays = buildPayloads(cut, S.w);
+    $("pays").innerHTML = pays.map(function(p,i){
+      return '<div class="pay"><div class="pay-h">' +
+        '<span class="nm">' + p.node.icon + ' ' + esc(p.node.id) + ' · ' + esc(p.node.name) + '</span>' +
+        '<span class="mdl">' + esc(p.node.model) + '</span>' +
+        '<span class="tmp">temp ' + esc(p.node.temp) + '</span>' +
+        '<button class="btn sm" data-act="copy" data-arg="' + i + '">Copy</button></div>' +
+        '<pre>' + esc(p.text) + '</pre></div>';
+    }).join("");
+    S.pays = pays;
+    show("stepPay",true);
+    show("stepMerge",true);
+  }
+
+  function doMerge(){
+    if(!S.cut){ msg("mergeMsg","err","Validate a Cut first."); return; }
+    var parsed = parseLensBlobs($("lensIn").value);
+    if(parsed.err.length && !parsed.out.length){
+      msg("mergeMsg","err","<b>Could not read the lens output.</b><ul>" +
+        parsed.err.map(function(x){ return "<li>" + esc(x) + "</li>"; }).join("") + "</ul>");
+      $("report").innerHTML = ""; return;
+    }
+    var contractErrs = [];
+    parsed.out.forEach(function(o,i){ contractErrs = contractErrs.concat(checkContract(o,i)); });
+
+    if(contractErrs.length){
+      msg("mergeMsg","warn","<b>" + parsed.out.length + " output" + (parsed.out.length>1?"s":"") +
+        " read, " + contractErrs.length + " contract problem" + (contractErrs.length>1?"s":"") +
+        ".</b> Findings that break the contract are still shown below, but in production they are dropped.<ul>" +
+        contractErrs.map(function(x){ return "<li>" + esc(x) + "</li>"; }).join("") + "</ul>");
+    } else {
+      msg("mergeMsg","ok","<b>" + parsed.out.length + " lens output" + (parsed.out.length>1?"s":"") +
+        " read, all conforming to the contract.</b>");
+    }
+
+    var R = buildReport(S.cut, S.w, parsed.out);
+    $("report").innerHTML = renderReport(S.cut, S.w, R);
+  }
+
+  document.addEventListener("click", function(ev){
+    var t = ev.target.closest("[data-act]"); if(!t) return;
+    var act = t.getAttribute("data-act");
+
+    if(act === "validate") doValidate();
+
+    else if(act === "example"){
+      $("cutIn").value = JSON.stringify(EXAMPLE, null, 2);
+      doValidate();
+    }
+    else if(act === "clear"){
+      $("cutIn").value = ""; $("valMsg").innerHTML = ""; $("lensIn").value = "";
+      $("mergeMsg").innerHTML = ""; $("report").innerHTML = "";
+      show("stepSheet",false); show("stepPay",false); show("stepMerge",false);
+      S.cut = null; S.w = null;
+    }
+    else if(act === "copy"){
+      var p = S.pays[+t.getAttribute("data-arg")];
+      if(!p) return;
+      var done = function(){ var o = t.textContent; t.textContent = "Copied"; setTimeout(function(){ t.textContent = o; }, 1200); };
+      if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(p.text).then(done, function(){});
+      else {
+        var ta = document.createElement("textarea"); ta.value = p.text; document.body.appendChild(ta);
+        ta.select(); try { document.execCommand("copy"); done(); } catch(e){} document.body.removeChild(ta);
+      }
+    }
+    else if(act === "demoFindings"){
+      $("lensIn").value = JSON.stringify(DEMO_FINDINGS, null, 2);
+      doMerge();
+    }
+    else if(act === "merge") doMerge();
+  });
+
+})();
+</script>
+</body>
+</html>

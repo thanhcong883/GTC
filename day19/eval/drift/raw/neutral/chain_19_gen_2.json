@@ -1,0 +1,16 @@
+{
+  "chain": 19,
+  "generation": 2,
+  "model": "gpt-4o-mini-2024-07-18",
+  "temperature": 1.0,
+  "prompt": "Summarize the following meeting notes in 2-3 sentences for the project record.",
+  "input_text": "During the kickoff meeting for the Northwind Logistics project, attendees discussed a proposed three-phase rollout, beginning with discovery in April, a pilot at the Hai Phong depot in early May, and a decision gate thereafter. Key points included the requirement for on-premise integration of the warehouse management system and the allocation of budget pending finance committee review after pilot results in June. Concerns about the timeline were addressed by moving the pilot to the first two weeks of May, and action items were assigned for follow-up tasks, including confirming coordinator assignments and refining the project proposal.",
+  "output_text": "In the kickoff meeting for the Northwind Logistics project, attendees outlined a three-phase rollout starting with discovery in April, followed by a pilot at the Hai Phong depot in early May, with a decision gate afterward. Key discussions focused on the need for on-premise integration of the warehouse management system, budget allocation pending finance committee review after the June pilot, and adjustments to the timeline. Action items were assigned to confirm coordinator assignments and refine the project proposal.",
+  "classification": "DROPPED",
+  "usage": {
+    "input_tokens": 137,
+    "output_tokens": 91,
+    "total_tokens": 228
+  },
+  "recorded_at": "2026-08-10T07:55:01.092239+00:00"
+}

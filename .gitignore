@@ -1,6 +1,21 @@
 # Vercel
 .vercel
 
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+
+# Local AI/tooling configuration
+.agents/
+.claude/
+.codex/
+.impeccable/
+
+# Local archives and temporary working files
+artifacts-*.zip
+_tmp/
+
 # Personal — contains phone number, DOB, home address. Kept off the public repo.
 Giang-Thanh-Cong-CV.pdf
 

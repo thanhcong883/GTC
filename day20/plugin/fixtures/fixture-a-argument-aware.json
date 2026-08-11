@@ -1,0 +1,61 @@
+{
+  "id": "fixture-a",
+  "title": "Argument-aware authorization",
+  "why": "A small reversible effect, so the only variable under test is the arguments. If the verdict moved because the tool is dangerous, the test would prove nothing about parameter-awareness. This is node 05 of the Firewall on the page — the fixture drives the same code path a reader clicks.",
+  "tool": "acme.crm.add_tag",
+  "node": 5,
+  "baseline": {
+    "principal": "user:cong",
+    "workspace": "ws_default",
+    "policy": "standard",
+    "grant": {
+      "grant_id": "grant_crm_tagging",
+      "grant_revision": 4,
+      "grant_issuer_id": "admin:cong",
+      "constraints": {
+        "tools": ["acme.crm.bulk_sync", "acme.crm.add_tag"],
+        "destinations": ["enrich.acme-partner.example", "api.acme.example"],
+        "expires_at": "2026-12-31T00:00:00Z"
+      }
+    },
+    "arguments": {
+      "contact_id": "contact_4471",
+      "tag": "prospect",
+      "destination": "api.acme.example"
+    }
+  },
+  "cases": [
+    {
+      "name": "Matching destination and grant",
+      "change": {},
+      "expect": { "verdict": "allow", "reason": "GRANT_MATCHED" }
+    },
+    {
+      "name": "Destination changed",
+      "change": { "arguments.destination": "api.other-vendor.example" },
+      "expect": { "verdict": "require_approval", "reason": "DESTINATION_OUTSIDE_GRANT" },
+      "note": "Same tool, same principal, same grant. Only one argument moved."
+    },
+    {
+      "name": "Grant scope mismatch",
+      "change": { "grant.constraints.tools": ["acme.crm.search_contacts"] },
+      "expect": { "verdict": "require_approval", "reason": "GRANT_SCOPE_MISMATCH" }
+    },
+    {
+      "name": "Grant expired",
+      "change": { "grant.constraints.expires_at": "2026-01-01T00:00:00Z" },
+      "expect": { "verdict": "require_approval", "reason": "GRANT_EXPIRED" }
+    },
+    {
+      "name": "Hard policy deny",
+      "change": { "policy": "deny_all_writes" },
+      "expect": { "verdict": "deny", "reason": "POLICY_HARD_DENY" }
+    }
+  ],
+  "control": {
+    "name": "A field the policy does not read",
+    "change": { "arguments.tag": "customer" },
+    "expect": { "verdict": "allow", "reason": "GRANT_MATCHED" },
+    "note": "Not every argument is security-relevant. The engine reads the ones that are — which is different from reading none, and different from reading the tool name."
+  }
+}

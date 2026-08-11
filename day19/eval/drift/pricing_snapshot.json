@@ -1,0 +1,15 @@
+{
+  "_note": "Price table used to turn MEASURED token usage into a DERIVED cost. Cost figures on the page are DERIVED, never MEASURED — the billed amount is only 'measured' if reconciled against the provider's own cost reporting, which this experiment does not do.",
+  "source": "https://developers.openai.com/api/docs/pricing",
+  "retrieved_at": "2026-08-10",
+  "currency": "USD",
+  "unit": "per 1,000,000 tokens",
+  "tier": "standard",
+  "models": {
+    "gpt-4o-mini-2024-07-18": {
+      "input": 0.15,
+      "output": 0.60,
+      "_note": "The pricing page lists gpt-4o-mini; the pinned dated snapshot gpt-4o-mini-2024-07-18 is billed at the gpt-4o-mini rate. Batch ($0.075/$0.30) and fast ($0.25/$1.00) tiers exist and are NOT used here."
+    }
+  }
+}

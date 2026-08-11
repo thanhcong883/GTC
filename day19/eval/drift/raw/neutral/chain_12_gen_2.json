@@ -1,0 +1,16 @@
+{
+  "chain": 12,
+  "generation": 2,
+  "model": "gpt-4o-mini-2024-07-18",
+  "temperature": 1.0,
+  "prompt": "Summarize the following meeting notes in 2-3 sentences for the project record.",
+  "input_text": "During the project kickoff for Northwind Logistics' RFP response on March 14, 2023, the team discussed a three-phase rollout plan, with a discovery phase in April and a pilot at the Hai Phong depot scheduled for the first two weeks of May. Mai Tran confirmed the depot's availability and allocated two part-time coordinators, while also emphasizing the need for a secure, on-premise integration for the warehouse management system. Action items included revising the pilot schedule, documenting the connection requirements, and preparing the proposal for finance committee review after the pilot results in June.",
+  "output_text": "The project kickoff for Northwind Logistics' RFP response took place on March 14, 2023, where the team outlined a three-phase rollout plan, beginning with a discovery phase in April and a pilot at the Hai Phong depot in early May. Mai Tran confirmed the depot's availability and assigned two part-time coordinators, stressing the importance of secure, on-premise integration for the warehouse management system. Key action items included revising the pilot schedule, documenting connection requirements, and preparing the proposal for the finance committee review following pilot results in June.",
+  "classification": "DROPPED",
+  "usage": {
+    "input_tokens": 142,
+    "output_tokens": 112,
+    "total_tokens": 254
+  },
+  "recorded_at": "2026-08-10T07:54:19.084287+00:00"
+}

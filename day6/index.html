@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 6 — The Launch Readiness Committee | Giang Thanh Cong</title>
+  <meta name="description" content="A live multi-agent committee on MindPal that stress-tests whether a product is ready to launch — seven functional lenses, a red team and a chair, catching the gaps that fall between owners. Day 6 of a 30-day build challenge." />
+  <meta property="og:title" content="Day 6 — The Launch Readiness Committee" />
+  <meta property="og:description" content="Seven AI lenses + a red team + a chair, run on MindPal. On my own product, VietGuide, it cited real Vietnamese law and found five launch-killing risks nobody owned." />
+  <meta property="og:type" content="article" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --orange:#f9660e; --orange-soft:#ffe7d6;
+      --navy:#111a3e; --navy-soft:#5a6488;
+      --peach:#fdece1; --lav:#efe6fb; --purple:#8b5cf6; --purple-soft:#eee9fb;
+      --blue:#2f6fed; --blue-soft:#e2ecfd;
+      --green:#1e9257; --green-soft:#e4f3ea;
+      --amber:#b0771a; --amber-soft:#f7edda;
+      --red:#c64b3e; --red-soft:#f8e6e3;
+      --bg:#f6f7fb; --card:#fff; --border:#e7e9f2; --ink-dark:#0f1730;
+      --shadow:0 18px 50px rgba(17,26,62,.12);
+      --shadow-sm:0 6px 20px rgba(17,26,62,.08);
+      --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+      background:var(--bg);color:var(--navy);line-height:1.6;-webkit-font-smoothing:antialiased}
+    a{text-decoration:none;color:inherit}
+    .wrap{max-width:1000px;margin:0 auto;padding:0 24px}
+    h1,h2,h3{line-height:1.15;letter-spacing:-.015em}
+    .accent{color:var(--orange)}
+    code,.mono{font-family:var(--mono)}
+    svg{max-width:100%}
+
+    /* --- language toggle: two versions live in the DOM, one is hidden --- */
+    .t{display:contents}
+    html[data-lang="en"] .t.vi{display:none}
+    html[data-lang="vi"] .t.en{display:none}
+    html[data-lang="en"] .sv-vi{display:none}
+    html[data-lang="vi"] .sv-en{display:none}
+    .langtog{display:inline-flex;border:1px solid var(--border);border-radius:20px;overflow:hidden;background:#fff}
+    .langtog button{border:0;background:transparent;font-family:inherit;font-weight:800;font-size:.74rem;
+      letter-spacing:.04em;padding:6px 12px;cursor:pointer;color:var(--navy-soft);transition:background .15s}
+    .langtog button.on{background:var(--navy);color:#fff}
+
+    header.top{background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+    .bar{display:flex;align-items:center;justify-content:space-between;gap:16px;height:64px;max-width:1000px;margin:0 auto;padding:0 24px}
+    .back{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:.92rem}
+    .back:hover{color:var(--orange)}
+    .meta{text-align:center;flex:1;min-width:0}
+    .meta .tag{display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:.68rem;
+      font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:20px}
+    .meta h1{font-size:1rem;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;
+      text-overflow:ellipsis;margin-top:2px}
+    .rightgrp{display:inline-flex;align-items:center;gap:10px}
+    .src{display:inline-flex;align-items:center;gap:7px;background:var(--navy);color:#fff;font-weight:700;
+      font-size:.85rem;padding:9px 16px;border-radius:24px;white-space:nowrap}
+    .src:hover{background:var(--orange)}
+    @media(max-width:720px){ .meta h1{font-size:.8rem} .src span{display:none} }
+
+    .hero{padding:56px 0 34px;background:
+      radial-gradient(120% 130% at 88% -10%, var(--lav) 0%, transparent 46%),
+      linear-gradient(180deg,var(--peach) 0%, #fdf4ee 55%, var(--bg) 100%)}
+    .eyebrow{color:var(--orange);font-weight:700;text-transform:uppercase;letter-spacing:.14em;font-size:.76rem;margin-bottom:12px}
+    .hero h2{font-size:clamp(2rem,4.8vw,3rem);font-weight:800;max-width:19ch}
+    .hero p.lede{color:var(--navy-soft);max-width:64ch;margin-top:16px;font-size:1.04rem}
+    .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
+    .btn{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:.9rem;padding:12px 20px;border-radius:26px}
+    .btn.pri{background:var(--orange);color:#fff}
+    .btn.pri:hover{background:var(--navy)}
+    .btn.sec{background:#fff;border:1px solid var(--border);color:var(--navy)}
+    .btn.sec:hover{border-color:var(--orange);color:var(--orange)}
+
+    .tldr{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:30px}
+    .tl{background:#fff;border-radius:16px;padding:16px 18px;box-shadow:var(--shadow-sm);border-top:3px solid var(--c,var(--orange))}
+    .tl .ic{font-size:22px;line-height:1}
+    .tl .n{font-weight:800;font-size:1.32rem;margin-top:8px;letter-spacing:-.02em}
+    .tl .l{font-size:.75rem;color:var(--navy-soft);font-weight:600;margin-top:2px}
+    @media(max-width:720px){.tldr{grid-template-columns:repeat(2,1fr)}}
+
+    section{padding:44px 0}
+    /* .wrap sets padding:0 24px and outranks the section rule above, zeroing the vertical
+       padding — restore it with a more specific selector so sections aren't cramped */
+    section.wrap{padding-top:40px;padding-bottom:40px}
+    .shead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+    .shead .n{font-family:var(--mono);font-weight:700;font-size:.74rem;color:var(--orange);
+      background:rgba(249,102,14,.1);padding:3px 9px;border-radius:6px}
+    h3.title{font-size:clamp(1.35rem,2.8vw,1.7rem);font-weight:800}
+    .lede{color:var(--navy-soft);max-width:70ch;margin-bottom:26px;font-size:.98rem}
+    .subh{font-size:1.06rem;font-weight:800;margin-top:30px;margin-bottom:8px}
+
+    .figframe{background:#fff;border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow-sm);padding:22px;overflow-x:auto}
+    .figframe.tint{background:linear-gradient(170deg,#fbf7ff,#fff)}
+    svg.chart{display:block;min-width:640px;width:100%;height:auto}
+
+    /* problem list */
+    .qgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:8px}
+    .q{background:#fff;border:1px solid var(--border);border-radius:14px;padding:15px 17px;box-shadow:var(--shadow-sm)}
+    .q b{font-size:.92rem;font-weight:800;display:block}
+    .q span{font-size:.82rem;color:var(--navy-soft)}
+    .note{border-left:3px solid var(--amber);background:var(--amber-soft);padding:12px 16px;border-radius:0 10px 10px 0;margin-top:18px;font-size:.9rem;color:var(--navy)}
+    .note.red{border-left-color:var(--red);background:var(--red-soft)}
+    .note.green{border-left-color:var(--green);background:var(--green-soft)}
+    .note b{color:var(--navy)}
+
+    /* before/after */
+    .ba{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media(max-width:720px){.ba{grid-template-columns:1fr}}
+    .col{border-radius:16px;padding:20px 22px}
+    .col.before{background:#fff;border:1px solid var(--border)}
+    .col.after{background:var(--ink-dark);color:#e7ecff}
+    .col h4{font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+    .col.before h4{color:var(--navy-soft)}
+    .col.after h4{color:#ffb27d}
+    .col ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+    .col li{font-size:.88rem;display:flex;gap:9px;align-items:flex-start;line-height:1.5}
+    .col.before li:before{content:"✕";color:var(--red);font-weight:800;flex:none}
+    .col.after li:before{content:"✓";color:#3fb950;font-weight:800;flex:none}
+    .col.after li span{color:#a9b3d6}
+
+    /* committee cards */
+    .lenses{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:6px}
+    .lens{background:#fff;border:1px solid var(--border);border-radius:14px;padding:15px 16px;box-shadow:var(--shadow-sm);border-top:3px solid var(--c)}
+    .lens .ic{font-size:22px}
+    .lens b{display:block;font-size:.92rem;font-weight:800;margin-top:7px}
+    .lens span{font-size:.8rem;color:var(--navy-soft);line-height:1.5}
+
+    /* the verdict — the money shot */
+    .verdict{background:var(--ink-dark);border-radius:20px;box-shadow:0 20px 44px rgba(17,26,62,.22);overflow:hidden;margin-top:6px}
+    .verdict .vbar{display:flex;align-items:center;gap:10px;padding:12px 18px;background:#0b1226;border-bottom:1px solid #1e2a4d}
+    .verdict .vbar i{width:11px;height:11px;border-radius:50%;display:block}
+    .verdict .vbar .r{background:#ff5f57}.verdict .vbar .y{background:#febc2e}.verdict .vbar .g{background:#28c840}
+    .verdict .vbar span{margin-left:6px;color:#7c89b4;font-size:.76rem;font-weight:700;font-family:var(--mono)}
+    .verdict .vbody{padding:22px 24px}
+    .ruling{display:inline-flex;align-items:center;gap:10px;background:rgba(198,75,62,.16);border:1px solid rgba(198,75,62,.4);
+      color:#ff8b7d;font-weight:800;font-size:1.05rem;padding:8px 16px;border-radius:12px;font-family:var(--mono)}
+    .verdict .oneline{color:#d6deff;font-size:1rem;margin-top:14px;max-width:70ch;line-height:1.55}
+    .scorecard{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:8px;margin-top:20px}
+    .sc{background:#182350;border:1px solid #2a3765;border-radius:11px;padding:11px 13px}
+    .sc .fn{font-size:.82rem;font-weight:700;color:#fff;display:flex;align-items:center;gap:6px}
+    .sc .st{font-family:var(--mono);font-size:.68rem;font-weight:700;margin-top:5px;padding:2px 8px;border-radius:20px;display:inline-block}
+    .sc .st.ready{background:var(--green-soft);color:var(--green)}
+    .sc .st.gaps{background:var(--amber-soft);color:var(--amber)}
+    .sc .st.blocker{background:var(--red-soft);color:var(--red)}
+    .blindspot{margin-top:20px;padding:16px 18px;background:#241b0c;border:1px solid #c9932f;border-radius:12px}
+    .blindspot .bl{font-family:var(--mono);font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#f0c069}
+    .blindspot h4{color:#fff;font-size:1.02rem;font-weight:800;margin-top:6px}
+    .blindspot p{color:#d6deff;font-size:.9rem;margin-top:7px;line-height:1.6}
+    .ifyou{margin-top:14px;font-size:.86rem;color:#f19189;font-style:italic;line-height:1.55}
+    .caption{font-size:.78rem;color:var(--navy-soft);margin-top:12px;font-family:var(--mono)}
+
+    /* full run transcript (expandable) */
+    .report{margin-top:16px;border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow-sm);overflow:hidden}
+    .report>summary{cursor:pointer;list-style:none;padding:15px 20px;font-weight:800;font-size:.92rem;
+      display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:linear-gradient(170deg,#fbf7ff,#fff)}
+    .report>summary::-webkit-details-marker{display:none}
+    .report>summary .chev{color:var(--orange);transition:transform .2s;font-family:var(--mono)}
+    .report[open]>summary .chev{transform:rotate(90deg)}
+    .report>summary .m2{font-family:var(--mono);font-weight:600;font-size:.7rem;color:var(--navy-soft);margin-left:auto}
+    .rpt-body{padding:4px 22px 24px}
+    .rpt-in{background:#f6f7fb;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin:16px 0;font-size:.85rem;line-height:1.6;color:var(--navy)}
+    .rpt-in .lbl{font-family:var(--mono);font-size:.66rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--orange);display:block;margin-bottom:6px}
+    .agentblk{border-top:1px dashed var(--border);padding-top:15px;margin-top:15px}
+    .agentblk .ah{font-weight:800;font-size:.92rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .agentblk .stt{font-family:var(--mono);font-size:.62rem;font-weight:800;padding:2px 8px;border-radius:20px;text-transform:uppercase}
+    .agentblk .stt.gaps{background:var(--amber-soft);color:var(--amber)}
+    .agentblk .stt.blocker{background:var(--red-soft);color:var(--red)}
+    .agentblk .stt.verd{background:var(--navy);color:#fff}
+    .agentblk .lead{font-size:.85rem;color:var(--navy-soft);line-height:1.6;margin-top:7px;font-style:italic}
+    .agentblk h6{font-size:.76rem;font-weight:800;margin-top:12px;color:var(--navy);letter-spacing:.01em}
+    .agentblk p{font-size:.85rem;color:var(--navy-soft);line-height:1.6;margin-top:5px}
+    .agentblk ul{margin:5px 0 0 18px;font-size:.85rem;color:var(--navy-soft);line-height:1.55}
+    .agentblk li{margin-top:4px}
+    .agentblk li b,.agentblk p b{color:var(--navy)}
+    .agentblk.verdictblk{background:var(--ink-dark);border-radius:14px;border-top:0;padding:18px 20px;margin-top:18px}
+    .agentblk.verdictblk .ah,.agentblk.verdictblk h6{color:#fff}
+    .agentblk.verdictblk p,.agentblk.verdictblk ul{color:#c2c9dd}
+    .agentblk.verdictblk p b,.agentblk.verdictblk li b{color:#ffb27d}
+
+    /* decisions / why */
+    .dd{display:flex;flex-direction:column;gap:14px}
+    .ddrow{background:#fff;border-radius:16px;box-shadow:var(--shadow-sm);padding:18px 20px;display:grid;grid-template-columns:38px 1fr;gap:15px}
+    .ddrow .num{width:38px;height:38px;border-radius:11px;background:var(--orange-soft);color:var(--orange);
+      display:grid;place-items:center;font-weight:800;font-size:.98rem}
+    .ddrow h5{font-size:.96rem;font-weight:800;margin-bottom:5px}
+    .ddrow p{font-size:.86rem;color:var(--navy-soft);line-height:1.6}
+    .ddrow p.why{margin-top:7px;padding-top:7px;border-top:1px dashed var(--border)}
+    .ddrow p.why b{color:var(--navy)}
+    @media(max-width:600px){.ddrow{grid-template-columns:1fr}}
+
+    /* ROI */
+    .roi{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .rc{background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow-sm)}
+    .rc .k{font-size:.66rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--navy-soft)}
+    .rc .v{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin-top:5px}
+    .rc .s{font-size:.8rem;color:var(--navy-soft);margin-top:5px;line-height:1.5}
+
+    .limits{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+    .lim{background:#fff;border-radius:14px;padding:16px 18px;box-shadow:var(--shadow-sm);border:1px dashed #c7cce0}
+    .lim h5{font-size:.9rem;font-weight:800;margin-bottom:5px}
+    .lim p{font-size:.8rem;color:var(--navy-soft);line-height:1.55}
+
+    footer{padding:44px 0 60px;border-top:1px solid var(--border);margin-top:20px}
+    footer p{color:var(--navy-soft);font-size:.84rem;text-align:center}
+    footer a{color:var(--orange);font-weight:700}
+  </style>
+</head>
+<body>
+
+  <header class="top">
+    <div class="bar">
+      <a class="back" href="../index.html"><span class="t en">← Portfolio</span><span class="t vi">← Hồ sơ</span></a>
+      <div class="meta">
+        <span class="tag"><span class="t en">Day 6 · 30 Day Challenge</span><span class="t vi">Ngày 6 · Thử thách 30 ngày</span></span>
+        <h1><span class="t en">The Launch Readiness Committee</span><span class="t vi">Hội đồng Thẩm định Ra mắt</span></h1>
+      </div>
+      <div class="rightgrp">
+        <div class="langtog" role="group" aria-label="Language">
+          <button type="button" data-l="en" class="on" onclick="setLang('en')">EN</button>
+          <button type="button" data-l="vi" onclick="setLang('vi')">VI</button>
+        </div>
+        <a class="src" href="#try">🏛️ <span><span class="t en">Try it live</span><span class="t vi">Dùng thử</span></span></a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div class="wrap">
+        <div class="eyebrow"><span class="t en">A live multi-agent agent, built on MindPal</span><span class="t vi">Một agent đa tác tử, chạy thật trên MindPal</span></div>
+        <h2>
+          <span class="t en">Is the product <span class="accent">actually ready to launch?</span></span>
+          <span class="t vi">Sản phẩm đã <span class="accent">thực sự sẵn sàng ra mắt?</span></span>
+        </h2>
+        <p class="lede">
+          <span class="t en">Before a launch there are a dozen questions — backend, UX, sales, support,
+            marketing, legal, security, cost — and no single person owns the whole picture. This is a
+            committee of seven AI functional leads, a red team, and a chair. You hand it your launch
+            brief or product doc; each lens reports what's ready and, more importantly, <b>flags what's
+            missing</b> — then the red team hunts for what they all overlooked. It catches the gap that
+            falls between owners.</span>
+          <span class="t vi">Trước một lần ra mắt có cả tá câu hỏi — backend, UX, bán hàng, hỗ trợ,
+            marketing, pháp lý, bảo mật, chi phí — và không một người nào nắm được toàn cảnh. Đây là một
+            hội đồng gồm bảy trưởng nhóm chức năng bằng AI, một đội đỏ, và một chủ tọa. Bạn đưa cho nó bản
+            brief ra mắt hoặc tài liệu sản phẩm; mỗi lăng kính báo cáo cái gì đã sẵn sàng và, quan trọng hơn,
+            <b>gắn cờ cái gì đang thiếu</b> — rồi đội đỏ đi săn thứ mà tất cả bỏ sót. Nó bắt đúng khoảng trống
+            rơi vào giữa những người phụ trách.</span>
+        </p>
+        <div class="cta">
+          <a class="btn pri" href="#try"><span class="t en">Try the live agent →</span><span class="t vi">Dùng thử agent chạy thật →</span></a>
+          <a class="btn sec" href="#proof"><span class="t en">See it catch a launch-killer ↓</span><span class="t vi">Xem nó bắt một thứ giết-ra-mắt ↓</span></a>
+        </div>
+      </div>
+    </div>
+
+    <!-- 01 · PROBLEM -->
+    <section class="wrap" id="problem">
+      <div class="shead"><span class="n">01</span><h3 class="title"><span class="t en">The problem — a launch is the most expensive moment to be wrong</span><span class="t vi">Vấn đề — ra mắt là thời điểm sai lầm đắt giá nhất</span></h3></div>
+      <p class="lede">
+        <span class="t en">A product launch is a company's highest-stakes, least-reversible bet: it concentrates
+          months of engineering, a marketing budget, and the one first impression you never get back — into a
+          single day. Get it wrong and the costs are real and compounding — wasted launch spend, a churned
+          first cohort, legal exposure, a reputation that a relaunch can't buy back. Yet the decision to ship
+          is usually made by whoever is loudest in the room, on a gut “we're ready.” <b>Every company that
+          ships anything faces this, repeatedly</b> — which is exactly why it's worth solving well.</span>
+        <span class="t vi">Ra mắt sản phẩm là canh bạc rủi ro cao nhất và khó đảo ngược nhất của một công ty:
+          nó dồn nhiều tháng kỹ thuật, một ngân sách marketing, và ấn tượng đầu tiên không bao giờ lấy lại
+          được — vào đúng một ngày. Sai một cái là chi phí có thật và chồng chất — tiền ra mắt đổ sông đổ biển,
+          lứa người dùng đầu tiên bỏ đi, rủi ro pháp lý, một danh tiếng mà lần relaunch nào cũng không mua lại
+          nổi. Vậy mà quyết định “phóng” thường do người nói to nhất trong phòng đưa ra, dựa trên cảm giác
+          “mình sẵn sàng rồi”. <b>Công ty nào bán bất cứ thứ gì cũng gặp chuyện này, lặp đi lặp lại</b> — nên
+          nó rất đáng để giải cho tử tế.</span>
+      </p>
+      <p class="lede" style="margin-top:-14px">
+        <span class="t en">And it fails the same way every time: <b>a launch dies in the seams between functions.</b>
+          Each owner sees their own lane and assumes the rest is handled. The questions that sink launches are
+          the ones that belong to everyone — and therefore to no one.</span>
+        <span class="t vi">Và nó luôn hỏng theo cùng một kiểu: <b>một lần ra mắt chết ở đường nối giữa các bộ phận.</b>
+          Mỗi người phụ trách chỉ nhìn làn của mình và mặc định phần còn lại đã có người lo. Những câu hỏi nhấn
+          chìm một lần ra mắt là những câu thuộc về tất cả mọi người — và vì thế chẳng thuộc về ai.</span>
+      </p>
+      <div class="qgrid">
+        <div class="q"><b><span class="t en">Engineering</span><span class="t vi">Kỹ thuật</span></b><span><span class="t en">Is it stable? Can it recover, not just stay up?</span><span class="t vi">Có ổn định không? Có phục hồi được không, chứ không chỉ “sống”?</span></span></div>
+        <div class="q"><b><span class="t en">Product &amp; UX</span><span class="t vi">Sản phẩm &amp; UX</span></b><span><span class="t en">Will a first-time user actually succeed?</span><span class="t vi">Người dùng lần đầu có thực sự thành công không?</span></span></div>
+        <div class="q"><b><span class="t en">Go-to-Market</span><span class="t vi">Ra thị trường</span></b><span><span class="t en">Positioned, priced, equipped to convert?</span><span class="t vi">Đã định vị, định giá, đủ đồ để chuyển đổi chưa?</span></span></div>
+        <div class="q"><b><span class="t en">Support</span><span class="t vi">Hỗ trợ</span></b><span><span class="t en">Ready for the questions day one will generate?</span><span class="t vi">Đã sẵn sàng cho những câu hỏi ngày đầu tiên chưa?</span></span></div>
+        <div class="q"><b><span class="t en">Legal</span><span class="t vi">Pháp lý</span></b><span><span class="t en">Could shipping this create real exposure?</span><span class="t vi">Tung ra cái này có tạo rủi ro pháp lý thật không?</span></span></div>
+        <div class="q" style="border-color:var(--orange)"><b class="accent"><span class="t en">The seam</span><span class="t vi">Đường nối</span></b><span><span class="t en">The gap none of them owns — the launch-killer.</span><span class="t vi">Khoảng trống không ai sở hữu — thứ giết chết một lần ra mắt.</span></span></div>
+      </div>
+      <div class="note">
+        <span class="t en"><b>The insight:</b> the fix isn't a longer checklist owned by one person — it's
+          a bench of specialists reasoning in parallel, each blind to the others' lanes, whose findings a
+          chair then reconciles. Disagreement between lenses is a feature: it locates the seam. <b>That's the
+          idea →</b></span>
+        <span class="t vi"><b>Nhận định cốt lõi:</b> cách sửa không phải một checklist dài hơn do một người
+          sở hữu — mà là một băng ghế các chuyên gia lý luận độc lập, mỗi người mù với làn của người khác, rồi
+          một chủ tọa dung hòa các phát hiện. Việc các lăng kính bất đồng là một tính năng: nó chỉ ra đúng
+          đường nối. <b>Đó chính là ý tưởng →</b></span>
+      </div>
+    </section>
+
+    <!-- 02 · THE IDEA -->
+    <section class="wrap" id="idea">
+      <div class="shead"><span class="n">02</span><h3 class="title"><span class="t en">The idea: adversarial specialists, not a longer checklist</span><span class="t vi">Ý tưởng: các chuyên gia đối kháng, không phải một checklist dài hơn</span></h3></div>
+      <p class="lede">
+        <span class="t en">Every launch review I've seen fails the same way. A single owner runs a checklist —
+          and inherits that one owner's blind spots. Or a single AI reads the plan and returns one confident
+          opinion — collapsing every angle into an average. Both miss the risk that lives <em>between</em>
+          disciplines, which is exactly where launches actually die. The idea here is to refuse the average:
+          stand up many narrow specialists, keep each one blind to the others' lanes, and let a chair
+          reconcile the collisions. The disagreement isn't noise to be smoothed over — it's the signal that
+          locates the seam.</span>
+        <span class="t vi">Mọi buổi review ra mắt tôi từng thấy đều hỏng theo cùng một kiểu. Một người phụ trách
+          chạy một checklist — và thừa hưởng đúng điểm mù của riêng người đó. Hoặc một AI duy nhất đọc kế hoạch
+          rồi trả về một ý kiến tự tin — gộp mọi góc nhìn thành một mức trung bình. Cả hai đều bỏ lỡ rủi ro nằm
+          <em>giữa</em> các chuyên môn, đúng nơi mà một lần ra mắt thực sự chết. Ý tưởng ở đây là từ chối cái
+          trung bình đó: dựng lên nhiều chuyên gia hẹp, giữ mỗi người mù với làn của người khác, và để một chủ
+          tọa hòa giải các va chạm. Sự bất đồng không phải nhiễu cần làm mượt — nó là tín hiệu chỉ ra đường nối.</span>
+      </p>
+
+      <div class="dd">
+        <div class="ddrow"><div class="num">01</div><div>
+          <h5><span class="t en">A checklist has one author's blind spots. A committee doesn't.</span><span class="t vi">Checklist mang điểm mù của một tác giả. Hội đồng thì không.</span></h5>
+          <p>
+            <span class="t en">Any single reviewer — however senior — can only see what they know to look for. Seven
+              specialists, each expert in one lane, cover ground no one person holds in their head at once.
+              The Legal lead thinks about consent law while the Finance lead thinks about cost-at-scale;
+              neither would have flagged the other's blocker.</span>
+            <span class="t vi">Bất kỳ người review đơn lẻ nào — dù kỳ cựu đến đâu — cũng chỉ thấy được những gì họ
+              biết để tìm. Bảy chuyên gia, mỗi người thạo một làn, phủ được vùng đất mà không một cái đầu nào ôm
+              hết cùng lúc. Trưởng nhóm Pháp lý nghĩ về luật đồng thuận, trong khi trưởng nhóm Tài chính nghĩ về
+              chi phí khi mở rộng; chẳng ai trong hai người sẽ nhận ra blocker của người kia.</span>
+          </p>
+        </div></div>
+        <div class="ddrow"><div class="num">02</div><div>
+          <h5><span class="t en">Multi-agent is the mechanism, not decoration</span><span class="t vi">Đa tác tử là cơ chế, không phải trang trí</span></h5>
+          <p>
+            <span class="t en">A single model asked to "consider all angles" quietly blends them into one middling take. The
+              only way to get seven genuinely different mental models — and to keep them from contaminating
+              each other — is seven separate agents, each with a persona, a checklist, and a hard instruction
+              to stay in its lane. The multiplicity <em>is</em> the product. Take it away and you're back to
+              one confident opinion.</span>
+            <span class="t vi">Một mô hình duy nhất được bảo “cân nhắc mọi góc độ” sẽ lặng lẽ trộn tất cả thành một ý
+              kiến làng nhàng. Cách duy nhất để có bảy mô hình tư duy thực sự khác nhau — và giữ chúng khỏi lây
+              nhiễm lẫn nhau — là bảy agent tách biệt, mỗi con một persona, một checklist, và một chỉ thị cứng:
+              ở yên trong làn của mình. Chính sự đa dạng đó <em>là</em> sản phẩm. Bỏ nó đi là bạn quay về một ý
+              kiến tự tin duy nhất.</span>
+          </p>
+        </div></div>
+        <div class="ddrow"><div class="num">03</div><div>
+          <h5><span class="t en">Silence is a finding — the anti-"probably fine" rule</span><span class="t vi">Im lặng là một phát hiện — luật chống “chắc ổn thôi”</span></h5>
+          <p>
+            <span class="t en">Every lens is told: if the brief doesn't confirm something, mark it UNCONFIRMED and treat it
+              as a gap. Never assume it's handled because it usually is. The launch-killer is almost always
+              the thing nobody wrote down — and a confident "probably fine" is the exact failure this whole
+              apparatus exists to catch. <span class="mono" style="color:var(--navy-soft)">(One discipline:
+              measure, don't assume.)</span></span>
+            <span class="t vi">Mỗi lăng kính được dặn: nếu bản brief không xác nhận điều gì, đánh dấu CHƯA XÁC NHẬN và
+              coi đó là một khoảng trống. Đừng bao giờ mặc định nó đã được lo vì “thường thì thế”. Thứ giết một
+              lần ra mắt gần như luôn là điều không ai viết ra — và một câu “chắc ổn thôi” đầy tự tin chính là
+              kiểu hỏng mà cả bộ máy này sinh ra để bắt. <span class="mono" style="color:var(--navy-soft)">(Một
+              kỷ luật: đo, đừng đoán.)</span></span>
+          </p>
+        </div></div>
+        <div class="ddrow"><div class="num">04</div><div>
+          <h5><span class="t en">Then a red team hunts what the committee itself missed</span><span class="t vi">Rồi một đội đỏ đi săn thứ mà chính hội đồng bỏ lỡ</span></h5>
+          <p>
+            <span class="t en">Even seven specialists share blind spots — the risk that belongs to <em>no</em> lane. So a
+              dedicated red team reads all seven reports and asks one question: what did you all overlook?
+              On my own product it surfaced a risk no functional lens could reach — that local tour guides
+              in Hoi An might see the app as a threat to their livelihood and organise a backlash. A
+              sociopolitical failure that isn't Engineering's, Legal's, or Finance's job — so without the red
+              team, it's nobody's.</span>
+            <span class="t vi">Ngay cả bảy chuyên gia cũng chung điểm mù — rủi ro không thuộc <em>làn nào</em> cả. Nên
+              một đội đỏ chuyên trách đọc cả bảy báo cáo và hỏi đúng một câu: các anh bỏ sót cái gì? Trên sản
+              phẩm của chính tôi, nó lôi ra một rủi ro không lăng kính chức năng nào chạm tới — rằng các hướng
+              dẫn viên địa phương ở Hội An có thể coi app là mối đe dọa tới miếng cơm của họ và tổ chức tẩy chay.
+              Một thất bại chính trị–xã hội không phải việc của Kỹ thuật, Pháp lý hay Tài chính — nên nếu không
+              có đội đỏ, nó chẳng là việc của ai.</span>
+          </p>
+        </div></div>
+        <div class="ddrow"><div class="num">05</div><div>
+          <h5><span class="t en">It's a reusable pattern, aimed at "confident but wrong"</span><span class="t vi">Đây là một khuôn mẫu tái dùng được, nhắm vào “tự tin nhưng sai”</span></h5>
+          <p>
+            <span class="t en">Strip away the domain and what's left is a general shape: <b>a council of adversarial
+              specialists → a red team → a synthesiser</b>, tuned so one blocker outweighs seven approvals.
+              I pointed it at launch readiness, but the same engine stress-tests any high-stakes decision.
+              Its whole purpose is to catch the confident assumption nobody checked — the quiet failure that
+              sinks more launches than any bug.</span>
+            <span class="t vi">Bỏ đi phần lĩnh vực cụ thể, thứ còn lại là một hình dạng tổng quát: <b>một hội đồng các
+              chuyên gia đối kháng → một đội đỏ → một người tổng hợp</b>, được chỉnh sao cho một blocker nặng
+              hơn bảy cái duyệt. Tôi chĩa nó vào việc thẩm định ra mắt, nhưng cùng cỗ máy đó có thể áp lực-kiểm
+              bất kỳ quyết định rủi ro cao nào. Mục đích của nó là bắt cái giả định tự tin mà không ai kiểm —
+              thất bại thầm lặng nhấn chìm nhiều lần ra mắt hơn bất kỳ con bug nào.</span>
+          </p>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- 03 · DESIGN -->
+    <section class="wrap" id="design">
+      <div class="shead"><span class="n">03</span><h3 class="title"><span class="t en">The committee, in ten agents</span><span class="t vi">Hội đồng, gồm mười agent</span></h3></div>
+      <p class="lede">
+        <span class="t en">One input fans out to seven functional lenses; a red team then hunts for what they
+          all missed; a chair synthesises everything into a single GO / DELAY decision. Built on MindPal —
+          no code, published as a public form. Input can be a pasted brief or an uploaded launch doc.</span>
+        <span class="t vi">Một đầu vào tỏa ra bảy lăng kính chức năng; rồi một đội đỏ đi săn thứ tất cả bỏ lỡ;
+          một chủ tọa tổng hợp mọi thứ thành một quyết định duy nhất GO / DELAY (đi / hoãn). Dựng trên MindPal —
+          không code, xuất bản dưới dạng một form công khai. Đầu vào có thể là một brief dán vào hoặc một tài
+          liệu ra mắt tải lên.</span>
+      </p>
+
+      <div class="figframe tint">
+        <svg class="chart" viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg" role="img"
+          aria-label="One launch brief feeds seven functional lens agents — Engineering, Product and UX, Go-to-Market, Customer Support, Legal, Security, and Finance — whose reports feed a Red Team that hunts for what they missed, then a Chair agent that outputs the launch verdict.">
+          <defs>
+            <marker id="ar" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#9aa3c4"/>
+            </marker>
+          </defs>
+
+          <rect x="12" y="132" width="140" height="50" rx="14" fill="#fff" stroke="#8b5cf6" stroke-width="2"/>
+          <text x="82" y="154" font-family="Plus Jakarta Sans" font-size="13" font-weight="800" fill="#111a3e" text-anchor="middle">Launch input</text>
+          <text x="82" y="170" font-family="JetBrains Mono, monospace" font-size="9" fill="#5a6488" text-anchor="middle">brief or doc = data</text>
+
+          <g font-family="Plus Jakarta Sans" text-anchor="middle">
+            <rect x="225" y="10"  width="180" height="32" rx="9" fill="#fff" stroke="#e7e9f2"/><text x="315" y="31"  font-size="12" font-weight="700" fill="#111a3e">🔧 Engineering</text>
+            <rect x="225" y="54"  width="180" height="32" rx="9" fill="#fff" stroke="#e7e9f2"/><text x="315" y="75"  font-size="12" font-weight="700" fill="#111a3e">🎨 Product &amp; UX</text>
+            <rect x="225" y="98"  width="180" height="32" rx="9" fill="#fff" stroke="#e7e9f2"/><text x="315" y="119" font-size="12" font-weight="700" fill="#111a3e">📣 Go-to-Market</text>
+            <rect x="225" y="142" width="180" height="32" rx="9" fill="#fff" stroke="#e7e9f2"/><text x="315" y="163" font-size="12" font-weight="700" fill="#111a3e">🎧 Customer Support</text>
+            <rect x="225" y="186" width="180" height="32" rx="9" fill="#fff" stroke="#e7e9f2"/><text x="315" y="207" font-size="12" font-weight="700" fill="#111a3e">⚖️ Legal</text>
+            <rect x="225" y="230" width="180" height="32" rx="9" fill="#fff" stroke="#e7e9f2"/><text x="315" y="251" font-size="12" font-weight="700" fill="#111a3e">🔒 Security &amp; Data</text>
+            <rect x="225" y="274" width="180" height="32" rx="9" fill="#fff" stroke="#e7e9f2"/><text x="315" y="295" font-size="12" font-weight="700" fill="#111a3e">💰 Finance</text>
+          </g>
+
+          <!-- input fans out to the 7 lenses -->
+          <g stroke="#9aa3c4" stroke-width="1.5" fill="none">
+            <path d="M152,157 C190,157 190,26  223,26"  marker-end="url(#ar)"/>
+            <path d="M152,157 C190,157 190,70  223,70"  marker-end="url(#ar)"/>
+            <path d="M152,157 C190,157 190,114 223,114" marker-end="url(#ar)"/>
+            <line x1="152" y1="157" x2="223" y2="158" marker-end="url(#ar)"/>
+            <path d="M152,157 C190,157 190,202 223,202" marker-end="url(#ar)"/>
+            <path d="M152,157 C190,157 190,246 223,246" marker-end="url(#ar)"/>
+            <path d="M152,157 C190,157 190,290 223,290" marker-end="url(#ar)"/>
+          </g>
+
+          <!-- the 7 lenses converge into the Red Team -->
+          <g stroke="#c9932f" stroke-width="1.4" fill="none" opacity="0.85">
+            <path d="M405,26  C450,26  450,120 476,120" marker-end="url(#ar)"/>
+            <path d="M405,70  C450,70  450,120 476,120" marker-end="url(#ar)"/>
+            <path d="M405,114 C450,114 450,120 476,120" marker-end="url(#ar)"/>
+            <path d="M405,158 C450,158 450,122 476,122" marker-end="url(#ar)"/>
+            <path d="M405,202 C450,202 450,124 476,124" marker-end="url(#ar)"/>
+            <path d="M405,246 C450,246 450,126 476,126" marker-end="url(#ar)"/>
+            <path d="M405,290 C450,290 450,128 476,128" marker-end="url(#ar)"/>
+          </g>
+
+          <rect x="478" y="100" width="152" height="44" rx="12" fill="#241b0c" stroke="#c9932f" stroke-width="1.75"/>
+          <text x="554" y="122" font-family="Plus Jakarta Sans" font-size="12.5" font-weight="800" fill="#fff" text-anchor="middle">🕵️ Red Team</text>
+          <text x="554" y="137" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#f0c069" text-anchor="middle" class="sv-en">what all 7 missed</text>
+          <text x="554" y="137" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#f0c069" text-anchor="middle" class="sv-vi">thứ cả 7 bỏ lỡ</text>
+
+          <!-- red team feeds the chair -->
+          <line x1="554" y1="144" x2="554" y2="192" stroke="#9aa3c4" stroke-width="1.75" marker-end="url(#ar)"/>
+
+          <rect x="478" y="192" width="152" height="52" rx="14" fill="#131c3a" stroke="#26315a" stroke-width="2"/>
+          <text x="554" y="216" font-family="Plus Jakarta Sans" font-size="13" font-weight="800" fill="#fff" text-anchor="middle" class="sv-en">🎯 The Chair</text>
+          <text x="554" y="216" font-family="Plus Jakarta Sans" font-size="13" font-weight="800" fill="#fff" text-anchor="middle" class="sv-vi">🎯 Chủ tọa</text>
+          <text x="554" y="233" font-family="JetBrains Mono, monospace" font-size="8.5" fill="#ffb27d" text-anchor="middle">GO / DELAY + blind spot</text>
+
+          <text x="315" y="332" font-family="JetBrains Mono, monospace" font-size="10" fill="#9aa3c4" text-anchor="middle" class="sv-en">Each lens reads only the input, blind to the others — independent reasoning, not shared</text>
+          <text x="315" y="332" font-family="JetBrains Mono, monospace" font-size="10" fill="#9aa3c4" text-anchor="middle" class="sv-vi">Mỗi lăng kính chỉ đọc đầu vào, mù với các lăng kính khác — lý luận độc lập, không chia sẻ</text>
+          <text x="315" y="350" font-family="JetBrains Mono, monospace" font-size="9" fill="#c2c9dd" text-anchor="middle" class="sv-en">Runs sequentially on MindPal (~3 min, ~18 credits) · Red Team &amp; Chair then read every report</text>
+          <text x="315" y="350" font-family="JetBrains Mono, monospace" font-size="9" fill="#c2c9dd" text-anchor="middle" class="sv-vi">Chạy tuần tự trên MindPal (~3 phút, ~18 credit) · Đội đỏ &amp; Chủ tọa sau đó đọc mọi báo cáo</text>
+        </svg>
+      </div>
+
+      <div class="lenses">
+        <div class="lens" style="--c:var(--navy)"><div class="ic">🔧</div><b><span class="t en">Engineering</span><span class="t vi">Kỹ thuật</span></b><span><span class="t en">Stability, scale, rollback, monitoring, data recovery.</span><span class="t vi">Ổn định, mở rộng, rollback, giám sát, phục hồi dữ liệu.</span></span></div>
+        <div class="lens" style="--c:var(--purple)"><div class="ic">🎨</div><b><span class="t en">Product &amp; UX</span><span class="t vi">Sản phẩm &amp; UX</span></b><span><span class="t en">Onboarding, edge cases, time-to-value, accessibility.</span><span class="t vi">Onboarding, ca biên, thời gian-tới-giá-trị, khả năng tiếp cận.</span></span></div>
+        <div class="lens" style="--c:var(--orange)"><div class="ic">📣</div><b><span class="t en">Go-to-Market</span><span class="t vi">Ra thị trường</span></b><span><span class="t en">Positioning, pricing, enablement, success metric.</span><span class="t vi">Định vị, định giá, trang bị bán hàng, chỉ số thành công.</span></span></div>
+        <div class="lens" style="--c:var(--blue)"><div class="ic">🎧</div><b><span class="t en">Support</span><span class="t vi">Hỗ trợ</span></b><span><span class="t en">Predicts day-one tickets, escalation, staffing.</span><span class="t vi">Dự đoán ticket ngày đầu, leo thang, nhân sự trực.</span></span></div>
+        <div class="lens" style="--c:var(--red)"><div class="ic">⚖️</div><b><span class="t en">Legal</span><span class="t vi">Pháp lý</span></b><span><span class="t en">ToS, privacy, data use, consent, regulatory fit.</span><span class="t vi">Điều khoản, quyền riêng tư, dùng dữ liệu, đồng thuận, tuân thủ.</span></span></div>
+        <div class="lens" style="--c:var(--amber)"><div class="ic">🔒</div><b><span class="t en">Security &amp; Data</span><span class="t vi">Bảo mật &amp; Dữ liệu</span></b><span><span class="t en">Auth, access control, PII flow, secrets, abuse limits.</span><span class="t vi">Xác thực, kiểm soát truy cập, luồng PII, secrets, chặn lạm dụng.</span></span></div>
+        <div class="lens" style="--c:var(--green)"><div class="ic">💰</div><b><span class="t en">Finance</span><span class="t vi">Tài chính</span></b><span><span class="t en">Cost per use, margin, cost at scale, billing infra.</span><span class="t vi">Chi phí mỗi lượt, biên lợi nhuận, chi phí khi scale, hạ tầng thanh toán.</span></span></div>
+        <div class="lens" style="--c:var(--ink-dark)"><div class="ic">🕵️</div><b><span class="t en">Red Team</span><span class="t vi">Đội đỏ</span></b><span><span class="t en">Hunts the risk no lens owned — the unstated assumption.</span><span class="t vi">Săn rủi ro không lăng kính nào sở hữu — giả định không nói ra.</span></span></div>
+        <div class="lens" style="--c:var(--navy-soft)"><div class="ic">🎯</div><b><span class="t en">The Chair</span><span class="t vi">Chủ tọa</span></b><span><span class="t en">Weighs all eight, names the blind spot, rules.</span><span class="t vi">Cân cả tám, gọi tên điểm mù, ra phán quyết.</span></span></div>
+      </div>
+    </section>
+
+    <!-- 03 · BEFORE / AFTER -->
+    <section class="wrap" id="ba">
+      <div class="shead"><span class="n">04</span><h3 class="title"><span class="t en">Before &amp; after</span><span class="t vi">Trước &amp; sau</span></h3></div>
+      <div class="ba">
+        <div class="col before">
+          <h4><span class="t en">Before — the launch review meeting</span><span class="t vi">Trước — buổi họp review ra mắt</span></h4>
+          <ul>
+            <li><span class="t en">Six people, one hour, calendars never align</span><span class="t vi">Sáu người, một tiếng, lịch chẳng bao giờ khớp</span></li>
+            <li><span class="t en">Each speaks to their lane; the seams go unspoken</span><span class="t vi">Ai nói làn nấy; các đường nối bị bỏ ngỏ</span></li>
+            <li><span class="t en">The loudest function sets the agenda</span><span class="t vi">Bộ phận nói to nhất định hướng cuộc họp</span></li>
+            <li><span class="t en">No record of what was assumed vs confirmed</span><span class="t vi">Không ghi lại cái gì là giả định, cái gì đã xác nhận</span></li>
+            <li><span class="t en">"We're ready" — decided by vibes and seniority</span><span class="t vi">“Mình sẵn sàng rồi” — quyết bằng cảm giác và thâm niên</span></li>
+          </ul>
+        </div>
+        <div class="col after">
+          <h4><span class="t en">After — the committee</span><span class="t vi">Sau — hội đồng</span></h4>
+          <ul>
+            <li><span class="t en">Paste a brief or upload a doc, ~3 minutes, any time</span><span class="t vi">Dán một brief hoặc tải tài liệu, ~3 phút, bất cứ lúc nào</span></li>
+            <li><span class="t en">Seven lenses + a red team, each blind to the others</span><span class="t vi">Bảy lăng kính + một đội đỏ, mỗi con mù với con khác</span></li>
+            <li><span class="t en"><span>Every silence flagged as UNCONFIRMED, not assumed handled</span></span><span class="t vi"><span>Mọi im lặng bị gắn CHƯA XÁC NHẬN, không mặc định đã lo</span></span></li>
+            <li><span class="t en"><span>A written scorecard + the blind spot nobody owned</span></span><span class="t vi"><span>Một bảng điểm bằng văn bản + điểm mù không ai sở hữu</span></span></li>
+            <li><span class="t en">GO / DELAY with the reasoning attached</span><span class="t vi">GO / DELAY kèm lý lẽ đầy đủ</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="note green">
+        <span class="t en"><b>It doesn't replace the humans</b> — it front-loads the review so the
+          meeting starts from a structured map of gaps instead of a blank agenda, and it never forgets
+          to ask the legal question just because the room was excited about marketing.</span>
+        <span class="t vi"><b>Nó không thay thế con người</b> — nó dồn phần review lên trước, để cuộc họp
+          bắt đầu từ một bản đồ khoảng trống có cấu trúc thay vì một chương trình trống, và nó không bao giờ
+          quên hỏi câu pháp lý chỉ vì cả phòng đang phấn khích với marketing.</span>
+      </div>
+    </section>
+
+    <!-- 04 · PROOF -->
+    <section class="wrap" id="proof">
+      <div class="shead"><span class="n">05</span><h3 class="title"><span class="t en">Proof: I ran it on my own product</span><span class="t vi">Bằng chứng: tôi chạy nó trên chính sản phẩm của mình</span></h3></div>
+      <p class="lede">
+        <span class="t en">The most honest test there is. <b>VietGuide AI</b> is my own project — an AI travel
+          guide for Vietnam with 360°/VR, voice chat, and a RAG + web-search itinerary planner. I pasted its
+          real state and let the committee judge it. It caught real, Vietnam-specific legal exposure I would
+          have missed — verbatim, unedited.</span>
+        <span class="t vi">Phép thử trung thực nhất có thể. <b>VietGuide AI</b> là dự án của chính tôi — một
+          hướng dẫn viên du lịch AI cho Việt Nam với 360°/VR, chat giọng nói, và một trình lập lịch trình RAG +
+          tìm kiếm web. Tôi dán đúng hiện trạng thật của nó và để hội đồng phán xét. Nó bắt được rủi ro pháp lý
+          có thật, đặc thù Việt Nam mà tôi hẳn đã bỏ lỡ — nguyên văn, không chỉnh sửa.</span>
+      </p>
+
+      <div class="verdict">
+        <div class="vbar"><i class="r"></i><i class="y"></i><i class="g"></i><span>The Chair · VietGuide · 10 agents · run time 3m 21s</span></div>
+        <div class="vbody">
+          <div class="ruling">⛔ RULING: DELAY &nbsp;·&nbsp; confidence: high</div>
+          <p class="oneline">“The product is a high-cost ‘financial time bomb’ with critical legal
+            exposures and no safety net for scale or user safety.”</p>
+
+          <div class="scorecard">
+            <div class="sc"><div class="fn">🔧 Engineering</div><span class="st gaps">GAPS</span></div>
+            <div class="sc"><div class="fn">🎨 Product &amp; UX</div><span class="st gaps">GAPS</span></div>
+            <div class="sc"><div class="fn">📣 Go-to-Market</div><span class="st gaps">GAPS</span></div>
+            <div class="sc"><div class="fn">🎧 Support</div><span class="st gaps">GAPS</span></div>
+            <div class="sc"><div class="fn">⚖️ Legal</div><span class="st blocker">BLOCKER</span></div>
+            <div class="sc"><div class="fn">🔒 Security</div><span class="st blocker">BLOCKER</span></div>
+            <div class="sc"><div class="fn">💰 Finance</div><span class="st blocker">BLOCKER</span></div>
+          </div>
+
+          <div class="blindspot">
+            <div class="bl"><span class="t en">Biggest blind spot — the product is architected to fail if it succeeds</span><span class="t vi">Điểm mù lớn nhất — sản phẩm được thiết kế để sập nếu nó thành công</span></div>
+            <h4>The “Viral Bankruptcy” Loophole</h4>
+            <p>“Serving high-bandwidth VR content and expensive real-time AI queries with no rate-limiting
+              and no revenue model, a successful social-media mention would trigger a <b>self-inflicted DDoS
+              on your bank account</b> — five-to-six-figure API and bandwidth debts within 24 hours, before
+              you can even log in to shut it down.”</p>
+          </div>
+          <p class="ifyou">If you launch anyway → “You wake up on day two to a bankrupting Vercel bill and
+            a PR nightmare — a tourist followed a ‘hallucinated’ AI instruction into a hazardous or
+            restricted area.”</p>
+        </div>
+      </div>
+
+      <div class="note green">
+        <span class="t en"><b>Why running it on my own product matters.</b> This wasn't hand-waving.
+          Legal cited <b>Decree 13/2023/ND-CP</b> (voice is biometric data needing explicit consent) and the
+          cross-border transfer filing my Vercel/GCP stack triggers. Security flagged that a user asking
+          “hotels near [my address]” leaks PII to Tavily, and that with no rate-limit a bot can balloon my
+          GCP bill. Finance named the “Successful Bankruptcy” scenario outright. These are specific gaps in
+          <em>my real architecture</em> — the kind that sink a launch precisely because the founder building
+          the fun parts never thinks to check them.</span>
+        <span class="t vi"><b>Vì sao chạy nó trên chính sản phẩm của tôi lại quan trọng.</b> Đây không phải
+          nói suông. Pháp lý viện dẫn <b>Nghị định 13/2023/NĐ-CP</b> (giọng nói là dữ liệu sinh trắc học cần
+          đồng thuận rõ ràng) và thủ tục khai báo chuyển dữ liệu xuyên biên giới mà stack Vercel/GCP của tôi
+          kích hoạt. Bảo mật chỉ ra rằng một người dùng hỏi “khách sạn gần [địa chỉ của tôi]” làm rò rỉ PII
+          sang Tavily, và rằng khi không có giới hạn tần suất, một con bot có thể thổi phồng hóa đơn GCP của
+          tôi. Tài chính gọi thẳng tên kịch bản “Phá sản vì Thành công”. Đây là những khoảng trống cụ thể
+          trong <em>kiến trúc thật của tôi</em> — đúng loại nhấn chìm một lần ra mắt, chính vì người sáng lập
+          mải xây phần vui không bao giờ nghĩ tới việc kiểm chúng.</span>
+      </div>
+
+      <div class="blindspot" style="background:var(--ink-dark);border-color:#33406e;margin-top:14px;border-radius:16px;padding:22px 24px">
+        <div class="bl" style="color:#ffb27d"><span class="t en">🕵️ The Red Team — five risks all seven lenses missed</span><span class="t vi">🕵️ Đội đỏ — năm rủi ro cả bảy lăng kính bỏ lỡ</span></div>
+        <p style="margin-top:10px;color:#d6deff;font-size:.9rem;line-height:1.6">
+          <span class="t en">The deep build adds a dedicated agent whose only job is to find what the committee missed.
+            On VietGuide it found five unowned risks — including one no functional lens could have reached:</span>
+          <span class="t vi">Bản dựng sâu thêm một agent chuyên trách với nhiệm vụ duy nhất là tìm thứ hội đồng bỏ lỡ.
+            Trên VietGuide nó tìm ra năm rủi ro không ai sở hữu — trong đó có một cái không lăng kính chức năng
+            nào chạm tới:</span>
+        </p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:14px">
+          <div style="background:#182350;border:1px solid #2a3765;border-radius:11px;padding:13px 15px">
+            <div style="color:#fff;font-weight:800;font-size:.86rem"><span class="t en">🚸 Physical-safety hallucination</span><span class="t vi">🚸 Ảo giác đe dọa an toàn thân thể</span></div>
+            <div style="color:#a9b3d6;font-size:.8rem;margin-top:5px">
+              <span class="t en">The AI “guide” routes a tourist into a construction site or restricted military zone.
+                A “Duty of Care” suit no disclaimer mitigates. <b style="color:#f0c069">Legal saw disclaimers,
+                UX saw accuracy — nobody owned safety.</b></span>
+              <span class="t vi">“Hướng dẫn viên” AI dẫn một du khách vào công trường hoặc khu quân sự cấm. Một vụ kiện
+                “nghĩa vụ chăm sóc” mà không disclaimer nào gỡ được. <b style="color:#f0c069">Pháp lý thấy
+                disclaimer, UX thấy độ chính xác — không ai sở hữu an toàn.</b></span>
+            </div>
+          </div>
+          <div style="background:#182350;border:1px solid #2a3765;border-radius:11px;padding:13px 15px">
+            <div style="color:#fff;font-weight:800;font-size:.86rem"><span class="t en">🏮 The “Parasitic Guide” backlash</span><span class="t vi">🏮 Làn sóng phản đối “Hướng dẫn viên ký sinh”</span></div>
+            <div style="color:#a9b3d6;font-size:.8rem;margin-top:5px">
+              <span class="t en">Local guides and cyclo drivers in Hoi An and Hanoi's Old Quarter see the app as a threat
+                to their livelihood → review-bombing, an “AI vs. local culture” PR crisis. <b style="color:#f0c069">A
+                sociopolitical risk outside every lane.</b></span>
+              <span class="t vi">Hướng dẫn viên và người đạp xích lô ở Hội An và Phố Cổ Hà Nội coi app là mối đe dọa tới
+                sinh kế → review-bomb, một khủng hoảng truyền thông “AI đấu với văn hóa bản địa”. <b style="color:#f0c069">Một
+                rủi ro chính trị–xã hội nằm ngoài mọi làn.</b></span>
+            </div>
+          </div>
+          <div style="background:#182350;border:1px solid #2a3765;border-radius:11px;padding:13px 15px">
+            <div style="color:#fff;font-weight:800;font-size:.86rem"><span class="t en">📉 Temporal drift</span><span class="t vi">📉 Lệch theo thời gian</span></div>
+            <div style="color:#a9b3d6;font-size:.8rem;margin-top:5px">
+              <span class="t en">RAG says the landmark was just renovated; the 6-month-old VR asset shows a ruin. The premium
+                feature reads as broken. <b style="color:#f0c069">No one owned the content lifecycle.</b></span>
+              <span class="t vi">RAG nói địa danh vừa được trùng tu; nhưng tài sản VR 6 tháng tuổi lại hiện ra một phế tích.
+                Tính năng cao cấp trông như bị hỏng. <b style="color:#f0c069">Không ai sở hữu vòng đời nội dung.</b></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <details class="report">
+        <summary>
+          <span class="chev">▸</span>
+          <span class="t en">Read the full run — the exact brief I pasted + all 10 agent outputs, verbatim</span>
+          <span class="t vi">Đọc trọn lần chạy — đúng bản brief tôi đã dán + output nguyên văn của cả 10 agent</span>
+          <span class="m2">MindPal · 10 steps · 3m 21s</span>
+        </summary>
+        <div class="rpt-body">
+          <div class="rpt-in">
+            <span class="lbl"><span class="t en">Input · the brief I pasted (verbatim, Vietnamese)</span><span class="t vi">Đầu vào · bản brief tôi đã dán (nguyên văn)</span></span>
+            Sản phẩm: VietGuide AI — trợ lý du lịch AI cho Việt Nam. Người dùng có thể xem 360 độ, VR địa
+            điểm muốn đi. Người dùng chat hoặc nói bằng giọng, hỏi tự do về địa danh, và nhận lịch trình
+            thông minh. Mobile-first web app, agent đóng vai hướng dẫn viên ảo. Kiến trúc: RAG với ChromaDB
+            làm knowledge base + Tavily web search để lấy thông tin mới. Chạy deploy trên vercel, AI trên
+            GCP. Agent trả lời Q&amp;A về địa danh, gợi ý lịch trình.
+          </div>
+
+          <p class="caption" style="margin-top:4px"><span class="t en">Below is the committee's output, exactly as returned — nothing edited or trimmed.</span><span class="t vi">Bên dưới là output của hội đồng, đúng như nó trả về — không sửa, không cắt.</span></p>
+
+          <div class="agentblk">
+            <div class="ah">🔧 Engineering <span class="stt gaps">gaps</span></div>
+            <h6>Confirmed ready</h6>
+            <ul>
+              <li><b>Tech Stack Definition:</b> a modern architecture using "Vercel for deployment" and "GCP for AI," a baseline for scalability.</li>
+              <li><b>Component Selection:</b> "RAG with ChromaDB" and "Tavily web search" indicate a functional design for real-time information retrieval.</li>
+            </ul>
+            <h6>Gaps (unconfirmed)</h6>
+            <ul>
+              <li><b>Stability:</b> no load or stress testing for the RAG pipeline. Unknown whether it can handle concurrent VR/360 streaming alongside AI processing. Status of critical bugs unknown.</li>
+              <li><b>Scale:</b> no confirmation on API rate limits for Tavily or GCP AI quotas. Can ChromaDB handle a launch-day traffic spike?</li>
+              <li><b>Rollback:</b> no deployment strategy (Blue/Green or Canary) or rollback procedure for a catastrophic failure.</li>
+              <li><b>Monitoring &amp; Alerting:</b> no observability tools mentioned. Unknown if the team is alerted within minutes if the AI hallucinates or VR assets fail to load.</li>
+              <li><b>Data Integrity &amp; Backups:</b> no backup protocol for the ChromaDB knowledge base or user itinerary data.</li>
+            </ul>
+            <h6>Biggest risk</h6>
+            <p><b>System Latency &amp; API Bottlenecks.</b> Combining high-bandwidth 360/VR assets with high-latency RAG AI on a mobile-first platform is risky. Without load testing, launch-day traffic could hit Tavily/GCP rate limits or cause significant lag — poor first-user experience and potential crashes.</p>
+          </div>
+
+          <div class="agentblk">
+            <div class="ah">🎨 Product &amp; UX <span class="stt gaps">gaps</span></div>
+            <h6>Confirmed ready</h6>
+            <ul>
+              <li><b>Core Flow (Mobile):</b> "Mobile-first web app" aligns the primary platform with on-the-go travel needs.</li>
+              <li><b>Core Polish (Features):</b> "360 độ, VR" and voice provide a high-value, immersive experience versus a standard text bot.</li>
+              <li><b>Persona:</b> the "virtual guide" persona is established, giving a consistent UX framework.</li>
+            </ul>
+            <h6>Gaps (unconfirmed)</h6>
+            <ul>
+              <li><b>Onboarding:</b> no mention of how a first-time user is introduced to voice or VR. Can they reach the "aha" moment without a manual?</li>
+              <li><b>Edge Cases &amp; Empty States:</b> silent on "no results" from Tavily, or low-bandwidth handling (critical for VR in rural Vietnam).</li>
+              <li><b>Accessibility:</b> no screen-reader support or high-contrast mode for outdoor glare.</li>
+              <li><b>Feedback Loop:</b> no way for a user to flag a hallucinated itinerary or get help if voice recognition fails in a noisy environment.</li>
+              <li><b>Context Switching:</b> unconfirmed how smoothly a user moves from text chat to VR/360 and back.</li>
+            </ul>
+            <h6>Biggest risk</h6>
+            <p><b>The "VR-to-Web" Friction.</b> On a mobile web app, loading high-res 360/VR can be slow and crash-prone. If the transition from chat to immersive view isn't instant and smooth, the "aha" moment becomes technical frustration and immediate drop-off.</p>
+          </div>
+
+          <div class="agentblk">
+            <div class="ah">📣 Go-to-Market <span class="stt gaps">gaps</span></div>
+            <h6>Confirmed ready</h6>
+            <p>Positioning is functionally defined — a "VietGuide AI travel assistant for Vietnam" acting as a "virtual guide agent," with a clear USP from "360-degree views/VR" + "smart itinerary generation" on a mobile-first web app.</p>
+            <h6>Gaps (unconfirmed)</h6>
+            <ul>
+              <li><b>Pricing &amp; Packaging:</b> silent on monetization — no decided price point or structure (freemium, per-itinerary, subscription).</li>
+              <li><b>Sales Enablement:</b> no demo environment, pitch deck for travel agencies, or objection-handling for AI hallucinations.</li>
+              <li><b>Launch Assets &amp; Channels:</b> specific channels (social, travel forums, OTA partnerships) and a dedicated landing page unconfirmed.</li>
+              <li><b>Success Metric:</b> no defined KPI for a "successful launch."</li>
+            </ul>
+            <h6>Biggest risk</h6>
+            <p>No specific target-audience definition. Domestic vs. international travelers differ significantly in search habits and expectations of a "virtual guide"; without this the launch is too broad to convert effectively.</p>
+          </div>
+
+          <div class="agentblk">
+            <div class="ah">🎧 Customer Support <span class="stt gaps">gaps</span></div>
+            <h6>Confirmed ready</h6>
+            <p><b>None.</b> The brief focuses entirely on technical architecture and features — zero mention of support infrastructure, documentation, or staffing.</p>
+            <h6>Predictable day-one questions</h6>
+            <ul>
+              <li>"Why is the 360°/VR view not loading or lagging on my phone?"</li>
+              <li>"The itinerary suggested a location that is permanently closed — how do I report this?" (Tavily may surface outdated SEO data.)</li>
+              <li>"The voice recognition isn't understanding my accent/dialect — can I use text only?"</li>
+            </ul>
+            <h6>Gaps (unconfirmed)</h6>
+            <ul>
+              <li><b>FAQ / Help docs:</b> none to navigate VR or explain the AI's limits.</li>
+              <li><b>Escalation path:</b> no process for a support agent to reach engineering when GCP/AI fails or RAG hallucinates.</li>
+              <li><b>Team readiness &amp; Feedback capture:</b> unclear who is staffed for the launch spike; no thumbs-up/down loop to improve the knowledge base.</li>
+            </ul>
+            <p><b>Assessment:</b> the product is technically defined but support-blind. Launching without a feedback loop for AI inaccuracies or a VR troubleshooting guide will lead to high user frustration.</p>
+          </div>
+
+          <div class="agentblk">
+            <div class="ah">⚖️ Legal &amp; Compliance <span class="stt blocker">blocker</span></div>
+            <h6>Exposure (unconfirmed)</h6>
+            <ul>
+              <li><b>Data Privacy &amp; Decree 13/2023/ND-CP:</b> silent on Vietnam's PDPD. The app collects voice and text — processing biometric voice data and basic personal data — with no Consent Management Platform.</li>
+              <li><b>Terms of Service &amp; Privacy Policy:</b> no evidence these exist or account for AI-generated hallucinations in "smart itineraries."</li>
+              <li><b>IP &amp; Content Rights:</b> unconfirmed whether the 360/VR assets are owned, licensed, or scraped — high copyright infringement exposure.</li>
+              <li><b>Cross-Border Data Transfer:</b> Vercel/GCP means user data leaves Vietnam. Decree 13 requires a Transfer Impact Assessment filed with the Ministry of Public Security.</li>
+              <li><b>Third-Party AI Liability:</b> Tavily surfaces live web content; liability for copyrighted or defamatory content under the "guide" role is undefined.</li>
+            </ul>
+            <h6>Hard blocker</h6>
+            <ul>
+              <li><b>Absence of Privacy Policy/TOS:</b> cannot ship a data-collecting app without them; they must disclaim liability for AI hallucinations on travel safety/legality.</li>
+              <li><b>Voice Data Consent:</b> processing biometric (voice) data requires explicit, affirmative consent — a hard blocker until the UI has a mandatory consent checkbox.</li>
+              <li><b>Content Licensing:</b> verifying the 360/VR asset source is mandatory to avoid take-down notices or IP litigation.</li>
+            </ul>
+          </div>
+
+          <div class="agentblk">
+            <div class="ah">🔒 Security &amp; Data <span class="stt blocker">blocker</span></div>
+            <p class="lead">From a security and data-protection standpoint it is currently a "black box" — critical omissions in user-data protection and cost control prevent a safe launch.</p>
+            <h6>Gaps (unconfirmed)</h6>
+            <ul>
+              <li><b>Authentication &amp; Session:</b> never addresses how users are identified or whether sessions are protected against hijacking.</li>
+              <li><b>Authorization (BOLA):</b> no mention of data isolation — can User A read User B's itineraries by changing a URL or API request?</li>
+              <li><b>Encryption:</b> unconfirmed whether data is encrypted at rest in ChromaDB or TLS 1.3 enforced in transit.</li>
+              <li><b>Secrets Management:</b> no mention of how Tavily/GCP/ChromaDB API keys are stored — risk of hardcoding or client-side leaks.</li>
+              <li><b>PII Flow (High Risk):</b> voice interaction — are recordings stored? Is PII scrubbed before prompts reach RAG or Tavily?</li>
+              <li><b>Third-party Exposure:</b> "hotels near my house at [Address]" may leak PII to an external search engine.</li>
+              <li><b>Abuse &amp; Rate Limits:</b> no limits on AI queries or search calls — a bad actor could script requests and balloon the GCP/Tavily bill instantly.</li>
+              <li><b>Incident Response:</b> no protocol for a data breach or a dangerous/illegal AI hallucination on launch day.</li>
+            </ul>
+            <h6>Biggest risk</h6>
+            <p><b>PII Leakage and API Abuse.</b> Voice+chat (high PII) plus expensive third-party APIs, with no scrubbing and no rate-limiting, create a dual threat: a massive privacy liability and an uncapped bill from bot scraping or malicious over-use.</p>
+          </div>
+
+          <div class="agentblk">
+            <div class="ah">💰 Finance &amp; Unit-economics <span class="stt blocker">blocker</span></div>
+            <p class="lead">As the Finance lead, I cannot greenlight this launch. The technical architecture is clear, but the financial architecture is non-existent. We are flying a plane with no fuel gauge and no ticket counter.</p>
+            <h6>Gaps (unconfirmed)</h6>
+            <ul>
+              <li><b>Cost per Use (the "session bill"):</b> no calculation for a single journey — Tavily call + LLM tokens + Voice STT/TTS + heavy VR/360 egress. Silence on blended cost per user is a major gap.</li>
+              <li><b>Revenue &amp; Margin:</b> zero mention of pricing. Without a price point, we can't tell if we lose $1.00 per user acquired.</li>
+              <li><b>Cost at Scale:</b> Tavily/GCP billing is linear; 10× usage = 10× bill. No caching or tiered compute to save money.</li>
+              <li><b>Free-tier Exposure:</b> "Free Q&amp;A" with no caps — one power user or bot could run up a $500 bill in a day, paying nothing.</li>
+              <li><b>Billing &amp; Metering Infra:</b> no billing engine, credit system, or way to cut off users over quota.</li>
+            </ul>
+            <h6>Biggest risk</h6>
+            <p><b>The "Successful Bankruptcy" Scenario.</b> High-cost variable APIs plus high-bandwidth VR/360, with no monetization engine, means a viral launch bankrupts the company: if serving a user costs $0.50 and revenue is $0.00, every new customer brings insolvency closer. Vercel bandwidth overages for VR alone could be a five-figure surprise bill in 24 hours.</p>
+          </div>
+
+          <div class="agentblk">
+            <div class="ah">🕵️ Red Team <span class="stt blocker">5 unowned risks</span></div>
+            <p class="lead">After reviewing all seven functional reports, the committee identified the "how" (latency, costs, privacy) but completely missed the "where" and the "who." These are the blind spots where the product meets the messy reality of the physical world.</p>
+            <h6>The Physical Safety / Hazardous Navigation Hallucination</h6>
+            <p><b>Why it slipped through:</b> Legal treated hallucinations as a disclaimer problem; Product/UX as an accuracy problem. No one owned the Physical Safety lane. <b>If it hits:</b> the AI suggests a "hidden gem" shortcut that is a private construction site, a dangerous monsoon trail, or a restricted military zone — a "Duty of Care" lawsuit no disclaimer mitigates when the product is marketed as a "Guide."</p>
+            <h6>The "Temporal Drift" (Static Assets vs. Dynamic Reality)</h6>
+            <p><b>Why it slipped through:</b> Engineering focused on VR delivery; Support on reporting closed locations. No one owned the Content Lifecycle. <b>If it hits:</b> the AI describes a newly renovated landmark (from web search), but the six-month-old VR asset shows a dilapidated building — an "uncanny valley" that destroys trust and makes the premium feature feel broken.</p>
+            <h6>The International "Data Roaming" Barrier</h6>
+            <p><b>Why it slipped through:</b> Engineering assumed "Vercel scales" and GTM assumed "mobile-first" = "mobile-accessible." <b>If it hits:</b> international tourists on throttled roaming — a single 360 view or voice interaction can burn 50MB+. "Death by loading spinner" or a carrier bill-shock after five minutes → deletion and "scam" reviews.</p>
+            <h6>The "Parasitic Guide" Hostile Response</h6>
+            <p><b>Why it slipped through:</b> a sociopolitical risk outside Tech, Finance, or UX. <b>If it hits:</b> local human guides and cyclo drivers in Hanoi's Old Quarter and Hoi An see the "Virtual Guide" as a threat to their livelihood → organized review-bombing, even harassment of tourists using the app — a brand-destroying "AI vs. Local Culture" crisis.</p>
+            <h6>The "Vercel Success Trap" (the Zero-Revenue DDoS)</h6>
+            <p><b>Why it slipped through:</b> Finance flagged cost; Engineering flagged scale. They missed the compounding failure of the two. <b>If it hits:</b> an influencer shares the app, 100,000 users land in an hour; with no paywall (GTM gap) and no rate-limiting (Security gap), the Vercel + GCP/Tavily bill compounds into six-figure debt before Finance can log in to shut it down — the product's success becomes a literal DDoS on the company's bank account.</p>
+          </div>
+
+          <div class="agentblk verdictblk">
+            <div class="ah">🎯 The Chair — Launch Readiness Verdict <span class="stt verd">DELAY · high</span></div>
+            <p><b>In one line:</b> the product is a high-cost "financial time bomb" with critical legal exposures and no safety net for scale or user safety.</p>
+            <h6>Readiness scorecard</h6>
+            <p>🔧 Engineering: gaps &nbsp;·&nbsp; 🎨 Product &amp; UX: gaps &nbsp;·&nbsp; 📣 Go-to-Market: gaps &nbsp;·&nbsp; 🎧 Customer Support: gaps &nbsp;·&nbsp; ⚖️ Legal: <b>BLOCKER</b> &nbsp;·&nbsp; 🔒 Security &amp; Data: <b>BLOCKER</b> &nbsp;·&nbsp; 💰 Finance: <b>BLOCKER</b></p>
+            <h6>Must-fix before launch</h6>
+            <ul>
+              <li><b>Compliance &amp; Consent (Legal):</b> mandatory explicit consent for biometric (voice) data per Decree 13, and verify licensing for all 360/VR assets.</li>
+              <li><b>Financial kill-switch (Finance/Security):</b> hard rate-limits and automated circuit breakers on GCP/Tavily/Vercel to stop a viral launch causing insolvency.</li>
+              <li><b>Identity &amp; Data Isolation (Security):</b> a robust auth/authorization layer and PII scrubbing so chat/voice data isn't leaked to third parties or other users.</li>
+              <li><b>Unit-economic model (Finance/GTM):</b> a monetization strategy or cost-per-session cap; currently every new user increases net loss with no path to margin.</li>
+            </ul>
+            <h6>Biggest blind spot — the "Viral Bankruptcy" Loophole</h6>
+            <p>The intersection of Finance, Engineering and Security reveals a fatal gap: <b>the product is architected to fail if it succeeds.</b> Serving high-bandwidth VR and expensive real-time AI queries with no rate-limiting and no revenue model, a successful social-media mention triggers a self-inflicted DDoS on your bank account — five-to-six-figure API and bandwidth debts within 24 hours, before you can manually intervene.</p>
+            <h6>If you launch anyway</h6>
+            <p>You wake up on day two to a bankrupting Vercel bill and a PR nightmare — a tourist followed a "hallucinated" AI instruction into a hazardous or restricted area.</p>
+          </div>
+        </div>
+      </details>
+
+      <h4 class="subh"><span class="t en">The same committee, two more products</span><span class="t vi">Cùng hội đồng đó, thêm hai sản phẩm</span></h4>
+      <div class="ba">
+        <div class="verdict" style="box-shadow:var(--shadow-sm)">
+          <div class="vbar"><i class="r"></i><i class="y"></i><i class="g"></i><span><span class="t en">FinBuddy · messy real-user brief</span><span class="t vi">FinBuddy · brief lộn xộn từ người dùng thật</span></span></div>
+          <div class="vbody">
+            <div class="ruling" style="font-size:.92rem;padding:6px 12px">⛔ DELAY · high</div>
+            <div class="blindspot" style="margin-top:14px">
+              <div class="bl"><span class="t en">The Liability Cascade</span><span class="t vi">Chuỗi trách nhiệm pháp lý dây chuyền</span></div>
+              <p style="margin-top:7px;font-size:.86rem">
+                <span class="t en">An AI “financial advisor” whose whole pitch is “better than an accountant.” The committee
+                  traced the trap: the product's <b>strength — confident advice — is its liability</b> when the
+                  advice is confidently wrong. “You are unknowingly assuming the professional liability of 800+
+                  accountants without a license.”</span>
+                <span class="t vi">Một “cố vấn tài chính” AI mà toàn bộ lời chào là “tốt hơn một kế toán”. Hội đồng lần ra cái
+                  bẫy: <b>điểm mạnh của sản phẩm — lời khuyên tự tin — chính là trách nhiệm pháp lý của nó</b> khi
+                  lời khuyên sai một cách tự tin. “You are unknowingly assuming the professional liability of 800+
+                  accountants without a license.”</span>
+              </p>
+            </div>
+            <p class="caption" style="color:#8891ac;margin-top:12px"><span class="t en">Parsed from a rambling Vietnamese
+              brain-dump. Proves it reasons about a subtle trap, not just pattern-matches a category.</span><span class="t vi">Bóc
+              tách từ một đoạn “nghĩ gì viết nấy” lan man bằng tiếng Việt. Chứng minh nó lý luận về một cái bẫy
+              tinh vi, chứ không chỉ khớp mẫu theo danh mục.</span></p>
+          </div>
+        </div>
+        <div class="verdict" style="box-shadow:var(--shadow-sm)">
+          <div class="vbar"><i class="r"></i><i class="y"></i><i class="g"></i><span><span class="t en">Jotdown · AI meeting recorder</span><span class="t vi">Jotdown · máy ghi cuộc họp AI</span></span></div>
+          <div class="vbody">
+            <div class="ruling" style="font-size:.92rem;padding:6px 12px">⛔ DELAY · high</div>
+            <div class="blindspot" style="margin-top:14px">
+              <div class="bl"><span class="t en">The “Trust Infrastructure” Void</span><span class="t vi">Khoảng trống “Hạ tầng Niềm tin”</span></div>
+              <p style="margin-top:7px;font-size:.86rem">
+                <span class="t en">Recording meetings without a consent flow — a <b>felony in California, Illinois and Germany</b>.
+                  Three lenses reached this seam independently (Legal, Support, GTM). And Product &amp; UX was rated
+                  READY — because it genuinely was. The committee discriminates; it doesn't just cry DELAY.</span>
+                <span class="t vi">Ghi âm cuộc họp mà không có luồng xin đồng thuận — một <b>trọng tội ở California, Illinois và
+                  Đức</b>. Ba lăng kính chạm tới đường nối này một cách độc lập (Pháp lý, Hỗ trợ, Ra thị trường).
+                  Còn Sản phẩm &amp; UX được chấm READY — vì nó thực sự sẵn sàng. Hội đồng biết phân biệt; nó không
+                  chỉ hô DELAY.</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="caption"><span class="t en">Three products, three completely different launch-killers, each surfaced in about
+        two minutes. Every blind spot was a gap between owners — exactly what one reviewer's checklist misses.</span><span class="t vi">Ba
+        sản phẩm, ba thứ giết-ra-mắt hoàn toàn khác nhau, mỗi cái lộ ra trong khoảng hai phút. Mọi điểm mù đều
+        là khoảng trống giữa những người phụ trách — đúng thứ mà checklist của một người review bỏ lỡ.</span></p>
+    </section>
+
+    <!-- 05 · DESIGN DECISIONS -->
+    <section class="wrap" id="decisions">
+      <div class="shead"><span class="n">06</span><h3 class="title"><span class="t en">The decisions behind it</span><span class="t vi">Những quyết định đằng sau nó</span></h3></div>
+      <div class="dd">
+        <div class="ddrow"><div class="num">1</div><div>
+          <h5><span class="t en">Silence is a finding, not a pass</span><span class="t vi">Im lặng là một phát hiện, không phải một cái “đạt”</span></h5>
+          <p>
+            <span class="t en">Every lens is instructed: if the brief doesn't confirm something, mark it UNCONFIRMED and
+              treat it as a gap — never assume it's handled because it usually is.</span>
+            <span class="t vi">Mỗi lăng kính được chỉ thị: nếu brief không xác nhận điều gì, đánh dấu CHƯA XÁC NHẬN và coi
+              là một khoảng trống — đừng bao giờ mặc định đã có người lo chỉ vì “thường là thế”.</span>
+          </p>
+          <p class="why">
+            <span class="t en"><b>Why:</b> the launch-killer is almost always the thing nobody thought to write
+              down. A confident “probably fine” is exactly the failure mode this committee exists to catch.</span>
+            <span class="t vi"><b>Vì sao:</b> thứ giết một lần ra mắt gần như luôn là điều không ai nghĩ tới việc viết
+              ra. Một câu “chắc ổn thôi” đầy tự tin chính là kiểu hỏng mà hội đồng này sinh ra để bắt.</span>
+          </p>
+        </div></div>
+        <div class="ddrow"><div class="num">2</div><div>
+          <h5><span class="t en">Asymmetric risk, baked into the chair</span><span class="t vi">Rủi ro bất đối xứng, gắn thẳng vào chủ tọa</span></h5>
+          <p>
+            <span class="t en">One BLOCKER from any single lens outweighs seven READYs. The chair is told plainly: a false
+              “GO” is far more costly than a false “DELAY.”</span>
+            <span class="t vi">Một BLOCKER từ bất kỳ lăng kính đơn lẻ nào nặng hơn bảy cái READY. Chủ tọa được dặn thẳng:
+              một cái “GO” sai tốn kém hơn nhiều một cái “DELAY” sai.</span>
+          </p>
+          <p class="why">
+            <span class="t en"><b>Why:</b> shipping broken is worse than shipping late. The verdict is tuned to
+              the real cost of being wrong, not to an average of opinions.</span>
+            <span class="t vi"><b>Vì sao:</b> tung ra thứ hỏng còn tệ hơn tung ra trễ. Phán quyết được chỉnh theo chi
+              phí thật của việc sai, không phải theo mức trung bình của các ý kiến.</span>
+          </p>
+        </div></div>
+        <div class="ddrow"><div class="num">3</div><div>
+          <h5><span class="t en">Each lens stays in its lane</span><span class="t vi">Mỗi lăng kính ở yên trong làn của mình</span></h5>
+          <p>
+            <span class="t en">Engineering doesn't judge messaging; Legal doesn't judge UX. Overlap is explicitly forbidden
+              in each prompt.</span>
+            <span class="t vi">Kỹ thuật không phán về thông điệp; Pháp lý không phán về UX. Chồng lấn bị cấm rõ ràng trong
+              từng prompt.</span>
+          </p>
+          <p class="why">
+            <span class="t en"><b>Why:</b> seven specialists reasoning independently surface more than one
+              generalist covering everything — and the disagreement between them is what locates the seam.</span>
+            <span class="t vi"><b>Vì sao:</b> bảy chuyên gia lý luận độc lập lôi ra nhiều hơn một người đa năng ôm hết
+              mọi thứ — và chính sự bất đồng giữa họ mới chỉ ra đường nối.</span>
+          </p>
+        </div></div>
+        <div class="ddrow"><div class="num">4</div><div>
+          <h5><span class="t en">Explicit committee, not the auto-orchestrator</span><span class="t vi">Hội đồng tường minh, không phải bộ điều phối tự động</span></h5>
+          <p>
+            <span class="t en">Built as ten fixed agents in sequence rather than MindPal's Orchestrator-Worker node, which
+              picks its workers dynamically.</span>
+            <span class="t vi">Dựng thành mười agent cố định chạy tuần tự, thay vì node Orchestrator-Worker của MindPal vốn
+              tự chọn worker động.</span>
+          </p>
+          <p class="why">
+            <span class="t en"><b>Why:</b> a launch review must run <em>every</em> lens every time — a
+              dynamic planner might skip one, and the skipped lens is exactly where the risk hides.</span>
+            <span class="t vi"><b>Vì sao:</b> một buổi review ra mắt phải chạy <em>mọi</em> lăng kính mọi lần — một bộ
+              lập kế hoạch động có thể bỏ qua một cái, và cái lăng kính bị bỏ qua chính là nơi rủi ro ẩn nấp.</span>
+          </p>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- 06 · ROI -->
+    <section class="wrap" id="roi">
+      <div class="shead"><span class="n">07</span><h3 class="title"><span class="t en">ROI — an asymmetry, not a spreadsheet</span><span class="t vi">ROI — một sự bất đối xứng, không phải một bảng tính</span></h3></div>
+      <p class="lede">
+        <span class="t en">Be honest about what's measurable. The cost to <em>run</em> this is exact and tiny.
+          The value is what a caught blocker would have cost you — which is large, but estimated. The whole
+          case is the gap between those two numbers.</span>
+        <span class="t vi">Hãy trung thực về cái gì đo được. Chi phí để <em>chạy</em> cái này là chính xác và bé
+          xíu. Giá trị là số tiền mà một blocker được bắt đã có thể khiến bạn mất — lớn, nhưng là ước tính.
+          Toàn bộ luận điểm nằm ở khoảng cách giữa hai con số đó.</span>
+      </p>
+      <div class="roi">
+        <div class="rc"><div class="k"><span class="t en">Cost to run — exact</span><span class="t vi">Chi phí chạy — chính xác</span></div><div class="v">≈ $0.11</div><div class="s"><span class="t en">18 credits per review, at a directly-measured ~2 credits/node. On the $39 Pro plan (6,000 credits) that's about eleven cents a launch check.</span><span class="t vi">18 credit mỗi lần review, ở mức ~2 credit/node đo trực tiếp. Trên gói Pro $39 (6.000 credit), tức khoảng mười một cent mỗi lần kiểm ra mắt.</span></div></div>
+        <div class="rc"><div class="k"><span class="t en">What one catch is worth — est.</span><span class="t vi">Một lần bắt trúng đáng giá bao nhiêu — ước tính</span></div><div class="v">5–6 <span class="t en">figures</span><span class="t vi">chữ số</span></div><div class="s"><span class="t en">On my own product it flagged an uncapped API + bandwidth bill that a viral launch could run to five or six figures in 24 hours. Avoiding that once dwarfs a lifetime of run cost.</span><span class="t vi">Trên chính sản phẩm của tôi, nó cảnh báo một hóa đơn API + băng thông không giới hạn mà một lần ra mắt viral có thể đẩy lên năm–sáu chữ số trong 24 giờ. Tránh được một lần thôi đã lấn át cả đời chi phí vận hành.</span></div></div>
+        <div class="rc"><div class="k"><span class="t en">vs. how it's done now</span><span class="t vi">so với cách làm hiện nay</span></div><div class="v"><span class="t en">an hour, ×7</span><span class="t vi">một tiếng, ×7</span></div><div class="s"><span class="t en">A cross-functional launch review needs seven people in a room. This front-loads that into a 3-minute structured pass — the meeting starts from a gap map, not a blank agenda.</span><span class="t vi">Một buổi review ra mắt liên phòng ban cần bảy người trong một phòng. Cái này dồn việc đó thành một lượt quét có cấu trúc 3 phút — cuộc họp bắt đầu từ một bản đồ khoảng trống, không phải chương trình trống.</span></div></div>
+        <div class="rc"><div class="k"><span class="t en">The asymmetry</span><span class="t vi">Sự bất đối xứng</span></div><div class="v">~100,000×</div><div class="s"><span class="t en">Eleven cents to run; a single caught blocker worth tens of thousands. You don't need a precise ROI when the two numbers are five orders of magnitude apart.</span><span class="t vi">Mười một cent để chạy; một blocker bắt trúng đáng giá hàng chục nghìn đô. Bạn không cần một ROI chính xác khi hai con số cách nhau năm bậc độ lớn.</span></div></div>
+      </div>
+      <div class="note">
+        <span class="t en"><b>What I'm not claiming.</b> I can't measure “launches saved” without shipping bad
+          ones on purpose, so the value figure is an <em>estimate</em> and labelled as one. The only hard
+          number is the run cost — grounded in per-node billing I measured directly, not a list price. The
+          argument isn't a precise return; it's that the downside it guards against is enormous and the cost
+          to guard is a rounding error.</span>
+        <span class="t vi"><b>Điều tôi không tuyên bố.</b> Tôi không thể đo “số lần ra mắt được cứu” mà không cố
+          tình tung ra những bản tệ, nên con số giá trị là một <em>ước tính</em> và được ghi rõ như vậy. Con số
+          cứng duy nhất là chi phí chạy — dựa trên mức tính tiền theo từng node mà tôi đo trực tiếp, không phải
+          giá niêm yết. Luận điểm không phải một mức hoàn vốn chính xác; mà là mặt rủi ro nó canh chừng thì
+          khổng lồ, còn chi phí để canh chừng chỉ là sai số làm tròn.</span>
+      </div>
+    </section>
+
+    <!-- 07 · LIMITS -->
+    <section class="wrap" id="limits">
+      <div class="shead"><span class="n">08</span><h3 class="title"><span class="t en">What it is not</span><span class="t vi">Nó không phải là gì</span></h3></div>
+      <div class="limits">
+        <div class="lim"><h5><span class="t en">It's decision support, not sign-off</span><span class="t vi">Nó là hỗ trợ quyết định, không phải phê duyệt</span></h5><p><span class="t en">The committee surfaces the gaps
+          between owners; a human still decides. It's an instrument for finding blind spots, not an
+          oracle that predicts the launch.</span><span class="t vi">Hội đồng lôi ra các khoảng trống giữa những người phụ
+          trách; con người vẫn là người quyết. Nó là công cụ tìm điểm mù, không phải nhà tiên tri dự đoán kết
+          quả ra mắt.</span></p></div>
+        <div class="lim"><h5><span class="t en">Only as good as the brief</span><span class="t vi">Chỉ tốt ngang bản brief</span></h5><p><span class="t en">It reasons from what you paste. A brief that
+          hides a problem hides it from the committee too — though the “flag every silence” rule catches
+          far more than a human reviewer skimming.</span><span class="t vi">Nó lý luận từ những gì bạn dán vào. Một brief giấu
+          đi một vấn đề thì cũng giấu nó khỏi hội đồng — dù luật “gắn cờ mọi im lặng” bắt được nhiều hơn hẳn
+          một người review đọc lướt.</span></p></div>
+        <div class="lim"><h5><span class="t en">Not realtime</span><span class="t vi">Không thời gian thực</span></h5><p><span class="t en">~3 minutes per review, because ten agents run in
+          sequence on MindPal. This is a deliberation tool, and three minutes to weigh a launch is a bargain.</span><span class="t vi">~3
+          phút mỗi lần review, vì mười agent chạy tuần tự trên MindPal. Đây là công cụ để cân nhắc, và ba phút
+          để cân một lần ra mắt là quá hời.</span></p></div>
+        <div class="lim"><h5><span class="t en">Legal reasoning ≠ legal advice</span><span class="t vi">Lý luận pháp lý ≠ tư vấn pháp lý</span></h5><p><span class="t en">The Legal lens flags exposure to
+          investigate; it doesn't replace counsel. Its value is making sure the question gets <em>asked</em>
+          before launch, not answered definitively.</span><span class="t vi">Lăng kính Pháp lý gắn cờ rủi ro cần điều tra; nó
+          không thay luật sư. Giá trị của nó là đảm bảo câu hỏi được <em>đặt ra</em> trước khi ra mắt, chứ không
+          phải được trả lời dứt khoát.</span></p></div>
+      </div>
+    </section>
+
+    <!-- 08 · TRY -->
+    <section class="wrap" id="try">
+      <div class="shead"><span class="n">09</span><h3 class="title"><span class="t en">Try the live agent</span><span class="t vi">Dùng thử agent chạy thật</span></h3></div>
+      <p class="lede">
+        <span class="t en">Paste your own launch brief — or upload your launch doc — describing the current
+          state of your product across the seven functions, and the committee returns a readiness verdict in
+          about three minutes. It's live and public, built and hosted on MindPal.</span>
+        <span class="t vi">Dán brief ra mắt của chính bạn — hoặc tải tài liệu ra mắt lên — mô tả hiện trạng
+          sản phẩm của bạn trên cả bảy chức năng, và hội đồng trả về một phán quyết mức độ sẵn sàng trong
+          khoảng ba phút. Nó chạy thật và công khai, dựng và host trên MindPal.</span>
+      </p>
+      <div class="cta">
+        <a class="btn pri" href="https://workflow.getmindpal.com/launch-committee-HvKTXeIS3dgLYxxN" target="_blank" rel="noopener"><span class="t en">Open the Launch Committee →</span><span class="t vi">Mở Hội đồng Thẩm định Ra mắt →</span></a>
+        <a class="btn sec" href="#proof"><span class="t en">See what it caught on a real product ↑</span><span class="t vi">Xem nó bắt được gì trên một sản phẩm thật ↑</span></a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>
+        <span class="t en">A working multi-agent launch-readiness committee, built and hosted on MindPal ·
+          <a href="../index.html">← back to the portfolio</a></span>
+        <span class="t vi">Một hội đồng thẩm định ra mắt đa tác tử hoạt động thật, dựng và host trên MindPal ·
+          <a href="../index.html">← quay lại hồ sơ</a></span>
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    function setLang(l){
+      document.documentElement.setAttribute('data-lang', l);
+      document.documentElement.setAttribute('lang', l === 'vi' ? 'vi' : 'en');
+      try{ localStorage.setItem('day6lang', l); }catch(e){}
+      document.querySelectorAll('.langtog button').forEach(function(b){
+        b.classList.toggle('on', b.dataset.l === l);
+      });
+    }
+    (function(){
+      var saved;
+      try{ saved = localStorage.getItem('day6lang'); }catch(e){}
+      setLang(saved === 'vi' ? 'vi' : 'en');
+    })();
+  </script>
+
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/assets/comments.js" data-page="day6"></script>
+</body>
+</html>

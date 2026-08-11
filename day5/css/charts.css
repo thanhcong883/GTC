@@ -1,0 +1,113 @@
+/* charts.css
+   Charts, built in plain HTML so text never scales with an SVG viewBox:
+   the daily column chart, horizontal bar lists and the empty state. */
+
+.chartgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr));gap:14px}
+.cpad{padding:4px 18px 18px}
+.cols{display:flex;align-items:flex-end;gap:2px;height:clamp(130px,20vh,180px);border-bottom:1px solid var(--line)}
+.colw{flex:1 1 0;min-width:0;height:100%;display:flex;align-items:flex-end;position:relative}
+.col{width:100%;background:var(--brand);border-radius:4px 4px 0 0;min-height:2px;transition:background .12s}
+.col.zero{background:var(--line);border-radius:2px;height:2px!important}
+.colw:hover .col{background:var(--ink)}
+.colw .tip{width:auto;white-space:nowrap;bottom:calc(100% + 6px)}
+.colw:hover .tip,.colw:focus-visible .tip{opacity:1;visibility:visible}
+.xax{display:flex;gap:2px;margin-top:7px}
+.xax span{flex:1 1 0;min-width:0;font-family:var(--mono);font-size:.64rem;color:var(--faint);
+  text-align:center;white-space:nowrap;overflow:hidden}
+
+.hbars{display:flex;flex-direction:column;gap:13px}
+.hb .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
+.hb .nm{font-size:.83rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hb .vl{font-family:var(--mono);font-size:.79rem;color:var(--ink-2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.hb .tr{height:9px;background:var(--line-soft);border-radius:5px;overflow:hidden}
+.hb .fi{height:100%;background:var(--brand);border-radius:5px}
+.hb .sub{font-size:.73rem;color:var(--faint);margin-top:5px}
+
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  padding:32px 20px;gap:7px;min-height:clamp(150px,22vh,200px)}
+.empty .ic{width:36px;height:36px;border-radius:10px;background:var(--line-soft);
+  display:grid;place-items:center;color:var(--faint);margin-bottom:2px}
+.empty h3{font-size:.9rem;font-weight:600}
+.empty p{font-size:.79rem;color:var(--muted);max-width:34ch}
+.empty a{font-size:.79rem;color:var(--brand);font-weight:500;margin-top:4px}
+
+.note{display:flex;gap:10px;align-items:flex-start;background:var(--warn-soft);
+  border-left:2px solid var(--warn);border-radius:0 9px 9px 0;padding:11px 14px;
+  font-size:.79rem;color:var(--ink-2);line-height:1.55;margin-top:14px}
+.note b{color:var(--ink)}
+.fnote{margin-top:12px;font-size:.75rem;color:var(--faint)}
+.fnote a{color:var(--muted)}.fnote a:hover{color:var(--brand)}
+.pager{display:flex;justify-content:center;align-items:center;gap:5px;padding:13px}
+.pager button{width:29px;height:29px;border-radius:8px;font-size:.78rem;color:var(--muted);
+  font-family:var(--mono);display:grid;place-items:center}
+.pager button:hover{background:var(--line-soft);color:var(--ink)}
+.pager button[aria-current]{background:var(--brand);color:var(--on-brand)}
+.src{font-size:.71rem;font-weight:600;padding:4px 9px;border-radius:var(--r-s);
+  background:var(--src-bg);color:var(--good);white-space:nowrap}
+.src.mindie{background:var(--brand-soft);color:var(--brand-deep)}
+
+
+.colw .tip b{font-weight:600}
+
+/* plot frame: gridlines behind the columns, y labels outside them --------- */
+.plot{position:relative;padding-left:52px}
+.grid{position:absolute;inset:0 0 0 52px;pointer-events:none}
+.grid span{position:absolute;left:0;right:0;height:1px;background:var(--line-soft)}
+.grid span:first-child{background:var(--line)}
+.yax{position:absolute;left:0;top:0;bottom:0;width:46px;pointer-events:none}
+.yax span{position:absolute;right:0;transform:translateY(50%);font-family:var(--mono);
+  font-size:.66rem;color:var(--faint);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* x labels are positioned, never packed into equal cells that clip them */
+.xax{position:relative;height:16px;margin-top:8px;margin-left:52px}
+.xax span.xl{position:absolute;transform:translateX(-50%);font-family:var(--mono);
+  font-size:.66rem;color:var(--faint);white-space:nowrap}
+.xax span.xl-start{transform:none;left:0!important}
+.xax span.xl-end{transform:translateX(-100%)}
+
+/* stats line above the per-model chart */
+.mstats{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:12px;font-size:.79rem;color:var(--muted)}
+.mstats b{font-family:var(--mono);font-size:.95rem;font-weight:600;color:var(--ink);
+  font-variant-numeric:tabular-nums}
+
+/* ── motion ─────────────────────────────────────────────────────────────
+   Columns grow into place and keep their identity when a filter changes, so
+   the eye can follow which bar became which instead of re-reading the chart. */
+.col{transition:height .32s cubic-bezier(.2,.8,.3,1),background .16s}
+.colw{animation:colIn .34s cubic-bezier(.2,.8,.3,1) backwards;
+  animation-delay:calc(min(var(--i,0),40) * 12ms)}
+@keyframes colIn{from{opacity:0;transform:translateY(6px)}}
+.hb .fi{transition:width .4s cubic-bezier(.2,.8,.3,1)}
+.meter .fi{transition:width .4s cubic-bezier(.2,.8,.3,1),background .2s}
+
+/* Motion is an aid, never a requirement — honour the OS setting. */
+@media (prefers-reduced-motion: reduce){
+}
+
+/* ── annotations ────────────────────────────────────────────────────────
+   Each one answers a question the bare columns leave open: which day was the
+   peak, what is normal, which days broke, and why the sawtooth is there. */
+
+/* the average, so a column has something to be tall or short against */
+.meanline{position:absolute;left:0;right:0;height:0;border-top:1px dashed var(--faint);
+  opacity:.75;pointer-events:none}
+.meanline b{position:absolute;right:0;top:-16px;font-family:var(--mono);font-size:.64rem;
+  font-weight:600;color:var(--muted);background:var(--surface);padding:0 5px;border-radius:4px}
+
+
+/* the tallest column names itself instead of making you hunt for it */
+.peak{position:absolute;bottom:calc(100% + 22px);left:50%;transform:translateX(-50%);
+  z-index:3;pointer-events:none;animation:peakIn .3s ease-out .55s backwards}
+.peak b{display:block;font-family:var(--mono);font-size:.68rem;font-weight:700;
+  color:var(--on-brand);background:var(--ink);padding:3px 7px;border-radius:6px;white-space:nowrap}
+.peak i{position:absolute;left:50%;top:100%;transform:translateX(-50%);
+  border:5px solid transparent;border-top-color:var(--ink)}
+.col.ispeak{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--brand)}
+@keyframes peakIn{from{opacity:0;transform:translateX(-50%) translateY(5px)}}
+
+/* days that broke, marked under the axis rather than inside the bar */
+.failtick{position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);
+  width:5px;height:5px;border-radius:50%;background:var(--bad);z-index:2}
+.tipbad{color:var(--tip-bad)}
+
+.colw{position:relative}

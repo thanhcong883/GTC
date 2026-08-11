@@ -1,0 +1,56 @@
+/* run-detail.css
+   Run detail view only: the cost x-ray and the model simulator. */
+
+/* ════════ COST X-RAY ════════
+   A workflow diagram drawn to scale by spend instead of by topology.
+   Builders show you the shape of a run; this shows you the bill. */
+.backlink{display:inline-flex;align-items:center;gap:7px;font-size:.83rem;font-weight:500;
+  color:var(--muted);margin-bottom:14px}
+.backlink:hover{color:var(--brand)}
+
+.xray{display:flex;flex-direction:column}
+.xn{display:grid;grid-template-columns:minmax(150px,1.25fr) minmax(0,2fr) auto;
+  gap:clamp(10px,1.4vw,20px);align-items:center;padding:12px 18px;border-bottom:1px solid var(--line-soft)}
+.xn:last-of-type{border-bottom:0}
+.xn:hover{background:var(--hover)}
+.xn .lead{min-width:0}
+.xn .nm{font-size:.87rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xn .sub{font-size:.74rem;color:var(--muted);display:flex;align-items:center;gap:6px;margin-top:2px;flex-wrap:wrap}
+.xn .tag{font-size:.62rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  padding:2px 6px;border-radius:5px;background:var(--line-soft);color:var(--muted)}
+.xn .bar{height:22px;border-radius:5px;background:var(--brand);min-width:2px;position:relative}
+.xn .bar.zero{background:var(--line);height:4px;border-radius:2px}
+.xn .amt{font-family:var(--mono);font-size:.84rem;font-variant-numeric:tabular-nums;
+  text-align:right;white-space:nowrap}
+.xn .amt .pc{display:block;font-size:.7rem;color:var(--faint)}
+.xn .loopx{font-family:var(--mono);font-size:.68rem;color:var(--brand);
+  background:var(--brand-soft);padding:2px 6px;border-radius:5px}
+
+.xtot{display:grid;grid-template-columns:minmax(150px,1.25fr) minmax(0,2fr) auto;
+  gap:clamp(10px,1.4vw,20px);align-items:center;padding:13px 18px;border-top:1px solid var(--line)}
+.xtot .lb{font-size:.8rem;font-weight:600;color:var(--ink-2)}
+.xtot .amt{font-family:var(--mono);font-size:1rem;font-weight:600;text-align:right;
+  font-variant-numeric:tabular-nums}
+.xlegend{display:flex;gap:16px;flex-wrap:wrap;padding:0 18px 14px;font-size:.74rem;color:var(--muted)}
+.xlegend span{display:inline-flex;align-items:center;gap:7px}
+.xlegend i{width:16px;height:9px;border-radius:3px;flex:none}
+.xlegend i.solid{background:var(--brand)}
+
+/* ════════ COST SIMULATOR ════════ */
+.sim{width:100%;border-collapse:collapse;min-width:520px}
+.sim th{font-size:.65rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);text-align:left;padding:9px 18px;border-bottom:1px solid var(--line)}
+.sim th.num{text-align:right}
+.sim td{padding:12px 18px;border-bottom:1px solid var(--line-soft);font-size:.85rem}
+.sim tr:last-child td{border-bottom:0}
+.sim tr.now{background:var(--brand-soft)}
+.sim tr.now td:first-child{font-weight:600;color:var(--brand-deep)}
+.sim td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.sim .delta{font-family:var(--mono);font-size:.78rem;font-variant-numeric:tabular-nums}
+.sim .delta.up{color:var(--bad)} .sim .delta.down{color:var(--good)}
+
+
+/* burn-down forecast */
+.forecast{display:flex;gap:10px;align-items:flex-start;margin-top:12px;padding:11px 14px;
+  background:var(--brand-soft);border-radius:9px;font-size:.79rem;color:var(--ink-2);line-height:1.55}
+.forecast b{color:var(--brand-deep)}

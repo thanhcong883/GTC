@@ -1,0 +1,35 @@
+PROJECT KICKOFF — NORTHWIND LOGISTICS / RFP RESPONSE
+Attendees: Mai Tran (Client, VP Operations), Duc Le (Client, Finance),
+           Sarah Okonkwo (Vendor, Delivery Lead), Tom Rasmussen (Vendor, Solutions)
+Recorded: 14 March, 10:02–10:41
+
+Sarah opened by walking through the proposed three-phase rollout: discovery in
+April, a pilot at the Hai Phong depot in May, and a decision gate before any
+wider deployment. Mai confirmed the Hai Phong site is available for the pilot
+and that her operations team can allocate two coordinators part-time.
+
+Tom asked about the integration surface. Mai said the warehouse management
+system is a 2019 on-premise install and that any connector would have to run
+inside their network. She was clear this is a hard requirement, not a
+preference — nothing that moves inventory data outside the perimeter will pass
+their security review.
+
+On commercials, Duc said the finance committee has not met on this yet. He said
+we may consider a budget of up to $50,000 for the initial phase, but stressed
+that nothing is signed off until the committee reviews the pilot results in
+June. Sarah acknowledged that and said the proposal would be structured so the
+pilot can be scoped independently of the wider rollout.
+
+Mai raised a concern about the timeline. The depot runs a seasonal peak from
+mid-May through June, and she does not want the pilot competing with peak
+staffing. Sarah agreed to move the pilot window earlier, to the first two weeks
+of May, and to confirm that in writing.
+
+Duc asked whether training was included. Tom said onboarding for up to fifteen
+users is included in the base scope and that anything beyond that would be
+quoted separately.
+
+Action items: Sarah to send a revised schedule with the earlier pilot window by
+Friday. Tom to document the on-premise connector approach. Duc to bring the
+proposal to the finance committee after the pilot review in June. Mai to confirm
+the two coordinators by end of next week.

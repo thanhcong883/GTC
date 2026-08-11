@@ -1,0 +1,1868 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PAL Memory Compiler — memory and context architecture for long-running agents</title>
+<meta name="description" content="Memory is governed state; context is a view compiled for one step under a credit and latency budget. A typed memory IR, an authority linter, a reproducible build receipt — with a working compiler you can operate in the page.">
+<meta property="og:title" content="PAL Memory Compiler">
+<meta property="og:description" content="Compile the right memory. Prove what the agent remembered — and why.">
+<meta property="og:type" content="article">
+<meta name="theme-color" content="#f6f7fb">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧾</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23f9660e%22/><text x=%2250%22 y=%2268%22 text-anchor=%22middle%22 font-family=%22monospace%22 font-size=%2258%22 font-weight=%22700%22 fill=%22white%22>M</text></svg>">
+<style>
+@font-face{font-family:"IBM Plex Sans";src:url("./fonts/ibm-plex-sans-latin-ext.woff2") format("woff2");font-style:normal;font-weight:100 700;font-display:swap}
+@font-face{font-family:"IBM Plex Mono";src:url("./fonts/ibm-plex-mono-400-latin-ext.woff2") format("woff2");font-style:normal;font-weight:400;font-display:swap}
+@font-face{font-family:"IBM Plex Mono";src:url("./fonts/ibm-plex-mono-700-latin-ext.woff2") format("woff2");font-style:normal;font-weight:700;font-display:swap}
+:root{
+  --orange:#f9660e; --orange-soft:#ffe7d6; --orange-ink:#a94208;
+  --navy:#111a3e; --navy-soft:#5a6488; --navy-faint:#8b95b5;
+  --blue:#2f6fed; --blue-soft:#e2ecfd;
+  --amber:#b0771a; --amber-soft:#f7edda;
+  --red:#c64b3e; --red-soft:#f8e6e3;
+  --green:#1e9257; --green-soft:#e4f3ea;
+  --purple:#6e55d9; --purple-soft:#eeeafe;
+  --bg:#f6f7fb; --card:#fff; --surface-soft:#fbfcff; --surface-muted:#eceef4;
+  --border:#e7e9f2; --border-soft:#f0f2f8; --chart-grid:#eef0f7;
+  --ink-dark:#0f1730; --diag-text:#dfe4f0; --on-accent:#fff;
+  --shadow:0 18px 50px rgba(17,26,62,.12);
+  --shadow-sm:0 6px 20px rgba(17,26,62,.08);
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --sans:"IBM Plex Sans","Segoe UI",sans-serif;
+  --measure:70ch;
+}
+:root[data-theme="dark"]{
+  --orange:#ff8a46; --orange-soft:#41291d; --orange-ink:#ffb58b;
+  --navy:#f2f4ff; --navy-soft:#b8c0da; --navy-faint:#8792b2;
+  --blue:#82aaff; --blue-soft:#1c2b4c; --amber:#e8bd69; --amber-soft:#3b3020;
+  --red:#ff9387; --red-soft:#432421; --green:#7bd3a6; --green-soft:#1c382b;
+  --purple:#b5a5ff; --purple-soft:#2d2749;
+  --bg:#0d1224; --card:#151b30; --surface-soft:#12182c; --surface-muted:#242b40;
+  --border:#2b334c; --border-soft:#222a40; --chart-grid:#273049;
+  --ink-dark:#090d19; --diag-text:#dfe4f0; --on-accent:#fff;
+  --shadow:0 18px 50px rgba(0,0,0,.3); --shadow-sm:0 6px 20px rgba(0,0,0,.2)
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --orange:#ff8a46; --orange-soft:#41291d; --orange-ink:#ffb58b;
+    --navy:#f2f4ff; --navy-soft:#b8c0da; --navy-faint:#8792b2;
+    --blue:#82aaff; --blue-soft:#1c2b4c; --amber:#e8bd69; --amber-soft:#3b3020;
+    --red:#ff9387; --red-soft:#432421; --green:#7bd3a6; --green-soft:#1c382b;
+    --purple:#b5a5ff; --purple-soft:#2d2749;
+    --bg:#0d1224; --card:#151b30; --surface-soft:#12182c; --surface-muted:#242b40;
+    --border:#2b334c; --border-soft:#222a40; --chart-grid:#273049;
+    --ink-dark:#090d19; --diag-text:#dfe4f0; --on-accent:#fff;
+    --shadow:0 18px 50px rgba(0,0,0,.3); --shadow-sm:0 6px 20px rgba(0,0,0,.2)
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{font-family:var(--sans);
+  background:var(--bg);color:var(--navy);line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--orange);text-decoration:none}
+a:hover{text-decoration:underline}
+button{font:inherit}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+h1,h2,h3,h4{line-height:1.18;letter-spacing:-.018em;text-wrap:balance}
+p,ul,ol{max-width:var(--measure)}
+p{margin:0 0 14px}
+ul,ol{margin:0 0 16px 20px}
+li{margin-bottom:6px}
+code{font-family:var(--mono)}
+code.i{background:var(--border-soft);border:1px solid var(--border);border-radius:5px;
+  padding:1px 5px;font-size:.86em;color:var(--purple)}
+
+/* bilingual scaffolding: both versions stay in the DOM, matching earlier day pages */
+.t{display:contents}.lang-panel{display:block}
+.budget-old,.eval-old,.limits-old{display:none!important}
+html[data-lang="en"] .t.vi,html[data-lang="en"] .lang-panel.vi{display:none}
+html[data-lang="vi"] .t.en,html[data-lang="vi"] .lang-panel.en{display:none}
+.langtog{display:inline-flex;border:1px solid var(--border);border-radius:20px;overflow:hidden;background:var(--card)}
+.langtog button{min-width:42px;min-height:34px;border:0;background:transparent;color:var(--navy-soft);
+  font:700 10.5px var(--mono);letter-spacing:.04em;cursor:pointer;padding:6px 11px}
+.langtog button.on{background:var(--navy);color:var(--bg)}
+.rightgrp{display:inline-flex;align-items:center;gap:10px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* header */
+header.top{position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--bg) 93%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.bar{max-width:1500px;margin:0 auto;padding:11px 24px;display:flex;align-items:center;gap:16px}
+.back{font:600 12px var(--mono);color:var(--navy-soft);white-space:nowrap}
+.back:hover{color:var(--orange);text-decoration:none}
+.meta{flex:1;min-width:0;text-align:center}
+.meta span{display:block;font:700 9px var(--mono);letter-spacing:.15em;color:var(--orange)}
+.meta b{display:block;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.src{font:600 11.5px var(--mono);color:var(--navy-soft);border:1px solid var(--border);
+  background:var(--card);border-radius:99px;padding:6px 13px;white-space:nowrap;transition:.18s}
+.src:hover{border-color:var(--orange);color:var(--orange);text-decoration:none}
+@media(max-width:700px){.meta b{font-size:11.5px}.src{display:none}}
+
+/* shell */
+.shell{max-width:1500px;margin:0 auto;padding:0 24px;display:grid;
+  grid-template-columns:224px minmax(0,1fr);gap:36px}
+.toc{position:sticky;top:70px;align-self:start;max-height:calc(100vh - 92px);
+  overflow-y:auto;padding:28px 0 40px}
+.toc h4{font:700 9px var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--navy-faint);margin:0 0 10px}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc a{display:flex;gap:9px;margin-left:-9px;padding:6px 9px;border-left:2px solid transparent;
+  color:var(--navy-soft);font-size:12.5px;line-height:1.35}
+.toc a:hover,.toc a.on{background:var(--card);color:var(--navy);border-left-color:var(--orange);
+  text-decoration:none;box-shadow:var(--shadow-sm)}
+.toc a.on{font-weight:700}
+.toc .tn{width:15px;flex:none;font:700 10px var(--mono);color:var(--navy-faint)}
+.toc-mobile{display:none}
+.doc{min-width:0;max-width:1120px;padding-bottom:90px}
+
+/* hero */
+.hero{padding:62px 0 30px}
+.kicker{font:700 11px var(--mono);letter-spacing:.15em;text-transform:uppercase;
+  color:var(--orange);margin-bottom:16px}
+.hero h1{font-size:clamp(30px,4.6vw,54px);letter-spacing:-.035em;max-width:19ch;margin-bottom:20px}
+.lede{font-size:17.5px;color:var(--navy-soft);max-width:66ch}
+.lede b{color:var(--navy);font-weight:700}
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:32px}
+.facts article{border:1px solid var(--border);background:var(--card);border-radius:12px;
+  padding:14px;box-shadow:var(--shadow-sm)}
+.facts span{display:block;font:700 8.5px var(--mono);letter-spacing:.09em;color:var(--navy-faint);
+  text-transform:uppercase}
+.facts b{display:block;margin-top:6px;font-size:25px;letter-spacing:-.02em}
+.facts small{display:block;color:var(--navy-soft);font-size:10.5px;margin-top:2px}
+.facts .proof-link{display:inline;color:var(--orange);font:700 9px var(--mono);margin-left:5px;text-decoration:underline}
+@media(max-width:760px){.facts{grid-template-columns:repeat(2,1fr)}}
+
+/* sections */
+section{padding-top:52px;scroll-margin-top:76px}
+section>h2,section>.lang-panel>h2{padding-top:18px;border-top:1px solid var(--border);font-size:clamp(23px,2.7vw,32px);
+  margin-bottom:14px}
+section>h2 .num,section>.lang-panel>h2 .num{display:block;font:700 10.5px var(--mono);letter-spacing:.15em;
+  color:var(--orange);margin-bottom:8px;text-transform:uppercase}
+h3{font-size:17.5px;margin:28px 0 9px}
+h4{font-size:14px;margin:20px 0 7px}
+
+/* evidence labels */
+.ev{display:inline-block;font:700 8.5px var(--mono);letter-spacing:.1em;padding:2px 6px;
+  border-radius:4px;vertical-align:middle;margin-left:6px;text-transform:uppercase}
+.ev.observed{background:var(--blue-soft);color:var(--blue)}
+.ev.verified{background:var(--purple-soft);color:var(--purple)}
+.ev.measured{background:var(--green-soft);color:var(--green)}
+.ev.derived{background:var(--amber-soft);color:var(--amber)}
+.ev.proposed{background:var(--orange-soft);color:var(--orange-ink)}
+.ev.oos{background:var(--surface-muted);color:var(--navy-soft)}
+
+/* diagnostic block — the page's signature device */
+.diag{background:var(--ink-dark);color:var(--diag-text);border-radius:13px;padding:19px 21px;margin:20px 0;
+  font:12.5px/1.62 var(--mono);overflow-x:auto;box-shadow:var(--shadow)}
+.diag .e{color:#ff8f6b;font-weight:700}
+.diag .w{color:#e8bf6a;font-weight:700}
+.diag .ok{color:#79d3a5;font-weight:700}
+.diag .g{color:#7f8db3}
+.diag .c{color:#9fb4e8}
+.diag .u{color:#ff8f6b}
+.diag b{color:var(--on-accent)}
+
+/* boxes */
+.box{border:1px solid var(--border);border-left:1px solid var(--navy-faint);background:var(--card);
+  border-radius:11px;padding:16px 19px;margin:20px 0;box-shadow:var(--shadow-sm)}
+.box .lab{display:block;font:700 9px var(--mono);letter-spacing:.12em;text-transform:uppercase;
+  color:var(--navy-faint);margin-bottom:7px}
+.box p{margin:0;max-width:none;color:var(--navy-soft)}
+.box p+p{margin-top:10px}
+.box.key{border-left-color:var(--orange);background:linear-gradient(180deg,var(--orange-soft),var(--card) 60%)}
+.box.key .lab{color:var(--orange)}
+.box.warn{border-left-color:var(--amber)}.box.warn .lab{color:var(--amber)}
+.box.stop{border-left-color:var(--red)}.box.stop .lab{color:var(--red)}
+.box.good{border-left-color:var(--green)}.box.good .lab{color:var(--green)}
+
+/* tables */
+.tw{overflow-x:auto;margin:20px 0;border:1px solid var(--border);border-radius:13px;
+  background:var(--card);box-shadow:var(--shadow-sm)}
+table{width:100%;min-width:640px;border-collapse:collapse;font-size:13px}
+caption{text-align:left;padding:14px 18px 6px;color:var(--navy-soft);font-size:11.5px}
+th,td{padding:10px 14px;border-bottom:1px solid var(--border-soft);text-align:left;vertical-align:top}
+th{border-bottom-color:var(--border);color:var(--navy-faint);font:700 9px var(--mono);
+  letter-spacing:.08em;text-transform:uppercase}
+tbody tr:last-child td{border-bottom:0}
+td code{font-size:11.5px}
+td b{display:block}
+td small{display:block;color:var(--navy-faint);font:10px var(--mono)}
+.num{text-align:right;font-family:var(--mono);white-space:nowrap}
+
+.tag{display:inline-block;padding:3px 8px;border-radius:20px;font:700 9px var(--mono);white-space:nowrap}
+.tag.ok{color:var(--green);background:var(--green-soft)}
+.tag.warn{color:var(--amber);background:var(--amber-soft)}
+.tag.stop{color:var(--red);background:var(--red-soft)}
+.tag.info{color:var(--blue);background:var(--blue-soft)}
+.tag.mut{color:var(--navy-soft);background:var(--surface-muted)}
+
+/* workbench */
+.wb{margin:26px 0;border:1px solid var(--border);border-radius:17px;background:var(--card);
+  box-shadow:var(--shadow);overflow:hidden}
+.wb-head{padding:15px 19px;border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,var(--surface-soft),var(--card))}
+.wb-head span{font:700 9px var(--mono);letter-spacing:.14em;color:var(--orange)}
+.wb-head b{display:block;font-size:16px;margin-top:3px}
+.wb-head p{margin:5px 0 0;font-size:12.5px;color:var(--navy-soft);max-width:74ch}
+.ctrls{display:flex;flex-wrap:wrap;gap:16px;padding:14px 19px;border-bottom:1px solid var(--border);
+  background:var(--surface-soft)}
+.cg{display:flex;flex-direction:column;gap:6px}
+.control-label{font:700 8.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--navy-faint)}
+.seg{display:flex;gap:0;border:1px solid var(--border);border-radius:9px;overflow:hidden;background:var(--card)}
+.seg button{border:0;background:var(--card);color:var(--navy-soft);padding:7px 12px;
+  font:600 11.5px var(--mono);cursor:pointer;border-right:1px solid var(--border);transition:.15s}
+.seg button:last-child{border-right:0}
+.seg button:hover:not(.on){background:var(--border-soft);color:var(--navy)}
+.seg button.on{background:var(--navy);color:var(--bg)}
+.seg button.on.danger{background:var(--red)}
+.btn{border:1px solid var(--border);background:var(--card);color:var(--navy);border-radius:9px;
+  padding:8px 14px;font:600 12px var(--mono);cursor:pointer;transition:.15s}
+.btn:hover:not(:disabled){border-color:var(--orange);color:var(--orange)}
+.btn.pri{background:var(--navy);color:var(--bg);border-color:var(--navy)}
+.btn.pri:hover:not(:disabled){background:var(--orange);border-color:var(--orange);color:var(--on-accent)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+.metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--border);
+  border-bottom:1px solid var(--border)}
+.metrics div{background:var(--card);padding:11px 13px}
+.metrics span{display:block;font:700 8px var(--mono);letter-spacing:.08em;color:var(--navy-faint);
+  text-transform:uppercase}
+.metrics b{display:block;font-size:17px;margin-top:3px;font-family:var(--mono);letter-spacing:-.02em}
+.metrics b.bad{color:var(--red)}.metrics b.good{color:var(--green)}
+@media(max-width:900px){.metrics{grid-template-columns:repeat(3,1fr)}}
+
+.panes{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr) minmax(0,1fr)}
+.pane{border-right:1px solid var(--border);min-height:430px;max-height:620px;overflow-y:auto}
+.pane:last-child{border-right:0}
+.pane>h5{position:sticky;top:0;background:var(--card);padding:11px 15px;border-bottom:1px solid var(--border);
+  font:700 9px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--navy-faint);z-index:2}
+.pane .body{padding:13px 15px}
+@media(max-width:1080px){.panes{grid-template-columns:1fr}.pane{border-right:0;
+  border-bottom:1px solid var(--border);max-height:none;min-height:0}}
+
+.rec{border:1px solid var(--border);border-radius:9px;padding:9px 11px;margin-bottom:8px;
+  background:var(--card);font-size:11.5px;transition:.15s}
+.rec.pinned{border-left:1px solid var(--orange)}
+.rec.out{opacity:.55;background:var(--surface-soft)}
+.rec.bad{border-color:var(--red);background:var(--red-soft)}
+.rec .rh{display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin-bottom:4px}
+.rec .rid{font:700 10.5px var(--mono);color:var(--navy)}
+.rec .rc{color:var(--navy-soft);line-height:1.5}
+.rec .rm{margin-top:5px;font:9.5px var(--mono);color:var(--navy-faint);display:flex;flex-wrap:wrap;gap:7px}
+.rec button.srcmap{border:0;background:none;color:var(--blue);font:700 9.5px var(--mono);
+  cursor:pointer;padding:0;text-decoration:underline}
+.empty{color:var(--navy-faint);font-size:12px;font-style:italic;padding:8px 0}
+.source-detail{margin:10px;padding:12px;border:1px solid var(--rule);background:var(--surface-soft);font:11px/1.65 var(--mono);color:var(--ink)}
+.source-detail[hidden]{display:none}
+
+pre.ctx{background:var(--ink-dark);color:var(--diag-text);border-radius:9px;padding:13px 15px;
+  font:11.5px/1.6 var(--mono);white-space:pre-wrap;word-break:break-word;overflow-x:auto}
+pre.ctx .h{color:#7f8db3}
+pre.json{background:var(--border-soft);border:1px solid var(--border);border-radius:9px;
+  padding:12px 14px;font:11px/1.55 var(--mono);overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+
+/* charts */
+.fig{background:var(--card);border:1px solid var(--border);border-radius:17px;
+  box-shadow:var(--shadow-sm);padding:20px;margin:22px 0;overflow-x:auto}
+.fig figcaption{font-size:12px;color:var(--navy-soft);margin-top:12px;max-width:none}
+svg.chart{display:block;min-width:600px;width:100%;height:auto}
+
+.await{border:1px dashed var(--border);border-radius:13px;padding:26px;text-align:center;
+  color:var(--navy-faint);font:600 12px var(--mono);background:var(--surface-soft)}
+
+footer{margin-top:60px;padding-top:22px;border-top:2px solid var(--navy);display:flex;
+  flex-wrap:wrap;gap:14px;justify-content:space-between;color:var(--navy-faint);font:11px var(--mono)}
+.links{display:flex;flex-wrap:wrap;gap:9px;margin:18px 0}
+.links a{border:1px solid var(--border);border-radius:20px;background:var(--card);
+  padding:8px 14px;color:var(--navy-soft);font:600 11.5px var(--mono)}
+.links a:hover{border-color:var(--orange);color:var(--orange);text-decoration:none}
+
+@media(max-width:960px){
+  .shell{grid-template-columns:1fr;gap:0}
+  .toc{display:none}
+  .toc-mobile{display:block;position:sticky;top:52px;z-index:30;background:var(--bg);
+    padding:10px 0;border-bottom:1px solid var(--border)}
+  .toc-mobile summary{font:700 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;
+    color:var(--orange);cursor:pointer;padding:6px 0}
+  .toc-mobile ol{list-style:none;margin:8px 0 0;padding:0;columns:2;font-size:12px}
+  .toc-mobile a{color:var(--navy-soft);display:block;padding:4px 0}
+  section{scroll-margin-top:118px}
+}
+@media(max-width:700px){.seg button,.btn,.langtog button{min-height:44px}.bar{padding-inline:14px}.shell{padding-inline:16px}}
+</style>
+</head>
+<body>
+<!--
+THESIS: Memory is governed state; context is a view compiled for one step. Refuses
+the category default of "agent memory = vector database + summarize when full".
+OWN-WORLD: The site's orange/navy token system, IBM Plex Sans + IBM Plex Mono,
+rendered as a compiler's own output: rustc-style diagnostics on near-black, typed
+record cards, a build receipt as the load-bearing object.
+STORY: The visitor sees a hedged proposal compiled into an approved constraint,
+turns the linter on, watches it refuse with a named missing authority event, and
+understands that summary drift is a type error.
+FIRST VIEWPORT: Kicker, thesis headline at 54px, lede, then four measured facts.
+The workbench sits second, not buried at the end.
+FORM: Compiler diagnostic report. Structure pinned by the brief, not rolled —
+the metaphor already generates the type system, linter, optimizer and receipt.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+-->
+
+<header class="top">
+  <div class="bar">
+    <a class="back" href="/"><span class="t en">← Home</span><span class="t vi">← Trang chủ</span></a>
+    <div class="meta">
+      <span><span class="t en">Agent Systems</span><span class="t vi">Hệ thống Agent</span></span>
+      <b>PAL Memory Compiler</b>
+    </div>
+    <div class="rightgrp">
+      <div class="langtog" role="group" aria-label="Language / Ngôn ngữ">
+        <button type="button" data-lang-choice="en" class="on" aria-pressed="true">EN</button>
+        <button type="button" data-lang-choice="vi" aria-pressed="false">VI</button>
+      </div>
+      <a class="src" href="#compiler"><span class="t en">↓ Open the compiler</span><span class="t vi">↓ Mở compiler</span></a>
+    </div>
+  </div>
+</header>
+<p class="sr-only" id="langStatus" aria-live="polite"></p>
+
+<div class="shell">
+  <nav class="toc" aria-label="Contents">
+    <h4><span class="t en">Contents</span><span class="t vi">Mục lục</span></h4>
+    <ol id="tocList">
+      <li><a href="#thesis"><span class="tn">01</span><span class="t en">Thesis and constraints</span><span class="t vi">Luận điểm và ràng buộc</span></a></li>
+      <li><a href="#compiler"><span class="tn">02</span><span class="t en">The compiler</span><span class="t vi">Compiler</span></a></li>
+      <li><a href="#taxonomy"><span class="tn">03</span><span class="t en">Memory architecture</span><span class="t vi">Kiến trúc memory</span></a></li>
+      <li><a href="#path"><span class="tn">04</span><span class="t en">Write and compile path</span><span class="t vi">Đường ghi và biên dịch</span></a></li>
+      <li><a href="#policies"><span class="tn">05</span><span class="t en">Lifecycle policies</span><span class="t vi">Chính sách vòng đời</span></a></li>
+      <li><a href="#types"><span class="tn">06</span><span class="t en">Type system</span><span class="t vi">Hệ kiểu</span></a></li>
+      <li><a href="#cache"><span class="tn">07</span><span class="t en">Cache and deletion</span><span class="t vi">Cache và xóa dữ liệu</span></a></li>
+      <li><a href="#budget"><span class="tn">08</span><span class="t en">Overhead budget</span><span class="t vi">Ngân sách overhead</span></a></li>
+      <li><a href="#eval"><span class="tn">09</span><span class="t en">Evaluation</span><span class="t vi">Đánh giá</span></a></li>
+      <li><a href="#limits"><span class="tn">10</span><span class="t en">Limitations</span><span class="t vi">Giới hạn</span></a></li>
+    </ol>
+  </nav>
+
+  <main class="doc">
+    <details class="toc-mobile"><summary><span class="t en">Contents</span><span class="t vi">Mục lục</span></summary>
+      <ol>
+        <li><a href="#thesis">01 <span class="t en">Thesis</span><span class="t vi">Luận điểm</span></a></li><li><a href="#compiler">02 Compiler</a></li>
+        <li><a href="#taxonomy">03 <span class="t en">Architecture</span><span class="t vi">Kiến trúc</span></a></li><li><a href="#path">04 <span class="t en">Compile path</span><span class="t vi">Đường biên dịch</span></a></li>
+        <li><a href="#policies">05 <span class="t en">Policies</span><span class="t vi">Chính sách</span></a></li><li><a href="#types">06 <span class="t en">Type system</span><span class="t vi">Hệ kiểu</span></a></li>
+        <li><a href="#cache">07 Cache</a></li><li><a href="#budget">08 <span class="t en">Budget</span><span class="t vi">Ngân sách</span></a></li>
+        <li><a href="#eval">09 <span class="t en">Evaluation</span><span class="t vi">Đánh giá</span></a></li><li><a href="#limits">10 <span class="t en">Limitations</span><span class="t vi">Giới hạn</span></a></li>
+      </ol>
+    </details>
+
+    <div class="hero">
+      <p class="kicker"><span class="t en">Memory &amp; context architecture for long-running agents</span><span class="t vi">Kiến trúc memory &amp; context cho agent chạy dài hạn</span></p>
+      <h1><span class="t en">The agent didn't forget. Nobody decided what it should remember.</span><span class="t vi">Agent không quên. Chưa ai quyết định nó nên nhớ điều gì.</span></h1>
+      <p class="lede"><span class="t en">An agent that runs for days does not fail because storage ran out. It fails because
+        it can no longer tell which of the things it knows is still true — and because the thing that
+        assembles its context has no opinion about that. This is a design for the missing component:
+        <b>memory is governed state, and context is a view compiled for one step</b>, under a credit
+        and latency budget. The compiler below is real and runs in this page.</span><span class="t vi">Một agent chạy nhiều ngày không thất bại vì hết chỗ lưu. Nó thất bại vì không còn phân biệt được điều nào nó biết vẫn còn đúng — và vì thành phần lắp ráp context không có chính sách để phán quyết. Đây là thiết kế cho thành phần còn thiếu: <b>memory là trạng thái dài hạn có quản trị; context là một working set được biên dịch riêng cho từng bước chạy</b>, dưới ngân sách credit và latency. Compiler bên dưới chạy thật ngay trên trang này.</span></p>
+      <div class="facts">
+        <article><span><span class="t en">Governed records kept</span><span class="t vi">Record có quản trị được giữ</span></span><b>0<small><span class="t en">of 3, recency assembler at step 200</span><span class="t vi">trên 3, assembler theo recency ở bước 200</span> <span class="ev verified">Verified</span><a class="proof-link" href="#eval"><span class="t en">proof ↘</span><span class="t vi">bằng chứng ↘</span></a></small></b></article>
+        <article><span><span class="t en">Promotion observed</span><span class="t vi">Promotion quan sát được</span></span><b>0<small><span class="t en">of 40 chains, real model</span><span class="t vi">trên 40 chain, model thật</span> <span class="ev measured">Measured</span><a class="proof-link" href="/day19/eval/drift/METHOD.md"><span class="t en">method ↗</span><span class="t vi">phương pháp ↗</span></a></small></b></article>
+        <article><span><span class="t en">Constraint dropped</span><span class="t vi">Constraint bị bỏ sót</span></span><b>35%<small><span class="t en">of chains, first summary</span><span class="t vi">số chain, ngay summary đầu</span> <span class="ev measured">Measured</span><a class="proof-link" href="/day19/eval/drift/results_neutral.json"><span class="t en">result ↗</span><span class="t vi">kết quả ↗</span></a></small></b></article>
+        <article><span><span class="t en">Experiment cost</span><span class="t vi">Chi phí thí nghiệm</span></span><b>$0.012<small>120 calls <span class="ev derived">Derived</span><a class="proof-link" href="/day19/eval/drift/METHOD.md#cost"><span class="t en">cost ↗</span><span class="t vi">chi phí ↗</span></a></small></b></article>
+      </div>
+    </div>
+
+    <section id="thesis">
+      <div class="lang-panel en">
+      <h2><span class="num">01</span>Memory is governed state. Context is a compiled view.</h2>
+      <p>Three words get used interchangeably and should not be. <b>History</b> is the raw record of what
+        happened. <b>Memory</b> is the curated, versioned state derived from it. <b>Context</b> is the
+        much smaller thing you hand a model for one step. A vector database is a retrieval mechanism,
+        not a memory architecture, and chat history is one input to memory, not memory itself.</p>
+      <p>Once those are separate, the interesting question stops being <em>"how do I store this"</em> and
+        becomes <em>"who is allowed to say this is true, and is it still true now"</em>. That is a
+        governance question, and it is why this design is shaped like a compiler rather than a database:
+        a compiler has a type system, refuses to build when types don't check, and emits a receipt of
+        what it did.</p>
+
+      <h3>Three constraints that are specific to PAL</h3>
+      <p>A memory architecture that is correct in the abstract can still be unshippable here. Three
+        properties of the platform decide the design:</p>
+      <div class="tw"><table>
+        <thead><tr><th>Constraint</th><th>Why it changes the design</th></tr></thead>
+        <tbody>
+        <tr><td><b>Credit coupling</b><small title="Product constraint supplied in the brief; validate against PAL telemetry">design input</small></td>
+          <td>Memory operations are billed in the same currency as the user's work. A memory writer that
+            classifies every event, a reranker on every step, a summarizer at every checkpoint — each is
+            an LLM call competing with the thing the customer actually asked for. A design that is
+            theoretically correct and eats the contribution margin is not a feature.</td></tr>
+        <tr><td><b>Sequential execution</b><small title="Product constraint supplied in the brief; validate against PAL telemetry">design input</small></td>
+          <td>Nodes run one at a time, so every millisecond of context assembly lands on the critical path.
+            There is no parallelism to hide it behind. This is why the cache below is versioned per
+            namespace rather than globally, and why compilation happens at memory-aware boundaries
+            rather than at every node.</td></tr>
+        <tr><td><b>Free-tier first impressions</b><small title="Product constraint supplied in the brief; validate against PAL telemetry">design input</small></td>
+          <td>The cheapest memory mode is the one running while a new user is deciding whether the product
+            works. So the cheap mode cannot be "no memory" — it has to be the mode that still guarantees
+            approvals and constraints survive, and drops only the expensive parts.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Three failures worth separating</h3>
+      <p>These get collapsed into "context rot", which then means everything and therefore nothing:</p>
+      <div class="tw"><table>
+        <thead><tr><th>Name</th><th>What it is</th><th>What fixes it</th></tr></thead>
+        <tbody>
+        <tr><td><b>Context-length degradation</b></td><td>The model gets worse as the prompt gets longer, independent of content.</td><td>Send less. Compile a working set instead of appending history.</td></tr>
+        <tr><td><b>Memory rot</b></td><td>Stored memory goes stale, contradicts itself, or is corrupted by a summary.</td><td>Versioning, expiry, supersession, provenance, authority.</td></tr>
+        <tr><td><b>Compiled-context failure</b></td><td>Memory is correct, but the assembler picked or packed the wrong subset.</td><td>Deterministic ordered selection, a lint pass, and a receipt you can audit.</td></tr>
+        </tbody>
+      </table></div>
+      <p>The rest of this document is mostly about the third, because it is the one nobody builds a
+        component for.</p>
+      </div>
+      <div class="lang-panel vi">
+        <h2><span class="num">01</span>Memory là trạng thái có quản trị. Context là một view được biên dịch.</h2>
+        <p>Ba khái niệm thường bị dùng lẫn lộn. <b>History</b> là bản ghi thô của những gì đã xảy ra. <b>Memory</b> là trạng thái đã được tuyển chọn, chuẩn hóa và version hóa từ history. <b>Context</b> là phần nhỏ hơn nhiều được đưa vào model cho đúng một bước suy luận. Vector database chỉ là một cơ chế retrieval; chat history chỉ là một nguồn đầu vào của memory.</p>
+        <p>Khi tách ba lớp này, câu hỏi không còn là <em>“lưu thế nào?”</em> mà trở thành <em>“ai có quyền nói điều này là đúng, và nó còn đúng ở thời điểm hiện tại không?”</em>. Đó là bài toán governance. Vì vậy thiết kế có hình dạng của compiler: có hệ kiểu, từ chối build khi type không hợp lệ và phát hành receipt giải thích chính xác những gì đã làm.</p>
+
+        <h3>Ba ràng buộc của PAL định hình thiết kế</h3>
+        <p>Một kiến trúc memory đúng về lý thuyết vẫn có thể không ship được trên PAL. Ba điều kiện dưới đây là <b>design inputs từ brief</b>, chưa phải telemetry độc lập:</p>
+        <div class="tw"><table>
+          <thead><tr><th>Ràng buộc</th><th>Ảnh hưởng tới thiết kế</th></tr></thead><tbody>
+          <tr><td><b>Credit coupling</b><small>design input</small></td><td>Memory operations dùng cùng loại credit với công việc người dùng. Writer phân loại mọi event, reranker ở mọi bước hay summarizer tại mọi checkpoint đều cạnh tranh ngân sách với task chính. Một thiết kế đúng nhưng phá contribution margin không phải là tính năng.</td></tr>
+          <tr><td><b>Thực thi tuần tự</b><small>design input</small></td><td>Mọi millisecond context assembly trên memory-aware boundary đều nằm trên critical path. Vì vậy compilation chỉ chạy tại boundary, packet được tái sử dụng nếu dependency fingerprint không đổi, và global capsule được tách khỏi local overlay.</td></tr>
+          <tr><td><b>Ấn tượng đầu ở free tier</b><small>design input</small></td><td>Mode rẻ nhất xuất hiện đúng lúc người mới đánh giá sản phẩm. Nó không thể là “tắt memory”; nó vẫn phải đảm bảo approval và constraint sống sót, chỉ bỏ các lớp retrieval đắt tiền.</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>Ba failure mode cần gọi đúng tên</h3>
+        <p>Gộp tất cả vào “context rot” khiến thuật ngữ này mất khả năng chẩn đoán:</p>
+        <div class="tw"><table>
+          <thead><tr><th>Tên</th><th>Định nghĩa</th><th>Cơ chế xử lý</th></tr></thead><tbody>
+          <tr><td><b>Context-length degradation</b></td><td>Model suy giảm khi prompt dài hơn, độc lập với nội dung.</td><td>Gửi ít hơn; compile working set thay vì nối history.</td></tr>
+          <tr><td><b>Memory rot</b></td><td>Memory đã lưu trở nên cũ, mâu thuẫn hoặc bị summary làm sai.</td><td>Versioning, expiry, supersession, provenance và authority.</td></tr>
+          <tr><td><b>Compiled-context failure</b></td><td>Memory đúng nhưng assembler chọn hoặc đóng gói sai tập con.</td><td>Ordered selection, lint pass và receipt có thể audit.</td></tr>
+          </tbody>
+        </table></div>
+        <p>Phần còn lại tập trung chủ yếu vào failure mode thứ ba, vì đây là thành phần hiếm khi được xây thành một hệ thống riêng.</p>
+      </div>
+    </section>
+
+    <section id="compiler">
+      <h2 id="compilerTitle"><span class="num">02</span><span class="t en">The compiler, running</span><span class="t vi">Compiler đang chạy</span></h2>
+      <p><span class="t en">This is not a mock. The engine below implements the ordered pipeline described in section 4,
+        over an authored fixture memory store, and every number in the panels is computed by it. Change
+        a control and it recompiles.</span><span class="t vi">Đây không phải mockup. Engine bên dưới thực thi ordered pipeline ở phần 4 trên một fixture memory store được công bố; mọi con số trong panel đều do engine tính. Thay đổi một control và context sẽ được compile lại.</span></p>
+
+      <div class="wb" role="region" aria-labelledby="compilerTitle">
+        <div class="wb-head">
+          <span><span class="t en">Interactive · deterministic selection · no network</span><span class="t vi">Tương tác · selection tất định · không dùng mạng</span></span>
+          <b>Context Compiler</b>
+          <p><span class="t en">Pick a scenario, set how long the agent has been running, choose an optimization level, and
+            decide whether the linter runs. Watch what reaches the model — and what gets refused.</span><span class="t vi">Chọn scenario, độ dài trajectory, optimization level và trạng thái linter. Quan sát record nào tới được model — và record nào bị từ chối.</span></p>
+        </div>
+
+        <div class="ctrls">
+          <div class="cg"><span class="control-label" id="scnLabel"><span class="t en">Scenario</span><span class="t vi">Tình huống</span></span>
+            <div class="seg" id="scn" role="group" aria-labelledby="scnLabel">
+              <button data-act="scn" data-arg="A" class="on">A · $50,000</button>
+              <button data-act="scn" data-arg="B"><span class="t en">B · supersession</span><span class="t vi">B · thay thế</span></button>
+              <button data-act="scn" data-arg="C"><span class="t en">C · hard delete</span><span class="t vi">C · xóa vĩnh viễn</span></button>
+            </div>
+          </div>
+          <div class="cg"><span class="control-label" id="stpLabel"><span class="t en">Steps run</span><span class="t vi">Số bước đã chạy</span></span>
+            <div class="seg" id="stp" role="group" aria-labelledby="stpLabel">
+              <button data-act="step" data-arg="10" class="on">10</button>
+              <button data-act="step" data-arg="50">50</button>
+              <button data-act="step" data-arg="200">200</button>
+            </div>
+          </div>
+          <div class="cg"><span class="control-label" id="lvlLabel"><span class="t en">Optimization</span><span class="t vi">Mức tối ưu</span></span>
+            <div class="seg" id="lvl" role="group" aria-labelledby="lvlLabel">
+              <button data-act="lvl" data-arg="naive">naive</button>
+              <button data-act="lvl" data-arg="O0">-O0</button>
+              <button data-act="lvl" data-arg="O2" class="on">-O2</button>
+              <button data-act="lvl" data-arg="O3">-O3</button>
+            </div>
+          </div>
+          <div class="cg"><span class="control-label" id="lntLabel">Linter</span>
+            <div class="seg" id="lnt" role="group" aria-labelledby="lntLabel">
+              <button data-act="lint" data-arg="on" class="on"><span class="t en">on</span><span class="t vi">bật</span></button>
+              <button data-act="lint" data-arg="off"><span class="t en">off</span><span class="t vi">tắt</span></button>
+            </div>
+          </div>
+          <div class="cg"><span class="control-label"><span class="t en">Action</span><span class="t vi">Thao tác</span></span>
+            <button class="btn pri" data-act="delete" id="delBtn"><span class="t en">Request hard delete</span><span class="t vi">Yêu cầu xóa vĩnh viễn</span></button>
+          </div>
+        </div>
+
+        <div class="metrics" id="metrics" aria-live="polite"></div>
+
+        <div class="panes">
+          <div class="pane"><h5><span class="t en">Memory store</span><span class="t vi">Kho memory</span></h5><div class="body" id="paneStore"></div></div>
+          <div class="pane"><h5><span class="t en">Compiled context</span><span class="t vi">Context đã biên dịch</span></h5><div class="body" id="paneCtx" aria-live="polite"></div></div>
+          <div class="pane"><h5>CompileReceipt</h5><div class="body" id="paneRcpt"></div><div class="source-detail" id="sourceDetail" tabindex="-1" hidden aria-live="polite"></div></div>
+        </div>
+      </div>
+
+      <div id="scenarioNote" aria-live="polite"></div>
+    </section>
+
+    <section id="taxonomy">
+      <div class="lang-panel en">
+      <h2><span class="num">03</span>What gets remembered, and as what</h2>
+      <p>Not every model output becomes a fact. The write path classifies into namespaces that differ in
+        who may write them, how long they live, and whether they may ever be compiled as an active
+        constraint.</p>
+      <div class="tw"><table>
+        <caption>Namespaces. The split is by governance, not by data type — that is the whole point.</caption>
+        <thead><tr><th>Namespace</th><th>Holds</th><th>Written by</th><th>Compiled as</th></tr></thead>
+        <tbody>
+        <tr><td><code>approvals</code></td><td>Decisions with an authorizing event</td><td>User or policy only</td><td><span class="tag ok">Pinned</span></td></tr>
+        <tr><td><code>constraints</code></td><td>Standing rules the work must satisfy</td><td>User or policy only</td><td><span class="tag ok">Pinned</span></td></tr>
+        <tr><td><code>artifacts</code></td><td>References, checksums, locations — never file bodies</td><td>Tools</td><td><span class="tag info">Retrieved</span></td></tr>
+        <tr><td><code>episodic</code></td><td>What happened: attempts, failures, observations</td><td>Model or tools</td><td><span class="tag info">Retrieved</span></td></tr>
+        <tr><td><code>preferences</code></td><td>Durable stylistic and working preferences</td><td>Model, on repetition</td><td><span class="tag mut">Decayed</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>What to remember</h3>
+      <ul>
+        <li><b>Approvals and rejections</b> — verbatim, with the authorizing event id. Highest authority, longest life.</li>
+        <li><b>Active constraints</b> — stated requirements, stored extractively so the original wording survives.</li>
+        <li><b>Decisions</b> — what was chosen and why, with what it supersedes.</li>
+        <li><b>Artifact references</b> — id, revision, checksum, location, and a short structural summary. Remember <em>where</em> the content is, not the content.</li>
+        <li><b>Meaningful episodes</b> — a failure and its cause, not the whole log that produced it.</li>
+        <li><b>Durable preferences</b> — only on repetition or explicit confirmation, and with confidence that decays.</li>
+      </ul>
+      <p>Deliberately not stored: small talk, intermediate drafts past their successor, raw tool logs, and
+        anything secret. Credentials are referenced through a broker, never copied into memory — a secret
+        written into memory is replayed into every future session that reads it.</p>
+      </div>
+      <div class="lang-panel vi">
+        <h2><span class="num">03</span>Nhớ điều gì, và nhớ dưới kiểu nào</h2>
+        <p>Không phải output nào của model cũng trở thành fact. Write path phân loại memory vào các namespace khác nhau về quyền ghi, vòng đời và khả năng được compile thành active constraint.</p>
+        <div class="tw"><table>
+          <caption>Namespace được tách theo governance, không phải theo data type.</caption>
+          <thead><tr><th>Namespace</th><th>Nội dung</th><th>Ai được ghi</th><th>Cách compile</th></tr></thead><tbody>
+          <tr><td><code>approvals</code></td><td>Decision có authority event</td><td>User hoặc policy</td><td><span class="tag ok">Ghim</span></td></tr>
+          <tr><td><code>constraints</code></td><td>Quy tắc bắt buộc còn hiệu lực</td><td>User hoặc policy</td><td><span class="tag ok">Ghim</span></td></tr>
+          <tr><td><code>artifacts</code></td><td>Reference, checksum, location — không lưu toàn bộ file</td><td>Tool</td><td><span class="tag info">Truy xuất</span></td></tr>
+          <tr><td><code>episodic</code></td><td>Điều đã xảy ra: attempt, failure, observation</td><td>Model hoặc tool</td><td><span class="tag info">Truy xuất</span></td></tr>
+          <tr><td><code>preferences</code></td><td>Preference làm việc bền vững</td><td>Model, khi lặp lại</td><td><span class="tag mut">Suy giảm</span></td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>Nên nhớ gì</h3>
+        <ul>
+          <li><b>Approval và rejection</b> — lưu nguyên văn cùng authority event id. Authority cao nhất, vòng đời dài nhất.</li>
+          <li><b>Active constraint</b> — yêu cầu bắt buộc, lưu extractive để giữ nguyên wording.</li>
+          <li><b>Decision</b> — điều đã chọn, lý do và record bị supersede.</li>
+          <li><b>Artifact reference</b> — id, revision, checksum, location và structural summary. Nhớ nơi tìm nội dung, không nhét nội dung vào memory.</li>
+          <li><b>Episode có ý nghĩa</b> — failure và nguyên nhân, không giữ toàn bộ log.</li>
+          <li><b>Preference bền vững</b> — chỉ lưu khi lặp lại hoặc được xác nhận, với confidence giảm dần.</li>
+        </ul>
+        <p>Cố ý không lưu: small talk, intermediate draft đã có successor, raw tool log và secret. Credential chỉ được tham chiếu qua broker; copy secret vào memory đồng nghĩa replay secret vào mọi session tương lai đọc record đó.</p>
+
+        <h3>Write path ở production</h3>
+        <div class="diag"><span class="g">event</span> → parse typed event → extract candidate → validate schema
+→ resolve claim identity → detect duplicate/conflict → attach provenance
+→ commit record + namespace version <span class="ok">trong cùng transaction</span> → enqueue indexes</div>
+        <p>Writer dùng idempotency key từ <code>eventId + policyVersion</code>. Event đến sai thứ tự không sửa history; nó tạo revision mới và chạy lại supersession. Embedding và summary là derived indexes có thể rebuild, không phải source of truth.</p>
+      </div>
+    </section>
+
+    <section id="path">
+      <div class="lang-panel en">
+      <h2><span class="num">04</span>The compile path</h2>
+      <p>Ten ordered steps. There is no weighted priority score, and that is a deliberate choice: a formula
+        that multiplies relevance by freshness will quietly zero out an approval that is old but still
+        binding. Ordered rules are explainable, debuggable, and produce the same answer twice.</p>
+      <div class="diag"><span class="g">compile path</span>
+
+ <b>1.</b> scope and ACL filter          <span class="g">tenant, workflow, permission</span>
+ <b>2.</b> block tombstoned              <span class="g">deleted is deleted, first</span>
+ <b>3.</b> partition active/historical   <span class="g">superseded and stale step aside, not away</span>
+ <b>4.</b> validate authority evidence   <span class="c">← where the $50,000 error dies</span>
+ <b>5.</b> pin approvals and constraints <span class="c">← where recall survives step 200</span>
+ <b>6.</b> retrieve remaining candidates <span class="g">hybrid, only for what is left</span>
+ <b>7.</b> type and conflict lint
+ <b>8.</b> deduplicate, pack to budget
+ <b>9.</b> build capsule + overlay
+<b>10.</b> emit CompileReceipt</div>
+      <p><b>Lifecycle partition happens before authority pinning</b> (3 before 5). Reverse them and you can
+        pin an approval that was superseded last week — the record is approved, it just is not current
+        any more.</p>
+      <p><b>Superseded and stale records move to a historical pool, not to the bin.</b> They may never be
+        compiled as an active constraint, and they must remain reachable for audit and for explaining
+        how the current state was reached. Scenario B is exactly this distinction.</p>
+
+      <h3>Retrieval</h3>
+      <p>Retrieval runs at step 6, on what is left after governance has had its say — which is the
+        opposite of the usual arrangement, where a similarity search runs first and governance is applied,
+        if at all, to whatever it returned. Hard filters (tenant, ACL, lifecycle) are not ranking signals.
+        They are gates.</p>
+      <p>Freshness is used for exactly three things: choosing between two external observations of the same
+        fact, ordering revisions inside one authority tier, and triggering a refresh. It is never allowed
+        to make a current approval lose to a recent note.</p>
+
+      <h3>The linter blocks two things, and only two</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Condition</th><th>Response</th></tr></thead>
+        <tbody>
+        <tr><td>Unauthorized promotion into an active decision or constraint</td><td><span class="tag stop">Hard block</span></td></tr>
+        <tr><td>Two incompatible active approved decisions</td><td><span class="tag stop">Hard block</span> — ask, never pick silently</td></tr>
+        <tr><td>Approved decision vs. a model inference</td><td><span class="tag warn">Keep the decision, quarantine the inference</span></td></tr>
+        <tr><td>External fact past its <code>validUntil</code></td><td><span class="tag warn">Refresh, or admit with a staleness marker</span></td></tr>
+        <tr><td>Conflicting low-stakes preferences</td><td><span class="tag ok">Take the newer, do not interrupt</span></td></tr>
+        <tr><td>Optional context missing</td><td><span class="tag ok">Continue, degraded</span></td></tr>
+        </tbody>
+      </table></div>
+      <p>The temptation is to block on every conflict. That produces a system which interrupts constantly
+        and gets configured off within a week. Blocking is reserved for the cases where proceeding would
+        mean acting on authority nobody granted.</p>
+
+      <h3>Production guarantees at the boundary</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Concern</th><th>Guarantee</th><th>Mechanism</th></tr></thead><tbody>
+        <tr><td><b>Snapshot consistency</b></td><td>One compile never mixes namespace revisions</td><td>Read a version vector at start; retry if a pinned namespace changes before receipt commit</td></tr>
+        <tr><td><b>Idempotent writes</b></td><td>Retries do not create duplicate facts</td><td><code>eventId + policyVersion</code> idempotency key and claim-level uniqueness</td></tr>
+        <tr><td><b>Out-of-order events</b></td><td>History is append-only; current state remains explainable</td><td>Create a revision, rerun supersession, never rewrite the source event</td></tr>
+        <tr><td><b>Index drift</b></td><td>Embedding and summaries can be rebuilt without changing truth</td><td>Structured memory is source of truth; indexes carry model and policy versions</td></tr>
+        <tr><td><b>Failure recovery</b></td><td>A failed compile cannot partially publish context</td><td>Receipt and packet commit atomically; last valid packet remains available in degraded mode</td></tr>
+        </tbody>
+      </table></div>
+      <p>These are architecture guarantees, not claims that the browser fixture implements a distributed store. The fixture verifies selection policy; a production implementation still has to prove these properties under concurrent writes.</p>
+      </div>
+      <div class="lang-panel vi">
+        <h2><span class="num">04</span>Đường compile</h2>
+        <p>Mười bước có thứ tự. Không dùng weighted priority score: công thức nhân relevance với freshness có thể vô tình đưa một approval cũ nhưng còn hiệu lực về gần 0. Ordered rules giải thích được, debug được và cho selection có thể tái hiện với cùng snapshot, policy và candidate set.</p>
+        <div class="diag"><span class="g">compile path</span>
+
+ <b>1.</b> scope và ACL filter           <span class="g">tenant, workflow, permission</span>
+ <b>2.</b> chặn tombstoned               <span class="g">deleted là deleted, xử lý đầu tiên</span>
+ <b>3.</b> tách active / historical      <span class="g">superseded và stale rời active context</span>
+ <b>4.</b> kiểm tra authority evidence   <span class="c">← chặn lỗi $50,000</span>
+ <b>5.</b> ghim approval và constraint   <span class="c">← giữ recall tới bước 200</span>
+ <b>6.</b> retrieve candidate còn lại    <span class="g">hybrid, sau governance</span>
+ <b>7.</b> lint type và conflict
+ <b>8.</b> deduplicate, pack theo budget
+ <b>9.</b> build capsule + overlay
+<b>10.</b> phát hành CompileReceipt</div>
+        <p><b>Lifecycle partition phải đứng trước authority pinning.</b> Đảo thứ tự sẽ ghim một approval đã bị supersede. Record superseded và stale đi vào historical pool để audit, nhưng không được compile thành active constraint.</p>
+
+        <h3>Retrieval</h3>
+        <p>Retrieval chỉ chạy ở bước 6, sau khi hard gate về tenant, ACL và lifecycle đã loại candidate không hợp lệ. Freshness chỉ dùng để chọn giữa external observation cùng authority tier, sắp xếp revision và kích hoạt refresh. Nó không được khiến một approval hiện hành thua một note mới hơn.</p>
+
+        <h3>Linter chỉ hard-block hai trường hợp</h3>
+        <div class="tw"><table>
+          <thead><tr><th>Điều kiện</th><th>Phản ứng</th></tr></thead><tbody>
+          <tr><td>Promotion trái phép thành active decision hoặc constraint</td><td><span class="tag stop">Hard block</span></td></tr>
+          <tr><td>Hai approved decision xung đột cùng active</td><td><span class="tag stop">Hard block</span> — hỏi, không tự chọn</td></tr>
+          <tr><td>Approved decision và model inference</td><td><span class="tag warn">Giữ decision, cách ly inference</span></td></tr>
+          <tr><td>External fact quá <code>validUntil</code></td><td><span class="tag warn">Refresh hoặc gắn staleness marker</span></td></tr>
+          <tr><td>Low-stakes preference xung đột</td><td><span class="tag ok">Chọn bản mới hơn, không ngắt workflow</span></td></tr>
+          <tr><td>Thiếu optional context</td><td><span class="tag ok">Tiếp tục ở degraded mode</span></td></tr>
+          </tbody>
+        </table></div>
+        <p>Chặn mọi conflict sẽ tạo một hệ thống liên tục hỏi người dùng và nhanh chóng bị tắt. Chỉ hard-block khi tiếp tục đồng nghĩa hành động bằng authority chưa từng được cấp.</p>
+
+        <h3>Guarantee tại production boundary</h3>
+        <div class="tw"><table>
+          <thead><tr><th>Vấn đề</th><th>Guarantee</th><th>Cơ chế</th></tr></thead><tbody>
+          <tr><td><b>Snapshot consistency</b></td><td>Một compile không trộn revision giữa các namespace</td><td>Đọc version vector khi bắt đầu; retry nếu pinned namespace đổi trước khi commit receipt</td></tr>
+          <tr><td><b>Idempotent write</b></td><td>Retry không tạo fact trùng</td><td>Idempotency key <code>eventId + policyVersion</code> và uniqueness theo claim</td></tr>
+          <tr><td><b>Event sai thứ tự</b></td><td>History append-only; current state vẫn giải thích được</td><td>Tạo revision, chạy lại supersession, không rewrite source event</td></tr>
+          <tr><td><b>Index drift</b></td><td>Embedding và summary có thể rebuild mà không đổi truth</td><td>Structured memory là source of truth; index mang model/policy version</td></tr>
+          <tr><td><b>Khôi phục failure</b></td><td>Compile lỗi không publish context một phần</td><td>Receipt và packet commit nguyên tử; degraded mode dùng packet hợp lệ gần nhất</td></tr>
+          </tbody>
+        </table></div>
+        <p>Đây là guarantee của kiến trúc, không phải tuyên bố browser fixture đã triển khai distributed store. Fixture chỉ verify selection policy; production implementation phải chứng minh các property này dưới concurrent writes.</p>
+      </div>
+    </section>
+
+    <section id="policies">
+      <div class="lang-panel en">
+      <h2><span class="num">05</span>Remember, compress, supersede, delete</h2>
+      <p>"Forget" is four different verbs, and conflating them is the most common design error in this
+        area. Three of them are reversible and cheap. One is neither.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Verb</th><th>Means</th><th>Reversible</th></tr></thead>
+        <tbody>
+        <tr><td><b>Retain</b></td><td>Keep as-is, compile when relevant</td><td>—</td></tr>
+        <tr><td><b>Compress</b></td><td>Keep a shorter form that still links to its source</td><td><span class="tag ok">Yes — rebuild from source</span></td></tr>
+        <tr><td><b>Supersede</b></td><td>A newer authorized record replaces it; the old one becomes historical</td><td><span class="tag ok">Yes — history is intact</span></td></tr>
+        <tr><td><b>Delete</b></td><td>Tombstone the source and cascade to everything derived from it</td><td><span class="tag stop">No</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>How to compress</h3>
+      <p>Three levels, applied by what the content is, never by how big the context has got:</p>
+      <ul>
+        <li><b>Lossless</b> — deduplicate by claim, normalize, replace file bodies with references. Always safe, no model call.</li>
+        <li><b>Extractive</b> — keep the original sentences for figures, deadlines, constraints, decisions and rejection reasons. The wording is the evidence; paraphrasing it is what loses it.</li>
+        <li><b>Abstractive</b> — a model rewrites a span of episodes into a summary. Only at checkpoints, only for episodic content, and never as the sole carrier of a constraint.</li>
+      </ul>
+      <div class="box key"><span class="lab">The rule the measurement changed</span>
+        <p>The intuition was that damage accumulates through repeated summarization — summary of summary of
+          summary. The experiment in section 9 says otherwise: when a constraint was lost, it was lost on
+          the <b>first</b> abstractive pass, and the number barely moved afterwards.</p>
+        <p>So the rule is not "avoid summarizing summaries". It is stronger and simpler: <b>never let an
+          abstractive summary be the only thing carrying a constraint.</b> In this narrow experiment,
+          35% of chains dropped the figure on the first pass and one condition reached 45% by generation 3.</p>
+      </div>
+
+      <h3>When to forget</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Memory</th><th>Policy</th></tr></thead>
+        <tbody>
+        <tr><td>Working state</td><td>Dropped at run end; kept 24–72h for debugging <span class="ev proposed">Proposed</span></td></tr>
+        <tr><td>Intermediate drafts</td><td>Compressed once a successor is approved</td></tr>
+        <tr><td>Approvals and decisions</td><td>Never expire on disuse. Only revoked or superseded, and only by equal-or-higher authority</td></tr>
+        <tr><td>Preferences</td><td>Confidence decays without reconfirmation; never hard-deleted for staleness</td></tr>
+        <tr><td>External facts</td><td>Carry <code>validUntil</code>; on expiry become <code>stale</code>, refreshable, never silently current</td></tr>
+        <tr><td>Tool errors</td><td>Compressed into a failure pattern, not kept as raw logs</td></tr>
+        <tr><td>PII</td><td>Minimum necessary, never propagated into derived summaries, hard-delete cascade on request</td></tr>
+        </tbody>
+      </table></div>
+      <p>The distinction that matters: a deadline of 30 August should not disappear because nobody queried
+        it for a fortnight. On 31 August it should stop being an active constraint. Those are different
+        mechanisms — disuse is not expiry.</p>
+      </div>
+      <div class="lang-panel vi">
+        <h2><span class="num">05</span>Giữ, nén, thay thế và xóa</h2>
+        <p>“Quên” thực ra là bốn động từ khác nhau. Ba thao tác có thể đảo ngược và rẻ; một thao tác thì không.</p>
+        <div class="tw"><table>
+          <thead><tr><th>Động từ</th><th>Ý nghĩa</th><th>Đảo ngược</th></tr></thead><tbody>
+          <tr><td><b>Retain</b></td><td>Giữ nguyên, compile khi liên quan</td><td>—</td></tr>
+          <tr><td><b>Compress</b></td><td>Giữ bản ngắn hơn nhưng vẫn trỏ về nguồn</td><td><span class="tag ok">Có — rebuild từ source</span></td></tr>
+          <tr><td><b>Supersede</b></td><td>Record mới có thẩm quyền thay thế; record cũ thành historical</td><td><span class="tag ok">Có — history còn nguyên</span></td></tr>
+          <tr><td><b>Delete</b></td><td>Tombstone source và cascade tới mọi derived record</td><td><span class="tag stop">Không</span></td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>Nén như thế nào</h3>
+        <ul>
+          <li><b>Lossless</b> — deduplicate theo claim, normalize, thay file body bằng reference. Không cần model call.</li>
+          <li><b>Extractive</b> — giữ câu gốc cho con số, deadline, constraint, decision và rejection reason.</li>
+          <li><b>Abstractive</b> — model viết lại episode tại checkpoint; không bao giờ là nơi duy nhất mang constraint.</li>
+        </ul>
+        <div class="box key"><span class="lab">Quy tắc đã thay đổi sau measurement</span>
+          <p>Trực giác ban đầu cho rằng lỗi tích lũy qua summary-of-summary. Kết quả ở phần 9 cho thấy khi figure bị mất, phần lớn mất ngay ở pass đầu; các generation sau thay đổi rất ít.</p>
+          <p>Vì vậy quy tắc mạnh hơn là: <b>không để abstractive summary trở thành nơi duy nhất mang constraint.</b> Trong thí nghiệm hẹp này, 35% chain bỏ figure ngay pass đầu; neutral condition đạt 45% ở generation 3.</p>
+        </div>
+
+        <h3>Khi nào nên quên</h3>
+        <div class="tw"><table>
+          <thead><tr><th>Memory</th><th>Policy</th></tr></thead><tbody>
+          <tr><td>Working state</td><td>Bỏ khi run kết thúc; giữ 24–72 giờ để debug <span class="ev proposed">Proposed</span></td></tr>
+          <tr><td>Intermediate draft</td><td>Compress khi successor đã được duyệt</td></tr>
+          <tr><td>Approval và decision</td><td>Không expire vì ít dùng; chỉ revoked hoặc superseded bởi authority ngang/cao hơn</td></tr>
+          <tr><td>Preference</td><td>Confidence giảm nếu không được xác nhận lại</td></tr>
+          <tr><td>External fact</td><td>Mang <code>validUntil</code>; hết hạn thành <code>stale</code>, không âm thầm current</td></tr>
+          <tr><td>Tool error</td><td>Nén thành failure pattern, không giữ raw log</td></tr>
+          <tr><td>PII</td><td>Giữ tối thiểu, không lan sang summary, cascade hard-delete khi được yêu cầu</td></tr>
+          </tbody>
+        </table></div>
+        <p>Deadline 30/8 không được biến mất chỉ vì hai tuần không ai query. Nhưng từ 31/8 nó phải ngừng là active constraint. Disuse và expiry là hai cơ chế khác nhau.</p>
+      </div>
+    </section>
+
+    <section id="types">
+      <div class="lang-panel en">
+      <h2><span class="num">06</span>The type system</h2>
+      <p>Every record carries three independent axes. Collapsing them into one status field is what makes
+        the <code>$50,000</code> error invisible.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Axis</th><th>Values</th><th>Answers</th></tr></thead>
+        <tbody>
+        <tr><td><b>kind</b></td><td><code>observation · inference · proposal · decision · constraint · preference · episode</code></td><td>What sort of claim is this?</td></tr>
+        <tr><td><b>governanceStatus</b></td><td><code>unreviewed · pending · approved · rejected · revoked</code></td><td>What standing does it have?</td></tr>
+        <tr><td><b>lifecycleStatus</b></td><td><code>active · stale · superseded · tombstoned</code></td><td>Is it still current?</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Transitions</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Transition</th><th>Requires</th><th>Performed by</th></tr></thead>
+        <tbody>
+        <tr><td>proposal → approved decision</td><td>A valid authority event</td><td><span class="tag stop">Authority only</span></td></tr>
+        <tr><td>proposal → rejected</td><td>A rejection event</td><td><span class="tag stop">Authority only</span></td></tr>
+        <tr><td>approved → revoked</td><td>Equal or higher authority</td><td><span class="tag stop">Authority only</span></td></tr>
+        <tr><td>active → superseded</td><td>A newer authorized revision of the same claim</td><td><span class="tag info">Code + policy</span></td></tr>
+        <tr><td>active → stale</td><td><code>validUntil</code> elapsed</td><td><span class="tag info">Code</span></td></tr>
+        <tr><td>any → tombstoned</td><td>A hard-delete request</td><td><span class="tag info">Privacy pipeline</span></td></tr>
+        <tr><td><b>proposal → approved by summarization</b></td><td>—</td><td><span class="tag stop">Forbidden</span></td></tr>
+        </tbody>
+      </table></div>
+      <div class="box key"><span class="lab">The sentence this whole design exists to make true</span>
+        <p>Summary drift is not a summarization defect. It is a <b>type error</b>: a <code>proposal</code>
+          was compiled as an <code>approval</code> with no authority event to license the cast. Once it is
+          a type error, a compiler can refuse it — which is what the linter does, by name, with a span
+          pointing at the sentence that was never authorization in the first place.</p>
+      </div>
+      </div>
+      <div class="lang-panel vi">
+        <h2><span class="num">06</span>Hệ kiểu</h2>
+        <p>Mỗi record mang ba trục độc lập. Gộp chúng thành một status duy nhất sẽ làm lỗi <code>$50,000</code> trở nên vô hình.</p>
+        <div class="tw"><table>
+          <thead><tr><th>Trục</th><th>Giá trị</th><th>Câu hỏi được trả lời</th></tr></thead><tbody>
+          <tr><td><b>kind</b></td><td><code>observation · inference · proposal · decision · constraint · preference · episode</code></td><td>Đây là loại claim nào?</td></tr>
+          <tr><td><b>governanceStatus</b></td><td><code>unreviewed · pending · approved · rejected · revoked</code></td><td>Claim có standing gì?</td></tr>
+          <tr><td><b>lifecycleStatus</b></td><td><code>active · stale · superseded · tombstoned</code></td><td>Nó còn current không?</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>State transition</h3>
+        <div class="tw"><table>
+          <thead><tr><th>Transition</th><th>Yêu cầu</th><th>Thực hiện bởi</th></tr></thead><tbody>
+          <tr><td>proposal → approved decision</td><td>Authority event hợp lệ</td><td><span class="tag stop">Chỉ authority</span></td></tr>
+          <tr><td>proposal → rejected</td><td>Rejection event</td><td><span class="tag stop">Chỉ authority</span></td></tr>
+          <tr><td>approved → revoked</td><td>Authority ngang hoặc cao hơn</td><td><span class="tag stop">Chỉ authority</span></td></tr>
+          <tr><td>active → superseded</td><td>Revision mới có thẩm quyền của cùng claim</td><td><span class="tag info">Code + policy</span></td></tr>
+          <tr><td>active → stale</td><td><code>validUntil</code> đã qua</td><td><span class="tag info">Code</span></td></tr>
+          <tr><td>any → tombstoned</td><td>Hard-delete request</td><td><span class="tag info">Privacy pipeline</span></td></tr>
+          <tr><td><b>proposal → approved bởi summarization</b></td><td>—</td><td><span class="tag stop">Bị cấm</span></td></tr>
+          </tbody>
+        </table></div>
+        <div class="box key"><span class="lab">Câu mà toàn bộ thiết kế phải làm cho đúng</span>
+          <p>Summary drift không chỉ là lỗi tóm tắt. Nó là <b>lỗi type</b>: một <code>proposal</code> được compile thành <code>approval</code> mà không có authority event cho phép cast. Khi lỗi được biểu diễn như type error, compiler có thể từ chối và chỉ ra chính xác source span chưa bao giờ là approval.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="cache">
+      <div class="lang-panel en">
+      <h2><span class="num">07</span>Cache, and the one deletion that is real</h2>
+      <p>Compilation on every node would put its whole cost on the critical path, which sequential
+        execution has no way to hide. So the compiled packet is cached — but a single global memory
+        version would be self-defeating, because a long-running agent writes memory constantly and would
+        invalidate its own cache on every step.</p>
+      <p>Versions are therefore per namespace:</p>
+      <div class="diag"><span class="g">dependency fingerprint</span>
+
+ constraints@v7   approvals@v3   preferences@v4    <span class="c">← stable capsule, changes rarely</span>
+ episodic@v481                                     <span class="g">← overlay, changes constantly</span>
+
+ <span class="ok">writing an episodic note bumps episodic@ only</span>
+ <span class="ok">the constraints capsule stays valid and is reused</span></div>
+      <p>The slices that are most expensive to compile are also the ones that change least, so the hit rate
+        is high exactly where it pays. The metrics worth publishing are not just hit rate but
+        <b>false cache hit</b> and <b>stale-cache leakage</b> — a cache that serves a superseded constraint
+        quickly is worse than no cache.</p>
+
+      <h3>Hard delete is the only irreversible verb</h3>
+      <p>A PII fact does not sit in one place. It is in the raw event, in an embedding, in a summary, in a
+        summary of that summary, and in a cached packet. Deleting the source and calling it done leaves the
+        data in every derived artifact.</p>
+      <p>This is where the rule from section 5 — every summary links back to its sources — stops being
+        hygiene and starts paying. Because lineage is recorded as typed references, the cascade is
+        mechanical: tombstone the source, walk <code>derivedFrom</code> in reverse, invalidate every
+        derived record and cached packet, rebuild what can be rebuilt from surviving sources, and emit a
+        deletion receipt. <b>Scenario C in the compiler above runs this cascade for real</b> — it is not a
+        diagram of a cascade.</p>
+      <div class="box warn"><span class="lab">Production boundary</span><p>Backups, immutable audit logs and external vector stores need their own retention schedule. A DeletionReceipt is complete only after every active store acknowledges it; backup copies may truthfully remain <code>pending_expiry</code> rather than pretending deletion is instantaneous.</p></div>
+      </div>
+      <div class="lang-panel vi">
+        <h2><span class="num">07</span>Cache và thao tác xóa duy nhất là thật</h2>
+        <p>Compile tại mọi node sẽ đưa toàn bộ cost lên critical path của PAL. Vì vậy context packet được cache. Nhưng một global memory version sẽ tự phá cache vì long-running agent ghi episodic memory liên tục.</p>
+        <p>Version được tách theo namespace:</p>
+        <div class="diag"><span class="g">dependency fingerprint</span>
+
+ constraints@v7   approvals@v3   preferences@v4    <span class="c">← stable capsule, ít đổi</span>
+ episodic@v481                                     <span class="g">← local overlay, đổi liên tục</span>
+
+ <span class="ok">ghi một episodic note chỉ bump episodic@</span>
+ <span class="ok">constraints capsule vẫn hợp lệ và được dùng lại</span></div>
+        <p>Chỉ compile tại memory-aware boundary. Code node và deterministic tool node không cần full memory compilation. Worker dùng chung global capsule nhưng có local overlay theo task. Metric cần đo không chỉ là hit rate mà còn <b>false cache hit</b> và <b>stale-cache leakage</b>.</p>
+
+        <h3>Hard delete là động từ không thể đảo ngược</h3>
+        <p>Một PII fact có thể xuất hiện trong raw event, embedding, summary, summary-of-summary và cached packet. Chỉ xóa source vẫn để dữ liệu tồn tại trong derived artifact.</p>
+        <p>Vì mọi summary đều lưu lineage, cascade trở thành thao tác cơ học: tombstone source, đi ngược đồ thị <code>derivedFrom</code>, invalidate derived record và cache, rebuild từ source còn sống rồi phát hành DeletionReceipt. Scenario C chạy cascade này trên fixture store thay vì chỉ vẽ sơ đồ.</p>
+        <div class="box warn"><span class="lab">Production boundary</span><p>Backup, audit log bất biến và external vector store cần retention schedule riêng. DeletionReceipt chỉ được đánh dấu complete khi mọi active store đã xác nhận; backup có thể ở trạng thái <code>pending_expiry</code> thay vì giả vờ đã biến mất ngay lập tức.</p></div>
+      </div>
+    </section>
+
+    <section id="budget">
+      <div class="lang-panel en budget-old" aria-hidden="true">
+      <h2><span class="num">08</span>What it costs, and what gets dropped when it cannot</h2>
+      <p>Memory overhead is expressed as a fraction of the workflow it serves, in both currencies:</p>
+      <div class="diag">  MemoryOverhead      = memoryCredits / totalWorkflowCredits
+  LatencyOverhead     = memoryCriticalPathMs / totalWorkflowMs</div>
+      <div class="tw"><table>
+        <caption>Ceilings are <b>proposed policy</b>, not measurements. They are starting values to be moved by evidence.</caption>
+        <thead><tr><th>Mode</th><th>Behaviour</th><th>LLM memory calls</th><th>Credit ceiling</th></tr></thead>
+        <tbody>
+        <tr><td><b>-O0 Essential</b><small>free tier default</small></td><td>Typed state, exact dedup, pinned approvals and constraints, recency for the rest</td><td><span class="tag ok">None</span></td><td>0% <span class="ev proposed">Proposed</span></td></tr>
+        <tr><td><b>-O2 Standard</b><small>default</small></td><td>Hybrid retrieval, batch extraction at checkpoints, cached capsule</td><td>Bounded</td><td>≤5% <span class="ev proposed">Proposed</span></td></tr>
+        <tr><td><b>-O3 High-stakes</b><small>opt-in</small></td><td>Evidence reconstruction, verifier pass, conflict blocking</td><td>Deliberate</td><td>≤15% <span class="ev proposed">Proposed</span></td></tr>
+        </tbody>
+      </table></div>
+      <p>The important property of <code>-O0</code> is what it still guarantees. It is not "memory off" —
+        it is the mode that costs no model calls and <em>still</em> pins every approval and constraint.
+        That is why the free tier can use it without the product looking amnesiac to the exact users who
+        are deciding whether it works.</p>
+      <h3>Graceful degradation</h3>
+      <p>When the remaining budget cannot fund the cheapest memory operation, capability is shed in a
+        fixed order rather than the compiler quietly overspending:</p>
+      <div class="diag">  evidence verifier      <span class="u">↓ dropped first</span>
+  semantic reranker      <span class="u">↓</span>
+  fuzzy episodic recall  <span class="u">↓</span>
+  <span class="ok">typed approvals and constraints   ✓ always retained</span></div>
+        <div class="box warn"><span class="lab">Sequential PAL constraint</span><p>Compile only at a
+          memory-aware boundary—not at every node. Reuse a context packet while its memory snapshot is
+          unchanged, share one global capsule across workers, and add a small task-local overlay. Code and
+          deterministic tool nodes do not need a full memory compile.</p></div>
+      </div>
+
+      <div class="lang-panel en">
+        <h2><span class="num">08</span>What it costs, and what gets dropped when it cannot</h2>
+        <p>Memory overhead is expressed as a fraction of the workflow it serves, in both currencies:</p>
+        <div class="diag">  MemoryOverhead      = memoryCredits / totalWorkflowCredits
+  LatencyOverhead     = memoryCriticalPathMs / totalWorkflowMs</div>
+        <div class="tw"><table>
+          <caption>Ceilings are <b>proposed policy</b>, not measurements. They are starting values to be moved by evidence.</caption>
+          <thead><tr><th>Mode</th><th>Behaviour</th><th>LLM memory calls</th><th>Credit ceiling</th></tr></thead>
+          <tbody>
+          <tr><td><b>-O0 Essential</b><small>free-tier default</small></td><td>Typed state, exact dedup, pinned approvals and constraints, recency for the rest</td><td><span class="tag ok">None</span></td><td>0% <span class="ev proposed">Proposed</span></td></tr>
+          <tr><td><b>-O2 Standard</b><small>default</small></td><td>Hybrid retrieval, batch extraction at checkpoints, cached capsule</td><td>Bounded</td><td>≤ 5% <span class="ev proposed">Proposed</span></td></tr>
+          <tr><td><b>-O3 High-stakes</b><small>opt-in</small></td><td>Evidence reconstruction, verifier pass, conflict blocking</td><td>Deliberate</td><td>≤ 15% <span class="ev proposed">Proposed</span></td></tr>
+          </tbody>
+        </table></div>
+        <p><code>-O0</code> is not “memory off.” It makes no LLM memory calls and still pins every approved
+          decision and active constraint. That gives PAL a deterministic fallback when a run cannot afford
+          the cheapest optional memory operation.</p>
+        <h3>Graceful degradation</h3>
+        <p>Capability is shed in a fixed order rather than the compiler quietly overspending:</p>
+        <div class="diag">  evidence verifier      <span class="u">← dropped first</span>
+  semantic reranker      <span class="u">←</span>
+  fuzzy episodic recall  <span class="u">←</span>
+  <span class="ok">typed approvals and constraints   ✓ always retained</span></div>
+        <div class="box warn"><span class="lab">Sequential PAL constraint</span><p>Compile only at a
+          memory-aware boundary—not at every node. Reuse a context packet while its memory snapshot is
+          unchanged, share one global capsule across workers, and add a small task-local overlay. Code and
+          deterministic tool nodes do not need a full memory compile.</p></div>
+      </div>
+
+      <div class="lang-panel vi">
+        <h2><span class="num">08</span>Chi phí bao nhiêu, và phải bỏ gì khi không đủ budget</h2>
+        <p>Memory overhead được tính theo tỷ lệ của workflow mà nó phục vụ, ở cả credit và thời gian:</p>
+        <div class="diag">  MemoryOverhead      = memoryCredits / totalWorkflowCredits
+  LatencyOverhead     = memoryCriticalPathMs / totalWorkflowMs</div>
+        <div class="tw"><table>
+          <caption>Các ngưỡng dưới đây là <b>policy đề xuất</b>, chưa phải số đo. Eval phải quyết định ngưỡng nào nằm trên Pareto frontier.</caption>
+          <thead><tr><th>Chế độ</th><th>Hành vi</th><th>LLM call cho memory</th><th>Trần credit</th></tr></thead>
+          <tbody>
+          <tr><td><b>-O0 Essential</b><small>mặc định free tier</small></td><td>Typed state, exact dedup, ghim approval và constraint; phần còn lại theo recency</td><td><span class="tag ok">Không</span></td><td>0% <span class="ev proposed">Đề xuất</span></td></tr>
+          <tr><td><b>-O2 Standard</b><small>mặc định</small></td><td>Hybrid retrieval, batch extraction tại checkpoint, cached capsule</td><td>Có giới hạn</td><td>≤ 5% <span class="ev proposed">Đề xuất</span></td></tr>
+          <tr><td><b>-O3 High-stakes</b><small>chủ động bật</small></td><td>Khôi phục evidence, verifier pass, chặn conflict nguy hiểm</td><td>Có chủ đích</td><td>≤ 15% <span class="ev proposed">Đề xuất</span></td></tr>
+          </tbody>
+        </table></div>
+        <p><code>-O0</code> không phải “tắt memory”. Chế độ này không dùng LLM memory call nhưng vẫn ghim mọi
+          approved decision và active constraint. Đây là fallback tất định khi run không còn đủ credit cho
+          memory operation tùy chọn rẻ nhất.</p>
+        <h3>Giảm cấp có kiểm soát</h3>
+        <p>Hệ thống bỏ capability theo thứ tự cố định, không âm thầm vượt budget:</p>
+        <div class="diag">  evidence verifier      <span class="u">← bỏ trước</span>
+  semantic reranker      <span class="u">←</span>
+  fuzzy episodic recall  <span class="u">←</span>
+  <span class="ok">typed approvals và constraints    ✓ luôn giữ</span></div>
+        <div class="box warn"><span class="lab">Ràng buộc tuần tự của PAL</span><p>Chỉ compile tại
+          memory-aware boundary, không compile ở mọi node. Dùng lại context packet nếu memory snapshot không
+          đổi; chia sẻ một global capsule cho các worker và cộng local overlay nhỏ theo task. Code node và
+          deterministic tool node không cần full memory compilation.</p></div>
+      </div>
+    </section>
+
+    <section id="eval">
+      <div class="eval-old" aria-hidden="true">
+      <h2><span class="num">09</span>Evaluation</h2>
+      <p>Two evaluations, measuring two different things, labelled differently on purpose. Neither is a
+        claim about how good an agent is; they are claims about whether the compiler obeys its own policy,
+        and about what a real model actually does to a hedged claim.</p>
+
+      <h3>Does the compiler obey its policy as the run gets long? <span class="ev verified">Verified</span></h3>
+      <p>The chart is computed by the engine on this page, right now, over the fixture store — not read
+        from a file. The comparison is against <code>naive</code>: a recency-ranked assembler with no
+        lifecycle partition, no authority validation and no pinning, which is what most implementations
+        actually are.</p>
+      <figure class="fig">
+        <svg class="chart" id="chartRecallLegacy" viewBox="0 0 700 260" role="img"
+             aria-label="Active-constraint recall against trajectory length. The naive recency assembler holds all three governed claims at 10 steps but drops to zero from 25 steps onward, while -O0, -O2 and -O3 hold all three at every length."></svg>
+        <figcaption><b>Active-constraint recall.</b> Three governed claims must survive into the compiled
+          context. The naive assembler holds them while the conversation is short, then loses all three as
+          routine notes crowd the budget. Pinning is the single step that prevents it. Token budget 420;
+          each routine note costs 24 tokens, so roughly seventeen of them saturate the window.</figcaption>
+      </figure>
+      <div id="probeTableLegacy"></div>
+
+      <h3>Does a real model promote a hedged claim? <span class="ev measured">Measured</span></h3>
+      <p>A meeting transcript contains one sentence engineered to be at risk — <em>"we may consider a
+        budget of up to $50,000 … nothing is signed off"</em>. A real model summarizes it, then summarizes
+        its own summary, three generations deep, twenty independent chains per condition. The second
+        condition uses an adversarial prompt that explicitly asks what was <em>decided</em>.</p>
+      <figure class="fig">
+        <svg class="chart" id="chartDriftLegacy" viewBox="0 0 700 300" role="img"
+             aria-label="Claim status by summary generation for two conditions. No promotion occurred in any generation of either condition. Preserved falls from 13 to 11 of 20 chains in the neutral condition while dropped rises from 7 to 9; the adversarial condition stays at 13 preserved and 7 dropped throughout."></svg>
+        <figcaption><b>Claim status by summary generation.</b> <code>gpt-4o-mini-2024-07-18</code>,
+          temperature 1.0, n = 20 chains per condition, 120 calls total. Generations within a chain are
+          dependent observations and are not counted as independent samples.</figcaption>
+      </figure>
+      <div class="box stop"><span class="lab">The hypothesis was wrong</span>
+        <p><b>Promotion did not happen once in 40 chains.</b> Not in the neutral condition, and not when
+          the prompt explicitly asked what had been decided — which demonstrably changed the framing
+          (<em>"it was decided to implement…"</em>) while still writing <em>"a pilot budget of up to
+          $50,000 pending finance committee approval"</em>. Wilson 95% CI [0%, 16.1%] per condition:
+          this rules out a promotion rate above roughly 16%, not promotion itself.</p>
+        <p>What failed instead was <b>omission</b>. Between 7 and 9 of 20 chains dropped the figure
+          entirely — the constraint was not distorted, it silently vanished. And it vanished on the
+          first summary, not through accumulation.</p>
+        <p>So the authority linter in section 6 stands as a <b>governance requirement</b> — a system must
+          not let a proposal become an approval without an authorizing event, whatever a given model
+          happens to do unprompted — but it is <b>not</b> empirically motivated by these runs, and this
+          page does not pretend it is. What the runs do motivate is extractive handling of constraints,
+          which is now the stronger claim of the two.</p>
+      </div>
+      <p>Method, scoring rule, the pilot that caught a false positive in that rule before the measured
+        runs, every raw request and response, and the derived cost are all published in
+        <a href="/day19/eval/drift/METHOD.md">METHOD.md</a>.</p>
+      </div>
+
+      <h2><span class="num">09</span><span class="t en">Evaluation</span><span class="t vi">Đánh giá</span></h2>
+      <p><span class="t en">Two evaluations measure two different things. The labels are deliberate:
+        <code>VERIFIED</code> means the browser engine obeyed its authored policy; <code>MEASURED</code>
+        means a real model produced the published outputs.</span><span class="t vi">Hai phép đánh giá đo hai
+        thứ khác nhau. Nhãn được dùng có chủ đích: <code>VERIFIED</code> nghĩa là browser engine tuân thủ
+        policy đã viết; <code>MEASURED</code> nghĩa là model thật đã tạo ra output được công bố.</span></p>
+
+      <h3><span class="t en">Does the compiler obey its policy as the run gets long?</span><span class="t vi">Compiler có còn tuân thủ policy khi run kéo dài?</span> <span class="ev verified">Verified</span></h3>
+      <p><span class="t en">This chart is recomputed by the engine on this page over the fixture store.
+        The baseline is a recency-only assembler with no lifecycle partition, authority validation or
+        pinning.</span><span class="t vi">Biểu đồ được engine trên trang tính lại trực tiếp từ fixture store.
+        Baseline là assembler chỉ xếp theo recency, không phân vùng lifecycle, không xác thực authority và
+        không pin constraint.</span></p>
+      <figure class="fig">
+        <svg class="chart" id="chartRecall" viewBox="0 0 700 260" role="img"
+             aria-label="Active-constraint recall against trajectory length."></svg>
+        <figcaption><span class="t en"><b>Active-constraint recall.</b> Three governed claims must survive.
+          The naive assembler holds them at 10 steps and loses them after routine notes consume the 420-token
+          budget; pinning keeps all three optimization modes at 100%.</span><span class="t vi"><b>Recall của
+          active constraint.</b> Ba governed claim phải sống sót. Naive assembler giữ được ở bước 10 nhưng
+          mất chúng khi routine note chiếm hết budget 420 token; pinning giữ cả ba optimization mode ở 100%.</span></figcaption>
+      </figure>
+      <div id="probeTable"></div>
+
+      <h3><span class="t en">Does a real model promote a hedged claim?</span><span class="t vi">Model thật có biến một claim dè dặt thành approval?</span> <span class="ev measured">Measured</span></h3>
+      <p><span class="t en">A model summarized a meeting transcript, then summarized its own summary for
+        three generations, across 20 independent chains per condition. One prompt was neutral; the other
+        explicitly asked what had been decided.</span><span class="t vi">Model tóm tắt một meeting transcript,
+        rồi tóm tắt chính summary đó qua ba thế hệ, với 20 chain độc lập cho mỗi condition. Một prompt trung
+        tính; prompt còn lại hỏi thẳng điều gì đã được quyết định.</span></p>
+      <figure class="fig">
+        <svg class="chart" id="chartDrift" viewBox="0 0 700 300" role="img"
+             aria-label="Claim status by summary generation for two conditions."></svg>
+        <figcaption><span class="t en"><b>Claim status by summary generation.</b>
+          <code>gpt-4o-mini-2024-07-18</code>, temperature 1.0, n = 20 chains per condition, 120 calls.
+          Generations within one chain are dependent observations.</span><span class="t vi"><b>Trạng thái claim
+          theo thế hệ summary.</b> <code>gpt-4o-mini-2024-07-18</code>, temperature 1.0, n = 20 chain mỗi
+          condition, tổng 120 call. Các thế hệ trong cùng một chain là quan sát phụ thuộc.</span></figcaption>
+      </figure>
+      <div class="box stop"><span class="lab"><span class="t en">The hypothesis was wrong</span><span class="t vi">Giả thuyết ban đầu sai</span></span>
+        <p><span class="t en"><b>Promotion occurred in 0 of 40 chains.</b> Wilson 95% CI [0%, 16.1%] per
+          condition rules out a promotion rate above roughly 16%, not promotion itself. The observed failure
+          was omission: 7 of 20 chains dropped the figure on generation 1, and the neutral condition reached
+          9 of 20 by generation 3.</span><span class="t vi"><b>Không có promotion trong 40 chain.</b> Wilson
+          95% CI [0%, 16.1%] cho mỗi condition loại trừ tỷ lệ promotion lớn hơn khoảng 16%, không chứng minh
+          promotion là bất khả thi. Lỗi quan sát được là omission: 7/20 chain làm mất con số ngay generation
+          1; neutral condition tăng lên 9/20 ở generation 3.</span></p>
+        <p><span class="t en">Therefore authority checking remains a governance requirement, while these
+          runs directly support extractive handling of constraints. The page does not claim more.</span><span class="t vi">Vì vậy authority checking vẫn là yêu cầu governance; còn điều thí nghiệm trực tiếp ủng hộ là
+          xử lý constraint theo hướng extractive. Trang này không suy rộng hơn dữ liệu.</span></p>
+      </div>
+      <p><span class="t en">The scoring rule, pilot, every raw request and response, and derived cost are
+        published in </span><span class="t vi">Scoring rule, pilot, toàn bộ raw request/response và chi phí
+        suy ra được công bố trong </span><a href="/day19/eval/drift/METHOD.md">METHOD.md</a>.</p>
+    </section>
+
+    <section id="limits">
+      <div class="limits-old" aria-hidden="true">
+      <h2><span class="num">10</span>Limitations</h2>
+      <ul>
+        <li><b>The compiler here runs on authored fixtures.</b> Conformance is <code>VERIFIED</code>, never
+          <code>MEASURED</code> — it proves the engine obeys the policy written for it, and says nothing
+          about how good an agent using it would be.</li>
+        <li><b>Engine time is not compile latency.</b> The milliseconds reported by the workbench are real
+          browser milliseconds for a JavaScript function over an in-memory array. A production compiler
+          adds approximate vector search, reranking and possibly an extraction call. The 800 ms figure a
+          real deployment should hold itself to is a target, not something this page measured.</li>
+        <li><b>Semantic relevance is a fixture.</b> Scores are declared in the store, not produced by an
+          embedding model. Pretending otherwise in a browser would be theatre.</li>
+        <li><b>The credit ceilings are proposed policy.</b> 0% / 5% / 15% are starting values chosen to be
+          argued with, not results.</li>
+        <li><b>The drift experiment is narrow.</b> One model, one transcript, one hedged sentence, three
+          generations, twenty chains per condition. A different model, a longer chain, or a source
+          sentence with a weaker hedge could all produce a different answer.</li>
+        <li><b>Reproducible build is not determinism.</b> The claim is that the same snapshot, policy
+          version and candidate set yield the same selection digest. Approximate vector search, a model
+          summarizer and embedding drift all break anything stronger.</li>
+        <li><b>Not built:</b> multi-tenant isolation beyond a scope filter, the memory writer's own
+          classification path, and any live-agent quality measurement <span class="ev oos">Out of scope</span>.</li>
+      </ul>
+
+      <div class="links">
+        <a href="/day19/eval/drift/METHOD.md">Method &amp; result</a>
+        <a href="/day19/eval/drift/results_neutral.json">results · neutral</a>
+        <a href="/day19/eval/drift/results_decisions.json">results · adversarial</a>
+        <a href="/day19/eval/drift/transcript.txt">Source transcript</a>
+        <a href="/day19/eval/drift/run_drift.py">Experiment code</a>
+        <a href="/">← All work</a>
+      </div>
+
+      <footer>
+        <span>PAL Memory Compiler · memory and context architecture for long-running agents</span>
+        <span>Built with <a href="https://claude.com/claude-code">Claude Code</a></span>
+      </footer>
+      </div>
+
+      <div class="lang-panel en">
+        <h2><span class="num">10</span>Limitations and the 60-second verdict</h2>
+        <div class="box key"><span class="lab">Verdict</span>
+          <p><b>Thesis:</b> memory is governed state; context is a task-specific compiled view.</p>
+          <p><b>Proof:</b> the interactive compiler emits an explainable receipt and keeps all three active
+            constraints through 200 fixture steps; the separate model experiment shows omission, not
+            promotion, as the observed summary failure.</p>
+          <p><b>Boundary:</b> fixtures verify policy behavior. They do not measure live-agent quality,
+            production retrieval latency or distributed consistency.</p>
+          <p><b>Next production step:</b> connect the typed write path to a transactional event log and run
+            the same probes over real PAL trajectories at steps 10, 50 and 200.</p>
+        </div>
+        <ul>
+          <li><b>Authored fixtures.</b> Conformance is <code>VERIFIED</code>, never <code>MEASURED</code>.</li>
+          <li><b>Engine time is not compile latency.</b> Browser milliseconds exclude vector search,
+            reranking, network I/O and extraction calls. Any 800 ms production SLO is a target.</li>
+          <li><b>Semantic relevance is declared.</b> Fixture scores are not embedding output.</li>
+          <li><b>Credit ceilings are proposed.</b> 0% / 5% / 15% are starting policies, not findings.</li>
+          <li><b>The drift experiment is narrow.</b> One model, one transcript, one hedged claim, three
+            generations and 20 chains per condition.</li>
+          <li><b>Reproducible selection is not end-to-end determinism.</b> The same memory snapshot, policy
+            and candidate set reproduce the selection digest; approximate retrieval and model drift do not.</li>
+          <li><b>Not built:</b> a distributed memory writer, full tenant isolation, backup deletion and
+            live-agent quality measurement <span class="ev oos">Out of scope</span>.</li>
+        </ul>
+      </div>
+
+      <div class="lang-panel vi">
+        <h2><span class="num">10</span>Giới hạn và kết luận trong 60 giây</h2>
+        <div class="box key"><span class="lab">Kết luận</span>
+          <p><b>Luận điểm:</b> memory là governed state; context là compiled view riêng cho từng task.</p>
+          <p><b>Bằng chứng:</b> compiler tương tác tạo receipt có thể giải thích và giữ đủ ba active
+            constraint qua 200 fixture step; thí nghiệm model riêng cho thấy lỗi quan sát được là omission,
+            không phải promotion.</p>
+          <p><b>Ranh giới:</b> fixture xác minh hành vi policy. Nó không đo chất lượng live agent, production
+            retrieval latency hay distributed consistency.</p>
+          <p><b>Bước production tiếp theo:</b> nối typed write path vào transactional event log và chạy cùng
+            bộ probe trên PAL trajectory thật ở bước 10, 50 và 200.</p>
+        </div>
+        <ul>
+          <li><b>Fixture được biên soạn.</b> Conformance là <code>VERIFIED</code>, không phải <code>MEASURED</code>.</li>
+          <li><b>Engine time không phải compile latency.</b> Browser milliseconds chưa gồm vector search,
+            reranking, network I/O và extraction call. SLO production 800 ms chỉ là target.</li>
+          <li><b>Semantic relevance được khai báo.</b> Fixture score không phải embedding output.</li>
+          <li><b>Credit ceiling là đề xuất.</b> 0% / 5% / 15% là policy khởi điểm, chưa phải kết quả.</li>
+          <li><b>Drift experiment còn hẹp.</b> Một model, một transcript, một hedged claim, ba generation và
+            20 chain mỗi condition.</li>
+          <li><b>Selection tái hiện được không đồng nghĩa end-to-end deterministic.</b> Cùng snapshot,
+            policy và candidate set sẽ tái tạo selection digest; approximate retrieval và model drift thì không.</li>
+          <li><b>Chưa xây:</b> distributed memory writer, tenant isolation đầy đủ, backup deletion và đo
+            chất lượng live agent <span class="ev oos">Ngoài phạm vi</span>.</li>
+        </ul>
+      </div>
+
+      <div class="links">
+        <a href="/day19/eval/drift/METHOD.md"><span class="t en">Method &amp; result</span><span class="t vi">Phương pháp &amp; kết quả</span></a>
+        <a href="/day19/eval/drift/results_neutral.json">results · neutral</a>
+        <a href="/day19/eval/drift/results_decisions.json">results · adversarial</a>
+        <a href="/day19/eval/drift/transcript.txt"><span class="t en">Source transcript</span><span class="t vi">Transcript nguồn</span></a>
+        <a href="/day19/eval/drift/run_drift.py"><span class="t en">Experiment code</span><span class="t vi">Code thí nghiệm</span></a>
+        <a href="/"><span class="t en">← All work</span><span class="t vi">← Tất cả bài</span></a>
+      </div>
+
+      <footer>
+        <span><span class="t en">PAL Memory Compiler · memory and context architecture for long-running agents</span><span class="t vi">PAL Memory Compiler · kiến trúc memory và context cho agent chạy dài</span></span>
+        <span><span class="t en">Built as an executable architecture note</span><span class="t vi">Bài kiến trúc có thể chạy trực tiếp</span></span>
+      </footer>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ===================================================================
+   PAL Memory Compiler — deterministic engine.
+   Compute and render are strictly separated: every function above the
+   render section is pure, and the panels are rebuilt from its output.
+   =================================================================== */
+(function () {
+"use strict";
+
+// ---------------------------------------------------------- utilities
+function fnv1a(s){var h=0x811c9dc5;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);
+  h=(h+((h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24)))>>>0;}return ("00000000"+h.toString(16)).slice(-8);}
+function canonical(v){
+  if(v===null||typeof v!=="object")return JSON.stringify(v);
+  if(Array.isArray(v))return "["+v.map(canonical).join(",")+"]";
+  return "{"+Object.keys(v).sort().map(function(k){return JSON.stringify(k)+":"+canonical(v[k]);}).join(",")+"}";
+}
+function digest(v){return fnv1a(canonical(v));}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});}
+function $(id){return document.getElementById(id);}
+function isVi(){return document.documentElement.getAttribute("data-lang")==="vi";}
+function tr(en,vi){return isVi()?vi:en;}
+
+var CONTENT_VI={
+  mem_budget_approved:"Ngân sách $50.000 đã được phê duyệt cho giai đoạn đầu.",
+  mem_budget_proposal:"Đề xuất ngân sách tối đa $50.000; chưa được duyệt, hội đồng xem xét vào tháng 6.",
+  mem_onprem:"Connector phải chạy on-premise; dữ liệu tồn kho không được rời mạng của khách hàng.",
+  mem_pilot_window:"Pilot chạy trong hai tuần đầu tháng 5, trước mùa cao điểm.",
+  mem_training:"Onboarding bao gồm tối đa 15 người dùng; phần vượt quá được báo giá riêng.",
+  mem_soc2_ban:"Không được claim chứng nhận SOC 2: chưa có evidence trong hồ sơ.",
+  mem_contact_pii:"Liên hệ chính Duc Le, duc.le@northwind-logistics.example, +84 90 000 0000.",
+  mem_stakeholder_summary:"Stakeholder: Duc Le (finance), Mai Tran (operations).",
+  mem_project_digest:"Engagement digest: đầu mối finance là Duc Le.",
+  mem_pref_brief:"Khách hàng thích cập nhật bằng văn bản ngắn gọn.",
+  mem_rfp_artifact:"RFP artifact_rfp_v3 (14 trang, sha 9f2c); mục 3 và 7 chứa scoring rubric.",
+  mem_soc2_allow:"Đã có SOC 2 Type II evidence; có thể đưa claim chứng nhận vào tài liệu."
+};
+var EVENT_VI={
+  evt_budget_proposal:{actor:"Duc Le · Khách hàng, Finance",text:"Có thể cân nhắc ngân sách tối đa $50.000 cho giai đoạn đầu, nhưng chưa có gì được duyệt cho đến khi hội đồng xem kết quả pilot tháng 6."},
+  evt_security_requirement:{actor:"Mai Tran · Khách hàng, VP Operations",text:"Mọi connector phải chạy trong mạng nội bộ. Dữ liệu tồn kho rời perimeter sẽ không qua security review."},
+  evt_pilot_window:{actor:"Mai Tran · Khách hàng, VP Operations",text:"Chuyển pilot sang hai tuần đầu tháng 5, trước mùa cao điểm."},
+  evt_reviewer_rejection:{actor:"Reviewer",text:"Draft bị từ chối: không claim SOC 2 certification khi chưa có evidence."},
+  evt_security_report:{actor:"Mai Tran · Khách hàng, VP Operations",text:"Đã nhận và xác nhận báo cáo SOC 2 Type II. Claim chứng nhận hiện đã có evidence."},
+  evt_contact_intake:{actor:"Intake form",text:"Liên hệ chính: Duc Le, duc.le@northwind-logistics.example, +84 90 000 0000."},
+  evt_training_scope:{actor:"Tom Rasmussen · Vendor",text:"Base scope bao gồm onboarding cho tối đa 15 người dùng."}
+};
+function recordContent(r){
+  if(!isVi())return r.content;
+  if(CONTENT_VI[r.id])return CONTENT_VI[r.id];
+  if(r.id.indexOf("mem_step_")===0)return "Bước "+r.id.slice(9)+": ghi chú tiến độ thường lệ.";
+  return r.content;
+}
+function reasonLabel(reason){
+  if(!isVi())return reason||"not selected";
+  return ({TOMBSTONED:"ĐÃ XÓA",SUPERSEDED:"ĐÃ THAY THẾ",STALE:"HẾT HIỆU LỰC",
+    MISSING_AUTHORITY_EVENT:"THIẾU AUTHORITY EVENT",DUPLICATE_CLAIM:"CLAIM TRÙNG",
+    BUDGET_EXHAUSTED:"HẾT TOKEN BUDGET"})[reason]||reason||"không được chọn";
+}
+
+// ------------------------------------------------------------ events
+// The authority ledger. An approval is real only if it points at an event
+// here AND that event actually carries authority.
+var EVENTS = {
+  evt_budget_proposal:{actor:"Duc Le · Client, Finance",authority:false,
+    text:"We may consider a budget of up to $50,000 for the initial phase, but nothing is signed off until the committee reviews the pilot results in June."},
+  evt_security_requirement:{actor:"Mai Tran · Client, VP Operations",authority:true,
+    text:"Any connector must run inside our network. Nothing that moves inventory data outside the perimeter passes security review."},
+  evt_pilot_window:{actor:"Mai Tran · Client, VP Operations",authority:true,
+    text:"Move the pilot to the first two weeks of May, before the seasonal peak."},
+  evt_reviewer_rejection:{actor:"Reviewer",authority:true,
+    text:"Draft rejected: do not claim SOC 2 certification without evidence on file."},
+  evt_security_report:{actor:"Mai Tran · Client, VP Operations",authority:true,
+    text:"SOC 2 Type II report received and confirmed. The certification claim is now supported."},
+  evt_contact_intake:{actor:"Intake form",authority:false,
+    text:"Primary contact: Duc Le, duc.le@northwind-logistics.example, +84 90 000 0000."},
+  evt_training_scope:{actor:"Tom Rasmussen · Vendor",authority:true,
+    text:"Onboarding for up to fifteen users is included in base scope."}
+};
+function hasAuthority(id){return !!(id && EVENTS[id] && EVENTS[id].authority);}
+
+// ---------------------------------------------------------- fixtures
+// Relevance scores are DECLARED fixtures, not embedding output.
+function baseStore(){return [
+  {id:"mem_budget_approved",revision:1,namespace:"constraints",kind:"constraint",
+   governanceStatus:"approved",lifecycleStatus:"active",claimId:"claim_budget",createdBy:"model",
+   authorityEventId:null,derivedFrom:[{type:"event",id:"evt_budget_proposal"}],
+   sourceEventIds:["evt_budget_proposal"],tokenCost:38,relevance:.95,
+   content:"Approved budget: $50,000 for the initial phase."},
+  {id:"mem_budget_proposal",revision:1,namespace:"episodic",kind:"proposal",
+   governanceStatus:"pending",lifecycleStatus:"active",claimId:"claim_budget_src",createdBy:"user",
+   authorityEventId:null,derivedFrom:[{type:"event",id:"evt_budget_proposal"}],
+   sourceEventIds:["evt_budget_proposal"],tokenCost:44,relevance:.92,
+   content:"Budget of up to $50,000 proposed; not signed off, committee reviews in June."},
+  {id:"mem_onprem",revision:1,namespace:"constraints",kind:"constraint",
+   governanceStatus:"approved",lifecycleStatus:"active",claimId:"claim_onprem",createdBy:"user",
+   authorityEventId:"evt_security_requirement",derivedFrom:[{type:"event",id:"evt_security_requirement"}],
+   sourceEventIds:["evt_security_requirement"],tokenCost:40,relevance:.88,
+   content:"Connector must run on-premise; no inventory data may leave the client network."},
+  {id:"mem_pilot_window",revision:1,namespace:"approvals",kind:"decision",
+   governanceStatus:"approved",lifecycleStatus:"active",claimId:"claim_pilot_window",createdBy:"user",
+   authorityEventId:"evt_pilot_window",derivedFrom:[{type:"event",id:"evt_pilot_window"}],
+   sourceEventIds:["evt_pilot_window"],tokenCost:30,relevance:.72,
+   content:"Pilot runs in the first two weeks of May, ahead of seasonal peak."},
+  {id:"mem_training",revision:1,namespace:"constraints",kind:"constraint",
+   governanceStatus:"approved",lifecycleStatus:"active",claimId:"claim_training",createdBy:"user",
+   authorityEventId:"evt_training_scope",derivedFrom:[{type:"event",id:"evt_training_scope"}],
+   sourceEventIds:["evt_training_scope"],tokenCost:26,relevance:.55,
+   content:"Onboarding included for up to fifteen users; beyond that is quoted separately."},
+  {id:"mem_soc2_ban",revision:1,namespace:"approvals",kind:"decision",
+   governanceStatus:"approved",lifecycleStatus:"active",claimId:"claim_soc2",createdBy:"user",
+   authorityEventId:"evt_reviewer_rejection",derivedFrom:[{type:"event",id:"evt_reviewer_rejection"}],
+   sourceEventIds:["evt_reviewer_rejection"],tokenCost:34,relevance:.80,
+   content:"Do not claim SOC 2 certification: no evidence on file."},
+  {id:"mem_contact_pii",revision:1,namespace:"episodic",kind:"observation",
+   governanceStatus:"unreviewed",lifecycleStatus:"active",claimId:"claim_contact",createdBy:"tool",
+   authorityEventId:null,derivedFrom:[{type:"event",id:"evt_contact_intake"}],
+   sourceEventIds:["evt_contact_intake"],tokenCost:28,relevance:.40,containsPII:true,
+   content:"Primary contact Duc Le, duc.le@northwind-logistics.example, +84 90 000 0000."},
+  {id:"mem_stakeholder_summary",revision:1,namespace:"episodic",kind:"episode",
+   governanceStatus:"unreviewed",lifecycleStatus:"active",claimId:"claim_stakeholders",createdBy:"model",
+   authorityEventId:null,derivedFrom:[{type:"memory",id:"mem_contact_pii",revision:1},
+                                      {type:"event",id:"evt_pilot_window"}],
+   sourceEventIds:["evt_contact_intake","evt_pilot_window"],tokenCost:33,relevance:.45,
+   content:"Stakeholders: Duc Le (finance, duc.le@northwind-logistics.example), Mai Tran (operations)."},
+  {id:"mem_project_digest",revision:1,namespace:"episodic",kind:"episode",
+   governanceStatus:"unreviewed",lifecycleStatus:"active",claimId:"claim_digest",createdBy:"model",
+   authorityEventId:null,derivedFrom:[{type:"memory",id:"mem_stakeholder_summary",revision:1}],
+   sourceEventIds:["evt_contact_intake","evt_pilot_window"],tokenCost:30,relevance:.35,
+   content:"Engagement digest: finance contact Duc Le reachable at duc.le@northwind-logistics.example."},
+  {id:"mem_pref_brief",revision:1,namespace:"preferences",kind:"preference",
+   governanceStatus:"unreviewed",lifecycleStatus:"active",claimId:"claim_pref",createdBy:"model",
+   authorityEventId:null,derivedFrom:[],sourceEventIds:["evt_pilot_window"],tokenCost:18,relevance:.30,
+   content:"Client prefers short written updates."},
+  {id:"mem_rfp_artifact",revision:1,namespace:"artifacts",kind:"observation",
+   governanceStatus:"unreviewed",lifecycleStatus:"active",claimId:"claim_rfp",createdBy:"tool",
+   authorityEventId:null,derivedFrom:[],sourceEventIds:["evt_security_requirement"],
+   tokenCost:22,relevance:.50,
+   content:"RFP artifact_rfp_v3 (14 pages, sha 9f2c…); sections 3 and 7 hold the scoring rubric."}
+];}
+
+function noise(step){
+  var out=[];
+  for(var i=1;i<=step;i++){
+    out.push({id:"mem_step_"+i,revision:1,namespace:"episodic",kind:"episode",
+      governanceStatus:"unreviewed",lifecycleStatus:"active",claimId:"claim_step_"+i,
+      createdBy:"model",authorityEventId:null,derivedFrom:[],sourceEventIds:["evt_pilot_window"],
+      tokenCost:24,relevance:.10+((i*37)%40)/200,seq:i,
+      content:"Step "+i+": routine progress note."});
+  }
+  return out;
+}
+
+function buildStore(step,scenario,tombstoned){
+  var store=baseStore().concat(noise(step)), byId={};
+  store.forEach(function(r){byId[r.id]=r;});
+  if(scenario==="B"){
+    byId.mem_soc2_ban.lifecycleStatus="superseded";
+    store.push({id:"mem_soc2_allow",revision:2,namespace:"approvals",kind:"decision",
+      governanceStatus:"approved",lifecycleStatus:"active",claimId:"claim_soc2",createdBy:"user",
+      authorityEventId:"evt_security_report",derivedFrom:[{type:"event",id:"evt_security_report"}],
+      sourceEventIds:["evt_security_report"],tokenCost:36,relevance:.86,supersedes:"mem_soc2_ban",
+      content:"SOC 2 Type II evidence on file; the certification claim may now be made."});
+  }
+  (tombstoned||[]).forEach(function(id){ if(byId[id]) byId[id].lifecycleStatus="tombstoned"; });
+  return store;
+}
+
+var LEVELS={
+  naive:{label:"naive",semantic:false,cache:false,lint:false,credits:0},
+  O0:{label:"-O0 Essential",semantic:false,cache:true,lint:true,credits:0},
+  O2:{label:"-O2 Standard",semantic:true,cache:true,lint:true,credits:2},
+  O3:{label:"-O3 High-stakes",semantic:true,cache:true,lint:true,credits:6}
+};
+var POLICY="compiler-v1.0", BUDGET=420;
+
+// ------------------------------------------------------------ compile
+function compile(o){
+  var t0=performance.now(), level=LEVELS[o.level]||LEVELS.O2,
+      lintOn=(o.lintOn!==false)&&level.lint, store=o.store,
+      excluded=[], warnings=[];
+  function drop(r,why){excluded.push({id:r.id,reason:why});}
+
+  if(o.level==="naive"){
+    var ord=store.slice().sort(function(a,b){return (b.seq||0)-(a.seq||0);}),
+        inc=[],used=0;
+    ord.forEach(function(r){
+      if(r.lifecycleStatus==="tombstoned"){drop(r,"TOMBSTONED");return;}
+      if(used+r.tokenCost>BUDGET){drop(r,"BUDGET_EXHAUSTED");return;}
+      inc.push(r);used+=r.tokenCost;
+    });
+    return receipt(inc,excluded,warnings,used,o,level,t0,{capsuleHit:false,overlayReused:0},{});
+  }
+
+  var pool=store.slice();                                        // 1 scope/ACL
+  pool=pool.filter(function(r){                                  // 2 tombstoned
+    if(r.lifecycleStatus==="tombstoned"){drop(r,"TOMBSTONED");return false;}return true;});
+  var historical=[];
+  pool=pool.filter(function(r){                                  // 3 partition
+    if(r.lifecycleStatus==="superseded"){historical.push(r);drop(r,"SUPERSEDED");return false;}
+    if(r.lifecycleStatus==="stale"){historical.push(r);drop(r,"STALE");return false;}
+    return true;});
+  var promotions=[];
+  pool=pool.filter(function(r){                                  // 4 authority
+    var settled=r.governanceStatus==="approved"&&(r.kind==="decision"||r.kind==="constraint");
+    if(settled&&!hasAuthority(r.authorityEventId)){
+      promotions.push(r);
+      if(lintOn){drop(r,"MISSING_AUTHORITY_EVENT");return false;}
+      warnings.push({code:"UNAUTHORIZED_PROMOTION_ADMITTED",id:r.id,
+        text:"Admitted with no authority event because the linter is off."});
+    }
+    return true;});
+  var pinned=pool.filter(function(r){                            // 5 pin
+        return r.namespace==="constraints"||r.namespace==="approvals";}),
+      rest=pool.filter(function(r){
+        return !(r.namespace==="constraints"||r.namespace==="approvals");});
+  var cands=level.semantic                                       // 6 retrieve
+    ? rest.slice().sort(function(a,b){return b.relevance-a.relevance;})
+    : rest.slice().sort(function(a,b){return (b.seq||0)-(a.seq||0);});
+  var blocked=0;                                                 // 7 lint
+  if(lintOn){
+    var seen={};
+    pinned.forEach(function(r){
+      if(r.governanceStatus!=="approved")return;
+      if(seen[r.claimId]&&seen[r.claimId]!==r.id){blocked++;
+        warnings.push({code:"INCOMPATIBLE_ACTIVE_DECISIONS",id:r.id,
+          text:"Two active approved decisions for "+r.claimId+". Blocked pending confirmation."});}
+      seen[r.claimId]=r.id;});
+  }
+  var seenClaim={},included=[],used2=0;                          // 8 dedup/pack
+  function admit(r){
+    if(seenClaim[r.claimId]){drop(r,"DUPLICATE_CLAIM");return;}
+    if(used2+r.tokenCost>BUDGET){drop(r,"BUDGET_EXHAUSTED");return;}
+    seenClaim[r.claimId]=1;included.push(r);used2+=r.tokenCost;}
+  pinned.forEach(admit);cands.forEach(admit);
+  var capIds=included.filter(function(r){                        // 9 capsule
+        return r.namespace==="constraints"||r.namespace==="approvals";})
+      .map(function(r){return r.id;});
+  var cache={capsuleDigest:digest(capIds),
+    capsuleHit:!!(level.cache&&o.prevCapsule&&o.prevCapsule===digest(capIds)),
+    overlayReused:level.cache&&o.watermark
+      ?included.filter(function(r){return (r.seq||0)<=o.watermark;}).length:0};
+  return receipt(included,excluded,warnings,used2,o,level,t0,cache,
+    {historical:historical,promotions:promotions,blocked:blocked});
+}
+
+function receipt(inc,exc,warn,used,o,level,t0,cache,extra){       // 10 emit
+  var candidateSetDigest=digest(o.store.map(function(r){return r.id+"@"+r.revision;}).sort());
+  // Volatile fields (receiptId, engineTimeMs, cache telemetry) are deliberately
+  // NOT part of either digest: they legitimately differ between identical runs.
+  var selectionDigest=digest({
+    included:inc.map(function(r){return r.id+"@"+r.revision;}),
+    excluded:exc.map(function(e){return e.id+":"+e.reason;}).sort(),
+    policy:POLICY,level:o.level,lint:o.lintOn!==false,budget:BUDGET});
+  return {
+    receiptId:"rcpt_"+digest(String(Date.now()+Math.random())),
+    policyVersion:POLICY,optimizationLevel:level.label,
+    candidateSetDigest:candidateSetDigest,selectionDigest:selectionDigest,
+    included:inc,excluded:exc,warnings:warn,tokenCount:used,creditOverhead:level.credits,
+    engineTimeMs:+(performance.now()-t0).toFixed(2),cache:cache,
+    historical:extra.historical||[],promotions:extra.promotions||[],
+    blockedConflicts:extra.blocked||0
+  };
+}
+
+// ------------------------------------------------------------- probes
+var REQUIRED=["claim_onprem","claim_pilot_window","claim_training"];
+function probeSet(level,step){
+  var store=buildStore(step,"A",[]),
+      r=compile({store:store,level:level,lintOn:true}),
+      ids={},claims={};
+  r.included.forEach(function(x){ids[x.id]=1;claims[x.claimId]=1;});
+  var checks=[
+    ["No superseded record in active context",
+      !r.included.some(function(x){return x.lifecycleStatus==="superseded";})],
+    ["No tombstoned record in active context",
+      !r.included.some(function(x){return x.lifecycleStatus==="tombstoned";})],
+    ["Unauthorized promotion blocked",!ids.mem_budget_approved],
+    ["Every included record resolves its provenance",
+      r.included.every(function(x){return x.sourceEventIds&&x.sourceEventIds.length&&
+        x.sourceEventIds.every(function(e){return !!EVENTS[e];});})],
+    ["Active constraints recalled",REQUIRED.every(function(c){return !!claims[c];})],
+    ["Within token budget",r.tokenCount<=BUDGET],
+    ["Every exclusion carries a reason",
+      r.excluded.every(function(e){return !!e.reason;})]
+  ];
+  return {checks:checks,passed:checks.filter(function(c){return c[1];}).length,
+          total:checks.length,receipt:r};
+}
+function recallAt(level,step){
+  var store=buildStore(step,"A",[]),r=compile({store:store,level:level,lintOn:true}),c={};
+  r.included.forEach(function(x){c[x.claimId]=1;});
+  return REQUIRED.filter(function(k){return !!c[k];}).length/REQUIRED.length;
+}
+
+// ============================================================== state
+var S={scenario:"A",step:10,level:"O2",lint:true,tombstoned:[],cascade:null,prevCapsule:null};
+
+function current(){
+  var store=buildStore(S.step,S.scenario,S.tombstoned);
+  var r=compile({store:store,level:S.level,lintOn:S.lint,prevCapsule:S.prevCapsule});
+  return {store:store,r:r};
+}
+
+// ============================================================= render
+function pill(r){
+  if(r.lifecycleStatus==="tombstoned")return '<span class="tag stop">'+tr("tombstoned","đã xóa")+'</span>';
+  if(r.lifecycleStatus==="superseded")return '<span class="tag mut">'+tr("superseded","đã thay thế")+'</span>';
+  if(r.governanceStatus==="approved")return '<span class="tag ok">'+tr("approved","đã duyệt")+'</span>';
+  if(r.governanceStatus==="pending")return '<span class="tag warn">'+tr("pending","đang chờ")+'</span>';
+  return '<span class="tag info">'+esc(r.kind)+'</span>';
+}
+
+function renderStore(store,r){
+  var incl={};r.included.forEach(function(x){incl[x.id]=1;});
+  var excl={};r.excluded.forEach(function(x){excl[x.id]=x.reason;});
+  var shown=store.filter(function(x){return x.id.indexOf("mem_step_")!==0;});
+  var hidden=store.length-shown.length;
+  var html=shown.map(function(x){
+    var cls="rec"+(incl[x.id]?"":" out")+(x.id==="mem_budget_approved"&&!S.lint?" bad":"")
+           +((x.namespace==="constraints"||x.namespace==="approvals")?" pinned":"");
+    return '<div class="'+cls+'">'
+      +'<div class="rh"><span class="rid">'+esc(x.id)+'</span>'+pill(x)+'</div>'
+      +'<div class="rc">'+esc(recordContent(x))+'</div>'
+      +'<div class="rm"><span>'+esc(x.namespace)+'</span><span>'+esc(x.kind)+'</span>'
+      +'<span>'+tr("by ","bởi ")+esc(x.createdBy)+'</span><span>'+x.tokenCost+'t</span>'
+      // Only a record claiming settled status needs an authority event. Flagging
+      // "no authority" on a preference or an observation would be noise.
+      +(x.authorityEventId?'<span>auth '+esc(x.authorityEventId)+'</span>'
+        :(x.governanceStatus==="approved"&&(x.kind==="decision"||x.kind==="constraint")
+          ?'<span style="color:var(--red)">'+tr("no authority event","không có authority event")+'</span>':''))
+      +(incl[x.id]?'':'<span style="color:var(--red)">'+esc(reasonLabel(excl[x.id]))+'</span>')
+      +'</div></div>';
+  }).join("");
+  if(hidden>0) html+='<div class="empty">+ '+hidden+tr(' routine episodic notes from the run, competing for the same token budget.',' episodic note thường lệ trong run, cùng tranh token budget.')+'</div>';
+  $("paneStore").innerHTML=html;
+}
+
+function renderCtx(r){
+  if(!r.included.length){$("paneCtx").innerHTML='<div class="empty">'+tr("Nothing compiled.","Không có memory nào được compile.")+'</div>';return;}
+  var lines=r.included.map(function(x){
+    return '<span class="h">['+esc(x.namespace)+']</span> '+esc(recordContent(x));}).join("\n");
+  var warn=r.warnings.map(function(w){
+    return '<div class="box '+(w.code==="UNAUTHORIZED_PROMOTION_ADMITTED"?"stop":"warn")
+      +'" style="margin:0 0 10px"><span class="lab">'+esc(w.code)+'</span><p>'+esc(w.text)+'</p></div>';
+  }).join("");
+  $("paneCtx").innerHTML=warn+'<pre class="ctx">'+lines+'</pre>';
+}
+
+function renderReceipt(r){
+  var ex={};r.excluded.forEach(function(e){ex[e.reason]=(ex[e.reason]||0)+1;});
+  var exRows=Object.keys(ex).map(function(k){
+    return '<tr><td><code>'+esc(k)+'</code></td><td class="num">'+ex[k]+'</td></tr>';}).join("");
+  $("paneRcpt").innerHTML=
+    '<pre class="json">'+esc(JSON.stringify({
+      policyVersion:r.policyVersion,optimizationLevel:r.optimizationLevel,
+      candidateSetDigest:r.candidateSetDigest,selectionDigest:r.selectionDigest,
+      included:r.included.length,excluded:r.excluded.length,
+      tokenCount:r.tokenCount,creditOverhead:r.creditOverhead,
+      capsuleDigest:r.cache.capsuleDigest,capsuleHit:r.cache.capsuleHit,
+      blockedConflicts:r.blockedConflicts
+    },null,2))+'</pre>'
+    +'<h4 style="margin:14px 0 6px;font:700 9px var(--mono);letter-spacing:.12em;'
+    +'text-transform:uppercase;color:var(--navy-faint)">'+tr("Why records were excluded","Lý do record bị loại")+'</h4>'
+    +'<div class="tw" style="margin:0"><table style="min-width:0">'
+    +'<thead><tr><th>'+tr("Reason","Lý do")+'</th><th class="num">n</th></tr></thead><tbody>'+exRows+'</tbody></table></div>'
+    +'<h4 style="margin:14px 0 6px;font:700 9px var(--mono);letter-spacing:.12em;'
+    +'text-transform:uppercase;color:var(--navy-faint)">Source map</h4>'
+    +r.included.slice(0,6).map(function(x){
+        return '<div class="rec" style="margin-bottom:6px"><div class="rh">'
+        +'<span class="rid">'+esc(x.id)+'</span>'
+        +'<button class="srcmap" data-act="src" data-arg="'+esc(x.sourceEventIds[0])+'">'
+        +esc(x.sourceEventIds[0])+' ↗</button></div></div>';}).join("")
+    +'<div class="empty">Volatile fields — receiptId, engine time, cache telemetry — are '
+    +'excluded from both digests by design.</div>';
+}
+
+function renderMetrics(r){
+  var m=[
+    [tr("Context tokens","Token context"),r.tokenCount+" / "+BUDGET,""],
+    [tr("Records compiled","Record đã compile"),r.included.length,""],
+    [tr("Memory credits","Credit memory"),r.creditOverhead,r.creditOverhead===0?"good":""],
+    [tr("Engine time","Thời gian engine"),r.engineTimeMs+" ms",""],
+    ["Capsule",r.cache.capsuleHit?tr("reused","dùng lại"):tr("rebuilt","build lại"),r.cache.capsuleHit?"good":""],
+    [tr("Promotions caught","Promotion bị chặn"),r.promotions.length,r.promotions.length&&S.lint?"good":(r.promotions.length?"bad":"")]
+  ];
+  $("metrics").innerHTML=m.map(function(x){
+    return '<div><span>'+esc(x[0])+'</span><b class="'+x[2]+'">'+esc(String(x[1]))+'</b></div>';
+  }).join("");
+}
+
+function scenarioNote(r){
+  var h="";
+  if(S.scenario==="A"){
+    var bad=r.included.some(function(x){return x.id==="mem_budget_approved";});
+    if(bad){
+      h='<div class="diag">'
+      +'<span class="e">error[E0501]</span>: <b>a proposal was compiled as an approved constraint</b>\n'
+      +'  <span class="g">┌─</span> evt_budget_proposal\n'
+      +'  <span class="g">│</span>\n'
+      +'  <span class="g">│</span> We may consider a budget of <b>up to $50,000</b> … <b>nothing is signed off</b>\n'
+      +'  <span class="g">│</span>                             <span class="u">──────────────</span> <span class="u">this is the entire basis</span>\n'
+      +'  <span class="g">│</span>\n'
+      +'  <span class="g">=</span> note: <b>mem_budget_approved</b> declares governanceStatus: <span class="e">approved</span>\n'
+      +'  <span class="g">=</span> note: authorityEventId: <span class="e">null</span>\n'
+      +'  <span class="g">=</span> note: createdBy: <span class="e">model</span> — a summarizer, not an authority\n'
+      +'  <span class="g">=</span> <span class="w">warning</span>: admitted anyway. the linter is off.\n'
+      +'</div>'
+      +'<div class="box stop"><span class="lab">What just happened</span><p>The compiler did not invent '
+      +'this. The corrupted record already existed in the store — a summarizer wrote it, claiming approved '
+      +'status while its only lineage is an event that carries no authority. With the linter off, the '
+      +'assembler trusts the record\'s own metadata and hands the model a budget the client never '
+      +'approved. Turn the linter on.</p></div>';
+    } else {
+      h='<div class="diag">'
+      +'<span class="ok">refused[E0501]</span>: <b>cannot compile `proposal` as an approved constraint</b>\n'
+      +'  <span class="g">┌─</span> mem_budget_approved\n'
+      +'  <span class="g">│</span>\n'
+      +'  <span class="g">│</span> governanceStatus: approved\n'
+      +'  <span class="g">│</span> authorityEventId: <span class="u">null</span>\n'
+      +'  <span class="g">│</span>                   <span class="u">────</span> <span class="u">no event licenses this cast</span>\n'
+      +'  <span class="g">│</span>\n'
+      +'  <span class="g">=</span> lineage: evt_budget_proposal <span class="g">(authority: false)</span>\n'
+      +'  <span class="g">=</span> help: an approval requires an authority event in scope\n'
+      +'  <span class="ok">=</span> <span class="ok">record excluded — MISSING_AUTHORITY_EVENT</span>\n'
+      +'</div>'
+      +'<div class="box good"><span class="lab">Refused, with a reason</span><p>The record stays in the '
+      +'store and stays auditable. It simply may not be compiled as an active constraint, and the receipt '
+      +'records why. Note what the honest record beside it still says: <b>up to</b> $50,000, <b>pending</b> '
+      +'committee review.</p></div>';
+    }
+  } else if(S.scenario==="B"){
+    h='<div class="box good"><span class="lab">Retained for audit · excluded from active</span>'
+    +'<p>A reviewer banned the SOC 2 claim. Later the security report arrived and an authorized decision '
+    +'superseded that ban. The old decision is <b>not deleted</b> — it moved to the historical pool, where '
+    +'it can still explain how the current state was reached. It is simply no longer compiled as an active '
+    +'constraint. This is the difference between <b>supersede</b> and <b>delete</b>, and it is why '
+    +'lifecycle partition runs before authority pinning.</p></div>';
+  } else {
+    h='<div class="box '+(S.cascade?"good":"warn")+'"><span class="lab">Hard delete</span>'
+    +'<p>The contact record contains PII, and two derived summaries plus a cached packet were built from '
+    +'it. Deleting only the source would leave the data in all three. Press <b>Request hard delete</b> to '
+    +'run the cascade — it walks <code class="i">derivedFrom</code> in reverse and tombstones every '
+    +'dependent record.</p></div>';
+    if(S.cascade) h+='<div class="diag">'+S.cascade+'</div>';
+  }
+  if(isVi()){
+    if(S.scenario==="A"){
+      var admitted=r.included.some(function(x){return x.id==="mem_budget_approved";});
+      h=admitted
+        ?'<div class="box stop"><span class="lab">Lỗi type-promotion đã lọt qua</span><p>Record do model tạo tự khai <code>approved</code> nhưng không có authority event. Khi tắt linter, compiler đưa ngân sách chưa được duyệt vào active context. Bật linter để chặn cast này.</p></div>'
+        :'<div class="box good"><span class="lab">Đã từ chối, kèm lý do</span><p><code>mem_budget_approved</code> vẫn còn trong store để audit nhưng bị loại khỏi active context với lý do <code>MISSING_AUTHORITY_EVENT</code>. Record trung thực bên cạnh vẫn giữ “tối đa $50.000” và trạng thái pending.</p></div>';
+    } else if(S.scenario==="B"){
+      h='<div class="box good"><span class="lab">Giữ để audit · loại khỏi active context</span><p>Quyết định cấm claim SOC 2 không bị xóa. Khi evidence mới và authority event hợp lệ xuất hiện, nó chuyển sang historical pool; decision mới trở thành phiên bản active. Đây là khác biệt giữa <b>supersede</b> và <b>delete</b>.</p></div>';
+    } else {
+      h='<div class="box '+(S.cascade?'good':'warn')+'"><span class="lab">Hard delete</span><p>PII đã lan sang hai derived summary và một cached packet. Xóa source thôi là chưa đủ; cascade phải đi ngược <code>derivedFrom</code>, tombstone mọi dependent record, invalidate cache rồi phát hành DeletionReceipt.</p></div>';
+      if(S.cascade)h+='<div class="diag">'+S.cascade+'</div>';
+    }
+  }
+  $("scenarioNote").innerHTML=h;
+}
+
+function render(){
+  var c=current();
+  renderMetrics(c.r);renderStore(c.store,c.r);renderCtx(c.r);renderReceipt(c.r);scenarioNote(c.r);
+  $("delBtn").disabled=(S.scenario!=="C")||!!S.cascade;
+  document.querySelectorAll("[data-act]").forEach(function(b){
+    var a=b.getAttribute("data-act"),v=b.getAttribute("data-arg");
+    if(a==="scn")b.classList.toggle("on",v===S.scenario);
+    if(a==="step")b.classList.toggle("on",+v===S.step);
+    if(a==="lvl")b.classList.toggle("on",v===S.level);
+    if(a==="lint"){b.classList.toggle("on",(v==="on")===S.lint);
+      b.classList.toggle("danger",v==="off"&&!S.lint);}
+    if(a==="scn"||a==="step"||a==="lvl"||a==="lint"){
+      b.setAttribute("aria-pressed",b.classList.contains("on")?"true":"false");
+    }
+  });
+}
+
+function setLang(lang,persist){
+  lang=lang==="vi"?"vi":"en";
+  document.documentElement.setAttribute("data-lang",lang);
+  document.documentElement.setAttribute("lang",lang);
+  document.querySelectorAll("[data-lang-choice]").forEach(function(b){
+    var active=b.getAttribute("data-lang-choice")===lang;
+    b.classList.toggle("on",active);
+    b.setAttribute("aria-pressed",active?"true":"false");
+  });
+  $("langStatus").textContent=lang==="vi"?"Đã chuyển sang tiếng Việt":"Language changed to English";
+  document.title=lang==="vi"?"PAL Memory Compiler · Kiến trúc memory cho agent chạy dài":"PAL Memory Compiler · Long-running agent memory architecture";
+  if(persist!==false){try{localStorage.setItem("day19-lang",lang);}catch(ignore){}}
+  render();chartRecall();chartDrift();probeTable();
+}
+
+// -------------------------------------------------------- interaction
+document.addEventListener("click",function(ev){
+  var langButton=ev.target.closest("[data-lang-choice]");
+  if(langButton){setLang(langButton.getAttribute("data-lang-choice"));return;}
+  var t=ev.target.closest("[data-act]");if(!t)return;
+  var a=t.getAttribute("data-act"),v=t.getAttribute("data-arg");
+  if(a==="scn"){S.scenario=v;S.cascade=null;S.tombstoned=[];}
+  else if(a==="step")S.step=+v;
+  else if(a==="lvl")S.level=v;
+  else if(a==="lint")S.lint=(v==="on");
+  else if(a==="delete")return runCascade();
+  else if(a==="src"){
+    var e=EVENTS[v];
+    if(e){
+      var local=isVi()&&EVENT_VI[v]?EVENT_VI[v]:e, detail=$("sourceDetail");
+      detail.hidden=false;
+      detail.innerHTML='<b>'+esc(v)+'</b><br>'+esc(local.actor)+'<br>'
+        +tr('carries authority: ','có authority: ')+esc(String(e.authority))+'<br><br>“'+esc(local.text)+'”';
+      detail.focus();
+    }
+    return;
+  }
+  render();
+});
+
+// The cascade steps visibly, guarded by a token so a scenario change mid-run
+// cannot leave a half-finished cascade on screen.
+var cascadeToken=0;
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
+async function runCascade(){
+  var tok=++cascadeToken;
+  var steps=[
+    [tr("tombstone source","tombstone source"),"mem_contact_pii"],
+    [tr("invalidate derived summary","vô hiệu derived summary"),"mem_stakeholder_summary"],
+    [tr("invalidate derived digest","vô hiệu derived digest"),"mem_project_digest"],
+    [tr("invalidate cached packet","vô hiệu cached packet"),"capsule@constraints"],
+    [tr("rebuild from surviving sources","build lại từ source còn hiệu lực"),null],
+    [tr("emit DeletionReceipt","phát hành DeletionReceipt"),null]
+  ];
+  var out="";
+  for(var i=0;i<steps.length;i++){
+    if(tok!==cascadeToken)return;
+    var s=steps[i];
+    if(s[1]&&s[1].indexOf("mem_")===0)S.tombstoned.push(s[1]);
+    out+='<span class="ok">✓</span> '+esc(s[0])+(s[1]?'  <span class="g">'+esc(s[1])+'</span>':"")+"\n";
+    S.cascade=out;render();
+    await sleep(420);
+  }
+  if(tok!==cascadeToken)return;
+  S.cascade=out+'\n<span class="g">DeletionReceipt</span>  tombstoned: 3   rebuilt: 1   '
+    +'cache invalidated: 1\n<span class="g">'+tr('the PII no longer resolves from any surviving record','PII không còn resolve từ bất kỳ record còn hiệu lực nào')+'</span>';
+  render();
+}
+
+// ------------------------------------------------------------- charts
+function chartRecall(){
+  var steps=[10,25,50,100,200],levels=[["naive","var(--red)"],["O0","var(--blue)"],["O2","var(--green)"],["O3","var(--purple)"]];
+  var X0=64,X1=650,Y0=44,Y1=196,w=X1-X0,h=Y1-Y0;
+  function px(i){return X0+w*i/(steps.length-1);}
+  function py(v){return Y1-h*v;}
+  var s='<g font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--navy-faint)">';
+  [0,.5,1].forEach(function(v){
+    s+='<line x1="'+X0+'" y1="'+py(v)+'" x2="'+X1+'" y2="'+py(v)+'" stroke="var(--chart-grid)" stroke-width="1"/>'
+      +'<text x="'+(X0-8)+'" y="'+(py(v)+3)+'" text-anchor="end">'+Math.round(v*100)+'%</text>';});
+  steps.forEach(function(st,i){
+    s+='<text x="'+px(i)+'" y="'+(Y1+16)+'" text-anchor="middle">'+st+'</text>';});
+  s+='<text x="'+((X0+X1)/2)+'" y="'+(Y1+34)+'" text-anchor="middle">'+tr("steps run","số bước đã chạy")+'</text></g>';
+  levels.forEach(function(L,k){
+    var pts=steps.map(function(st,i){return px(i)+","+py(recallAt(L[0],st));}).join(" ");
+    s+='<polyline points="'+pts+'" fill="none" stroke="'+L[1]+'" stroke-width="2.4" '
+      +(L[0]==="naive"?'':'stroke-dasharray="'+(k===1?"1 0":k===2?"1 0":"1 0")+'" ')+'/>';
+    steps.forEach(function(st,i){
+      s+='<circle cx="'+px(i)+'" cy="'+py(recallAt(L[0],st))+'" r="3.4" fill="'+L[1]+'"/>';});
+    s+='<text x="'+(X1+6)+'" y="'+(py(recallAt(L[0],200))+3+(k===1?-9:k===2?0:k===3?9:0))+'" '
+      +'font-family="IBM Plex Mono, monospace" font-size="9.5" font-weight="700" fill="'+L[1]+'">'
+      +L[0]+'</text>';
+  });
+  s+='<text x="'+X0+'" y="24" font-family="IBM Plex Sans, sans-serif" font-size="12" font-weight="700" '
+    +'fill="var(--ink)">'+tr("Active-constraint recall vs trajectory length","Recall active constraint theo độ dài trajectory")+'</text>';
+  s+='<text x="'+X0+'" y="'+(Y1+56)+'" font-family="IBM Plex Mono, monospace" font-size="9" '
+    +'fill="var(--navy-faint)">'+tr("-O0 / -O2 / -O3 overlap at 100% — pinning keeps them there","-O0 / -O2 / -O3 cùng ở 100% — pinning giữ chúng tại đó")+'</text>';
+  $("chartRecall").innerHTML=s;
+  $("chartRecall").setAttribute("aria-label",tr("Active-constraint recall against trajectory length. Naive recall falls to zero after 10 steps; governed modes remain at 100%.","Recall active constraint theo độ dài trajectory. Naive giảm về 0 sau bước 10; các governed mode giữ 100%."));
+}
+
+// MEASURED data, transcribed from results_neutral.json / results_decisions.json.
+// The raw request/response for every one of these calls is committed beside the page.
+var DRIFT={
+  neutral:{1:{P:13,R:0,D:7,A:0},2:{P:11,R:0,D:9,A:0},3:{P:11,R:0,D:9,A:0}},
+  decisions:{1:{P:13,R:0,D:7,A:0},2:{P:13,R:0,D:7,A:0},3:{P:13,R:0,D:7,A:0}}
+};
+function chartDrift(){
+  var conds=[["neutral",tr("neutral prompt","prompt trung tính")],["decisions",tr('adversarial: "what was decided"','đối kháng: “đã quyết định gì”')]];
+  var COL={P:["var(--green)",tr("preserved","được giữ")],R:["var(--red)",tr("promoted","bị nâng type")],D:["var(--amber)",tr("dropped","bị bỏ")],A:["var(--navy-faint)",tr("ambiguous","mơ hồ")]} ;
+  var s='',X0=70,BW=44,GAP=16,GRP=44,Y0=52,H=150,n=20;
+  conds.forEach(function(c,ci){
+    var ox=X0+ci*(3*(BW+GAP)+GRP);
+    s+='<text x="'+(ox+ (3*(BW+GAP)-GAP)/2 )+'" y="'+(Y0+H+34)+'" text-anchor="middle" '
+      +'font-family="IBM Plex Mono, monospace" font-size="9" font-weight="700" fill="var(--ink)">'
+      +esc(c[1])+'</text>';
+    [1,2,3].forEach(function(g,gi){
+      var x=ox+gi*(BW+GAP),y=Y0+H,d=DRIFT[c[0]][g];
+      ["P","R","D","A"].forEach(function(k){
+        var hh=H*d[k]/n; if(hh<=0)return; y-=hh;
+        s+='<rect x="'+x+'" y="'+y+'" width="'+BW+'" height="'+hh+'" fill="'+COL[k][0]+'" rx="2"/>';
+        if(hh>16)s+='<text x="'+(x+BW/2)+'" y="'+(y+hh/2+4)+'" text-anchor="middle" '
+          +'font-family="IBM Plex Mono, monospace" font-size="10" font-weight="700" fill="var(--on-accent)">'+d[k]+'</text>';
+      });
+      s+='<text x="'+(x+BW/2)+'" y="'+(Y0+H+16)+'" text-anchor="middle" '
+        +'font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--navy-faint)">gen '+g+'</text>';
+    });
+  });
+  [0,.5,1].forEach(function(v){
+    s+='<line x1="'+(X0-8)+'" y1="'+(Y0+H-H*v)+'" x2="640" y2="'+(Y0+H-H*v)+'" stroke="var(--chart-grid)"/>'
+      +'<text x="'+(X0-14)+'" y="'+(Y0+H-H*v+3)+'" text-anchor="end" '
+      +'font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--navy-faint)">'+Math.round(v*n)+'</text>';});
+  s+='<text display="none" x="'+X0+'" y="26" font-family="IBM Plex Sans, sans-serif" font-size="12" font-weight="700" '
+    +'fill="#111a3e">Claim status by summary generation · n = 20 chains per condition</text>';
+  s+='<text x="'+X0+'" y="26" font-family="IBM Plex Sans, sans-serif" font-size="12" font-weight="700" fill="var(--ink)">'+tr("Claim status by summary generation · n = 20 chains per condition","Trạng thái claim theo thế hệ summary · n = 20 chain mỗi condition")+'</text>';
+  var lx=X0;
+  Object.keys(COL).forEach(function(k){
+    s+='<rect x="'+lx+'" y="'+(Y0+H+52)+'" width="10" height="10" fill="'+COL[k][0]+'" rx="2"/>'
+      +'<text x="'+(lx+15)+'" y="'+(Y0+H+61)+'" font-family="IBM Plex Mono, monospace" '
+      +'font-size="9" fill="var(--navy-soft)">'+COL[k][1]+'</text>';
+    lx+=COL[k][1].length*6.2+34;});
+  s+='<text x="'+X0+'" y="'+(Y0+H+82)+'" font-family="IBM Plex Mono, monospace" font-size="9" '
+    +'fill="var(--red)" font-weight="700">'+tr("promoted = 0 in every generation of both conditions","promoted = 0 ở mọi generation của cả hai condition")+'</text>';
+  $("chartDrift").innerHTML=s;
+  $("chartDrift").setAttribute("aria-label",tr("Claim status by summary generation. Promotion is zero; seven to nine of twenty chains drop the claim.","Trạng thái claim theo thế hệ summary. Promotion bằng 0; 7 đến 9 trên 20 chain làm mất claim."));
+}
+
+function probeTable(){
+  var levels=["naive","O0","O2","O3"],rows=probeSet("O2",200).checks.map(function(c){return c[0];});
+  var rowsVi=["Không có record superseded trong active context","Không có record tombstoned trong active context",
+    "Unauthorized promotion bị chặn","Mọi record được chọn đều resolve được provenance",
+    "Active constraint được recall","Nằm trong token budget","Mọi exclusion đều có lý do"];
+  var head='<tr><th>'+tr("Conformance check at 200 steps","Kiểm tra conformance tại 200 bước")+'</th>'+levels.map(function(l){
+    return '<th class="num">'+esc(l)+'</th>';}).join("")+'</tr>';
+  var sets={};levels.forEach(function(l){sets[l]=probeSet(l,200);});
+  var body=rows.map(function(name,i){
+    return '<tr><td>'+esc(isVi()?rowsVi[i]:name)+'</td>'+levels.map(function(l){
+      var ok=sets[l].checks[i][1];
+      return '<td class="num">'+(ok?'<span class="tag ok">'+tr("pass","đạt")+'</span>'
+        :'<span class="tag stop">'+tr("fail","trượt")+'</span>')+'</td>';}).join("")+'</tr>';}).join("");
+  $("probeTable").innerHTML='<div class="tw"><table><caption>'+tr('Every check is a deterministic assertion over the fixture store, recomputed in your browser. <b>Verified</b>, not measured. <b>Read the naive column carefully:</b> its authority check passes at 200 steps only because budget exhaustion drops the corrupt record first; the same check fails at 10 steps. An aggregate score would hide that failure.','Mỗi check là assertion tất định trên fixture store và được browser tính lại. <b>Verified</b>, không phải measured. <b>Đọc cột naive cẩn thận:</b> authority check chỉ pass ở 200 bước vì hết budget làm record lỗi bị rơi trước; cùng check đó fail ở 10 bước. Điểm tổng hợp sẽ che mất lỗi này.')+'</caption>'
+    +'<thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>';
+}
+
+// --------------------------------------------------------------- toc
+var secs=[].slice.call(document.querySelectorAll("section[id]"));
+var links={};document.querySelectorAll('.toc a').forEach(function(a){
+  links[a.getAttribute("href").slice(1)]=a;});
+if("IntersectionObserver" in window){
+  new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(e.isIntersecting){
+        Object.keys(links).forEach(function(k){links[k].classList.remove("on");});
+        if(links[e.target.id])links[e.target.id].classList.add("on");
+      }});
+  },{rootMargin:"-15% 0px -70% 0px"}).observe&&secs.forEach(function(s){
+    new IntersectionObserver(function(es){
+      es.forEach(function(e){if(e.isIntersecting){
+        Object.keys(links).forEach(function(k){links[k].classList.remove("on");});
+        if(links[s.id])links[s.id].classList.add("on");}});
+    },{rootMargin:"-15% 0px -70% 0px"}).observe(s);});
+}
+
+var initialLang="en";
+try{initialLang=localStorage.getItem("day19-lang")||"en";}catch(ignore){}
+setLang(initialLang,false);
+})();
+</script>
+<script defer src="/assets/comments.js" data-page="day19"></script>
+</body>
+</html>

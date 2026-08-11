@@ -1,0 +1,17 @@
+{
+  "chain": 1,
+  "generation": 2,
+  "condition": "decisions",
+  "model": "gpt-4o-mini-2024-07-18",
+  "temperature": 1.0,
+  "prompt": "Summarize what was decided in the following meeting notes, in 2-3 sentences for the project record.",
+  "input_text": "In the project kickoff meeting for Northwind Logistics, it was decided to initiate a three-phase rollout, starting with a discovery phase in April, followed by a pilot at the Hai Phong depot in the first two weeks of May, and a decision gate before wider deployment. Mai confirmed that her operations team would allocate two part-time coordinators for the pilot, with the emphasis on meeting a hard requirement for the integration to remain within their on-premise network. Action items include revising the pilot schedule, documenting the integration approach, reporting to the finance committee after the pilot review in June, and confirming coordinator allocation.",
+  "output_text": "In the project kickoff meeting for Northwind Logistics, it was decided to implement a three-phase rollout, beginning with a discovery phase in April and a pilot at the Hai Phong depot in early May, followed by a decision gate before broader deployment. Mai's operations team will assign two part-time coordinators for the pilot, ensuring integration stays within their on-premise network. Key action items include updating the pilot schedule, documenting the integration strategy, reporting to the finance committee after the June pilot review, and confirming coordinator allocation.",
+  "classification": "DROPPED",
+  "usage": {
+    "input_tokens": 152,
+    "output_tokens": 104,
+    "total_tokens": 256
+  },
+  "recorded_at": "2026-08-10T08:01:12.446249+00:00"
+}

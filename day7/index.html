@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 7 — A PAM playbook that ships a full ad pack | Giang Thanh Cong</title>
+  <meta name="description" content="One high-value format — performance ad variations — turned into a repeatable PAM Playbook (a SKILL.md of inputs → steps → checks → outputs). Run on two brands, scored honestly: brand identity holds across every size, but the full placement set isn't emitted autonomously. Day 7 of a 30-day build challenge." />
+  <meta property="og:title" content="Day 7 — A PAM playbook that ships a full ad pack" />
+  <meta property="og:description" content="A documented, repeatable PAM Playbook for performance ad variations, plus a real batch of creatives — measured across two brands, with the reliability caveats stated plainly." />
+  <meta property="og:type" content="article" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📐</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --orange:#f9660e; --orange-soft:#ffe7d6;
+      --navy:#111a3e; --navy-soft:#5a6488;
+      --peach:#fdece1; --lav:#efe6fb; --purple:#8b5cf6;
+      --blue:#2f6fed; --blue-soft:#e2ecfd;
+      --green:#1e9257; --green-soft:#e4f3ea;
+      --amber:#b0771a; --amber-soft:#f7edda;
+      --red:#c64b3e; --red-soft:#f8e6e3;
+      --bg:#f6f7fb; --card:#fff; --border:#e7e9f2; --ink-dark:#0f1730;
+      --shadow:0 18px 50px rgba(17,26,62,.12);
+      --shadow-sm:0 6px 20px rgba(17,26,62,.08);
+      --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+      background:var(--bg);color:var(--navy);line-height:1.6;-webkit-font-smoothing:antialiased}
+    a{text-decoration:none;color:inherit}
+    .wrap{max-width:1000px;margin:0 auto;padding:0 24px}
+    h1,h2,h3{line-height:1.15;letter-spacing:-.015em}
+    .accent{color:var(--orange)}
+    code,.mono{font-family:var(--mono)}
+    svg{max-width:100%}
+
+    header.top{background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+    .bar{display:flex;align-items:center;justify-content:space-between;gap:16px;height:64px;max-width:1000px;margin:0 auto;padding:0 24px}
+    .back{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:.92rem}
+    .back:hover{color:var(--orange)}
+    .meta{text-align:center;flex:1;min-width:0}
+    .meta .tag{display:inline-block;background:var(--orange-soft);color:var(--orange);font-size:.68rem;
+      font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:20px}
+    .meta h1{font-size:1rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+    .src{display:inline-flex;align-items:center;gap:7px;background:var(--navy);color:#fff;font-weight:700;
+      font-size:.85rem;padding:9px 16px;border-radius:24px;white-space:nowrap}
+    .src:hover{background:var(--orange)}
+    @media(max-width:760px){ .meta h1{font-size:.8rem} .src span{display:none} }
+
+    .hero{padding:56px 0 34px;background:
+      radial-gradient(120% 130% at 88% -10%, var(--lav) 0%, transparent 46%),
+      linear-gradient(180deg,var(--peach) 0%, #fdf4ee 55%, var(--bg) 100%)}
+    .eyebrow{color:var(--orange);font-weight:700;text-transform:uppercase;letter-spacing:.14em;font-size:.76rem;margin-bottom:12px}
+    .hero h2{font-size:clamp(2rem,4.6vw,2.9rem);font-weight:800;max-width:20ch}
+    .hero p.lede{color:var(--navy-soft);max-width:66ch;margin-top:16px;font-size:1.04rem}
+    .tldr{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:30px}
+    .tl{background:#fff;border-radius:16px;padding:16px 18px;box-shadow:var(--shadow-sm);border-top:3px solid var(--c,var(--orange))}
+    .tl .ic{font-size:22px;line-height:1}
+    .tl .n{font-weight:800;font-size:1.3rem;margin-top:8px;letter-spacing:-.02em}
+    .tl .l{font-size:.75rem;color:var(--navy-soft);font-weight:600;margin-top:2px}
+    @media(max-width:720px){.tldr{grid-template-columns:repeat(2,1fr)}}
+
+    section.wrap{padding:40px 24px}
+    .shead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+    .shead .n{font-family:var(--mono);font-weight:700;font-size:.74rem;color:var(--orange);
+      background:rgba(249,102,14,.1);padding:3px 9px;border-radius:6px}
+    h3.title{font-size:clamp(1.35rem,2.8vw,1.7rem);font-weight:800}
+    .lede{color:var(--navy-soft);max-width:72ch;margin-bottom:24px;font-size:.98rem}
+    .subh{font-size:1.05rem;font-weight:800;margin:28px 0 10px}
+
+    .note{border-left:3px solid var(--amber);background:var(--amber-soft);padding:12px 16px;border-radius:0 10px 10px 0;margin-top:18px;font-size:.9rem;color:var(--navy)}
+    .note.red{border-left-color:var(--red);background:var(--red-soft)}
+    .note.green{border-left-color:var(--green);background:var(--green-soft)}
+    .note.blue{border-left-color:var(--blue);background:var(--blue-soft)}
+    .note b{color:var(--navy)}
+
+    /* inputs -> steps -> outputs flow */
+    .flow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:6px}
+    @media(max-width:760px){.flow{grid-template-columns:1fr}}
+    .fcol{background:#fff;border:1px solid var(--border);border-radius:16px;padding:16px 18px;box-shadow:var(--shadow-sm)}
+    .fcol h5{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+    .fcol.in h5{color:var(--blue)} .fcol.step h5{color:var(--orange)} .fcol.out h5{color:var(--green)}
+    .fcol ul{list-style:none;display:flex;flex-direction:column;gap:7px}
+    .fcol li{font-size:.83rem;color:var(--navy-soft);line-height:1.45;display:flex;gap:8px}
+    .fcol li:before{content:"›";color:var(--navy);font-weight:800;flex:none}
+    .fcol.step li{counter-increment:s} .fcol.step li:before{content:counter(s);font-family:var(--mono);font-size:.72rem;color:var(--orange);background:var(--orange-soft);border-radius:5px;padding:0 6px}
+    .fcol.step ul{counter-reset:s}
+
+    pre.skill{background:var(--ink-dark);color:#d6deff;border-radius:16px;padding:18px 20px;overflow-x:auto;
+      font-family:var(--mono);font-size:.78rem;line-height:1.6;margin-top:14px}
+    pre.skill .k{color:#ffb27d;font-weight:700}
+    details.doc{border:1px solid var(--border);border-radius:16px;background:#fff;box-shadow:var(--shadow-sm);margin-top:14px;overflow:hidden}
+    details.doc>summary{cursor:pointer;list-style:none;padding:14px 18px;font-weight:800;font-size:.9rem;display:flex;align-items:center;gap:10px;background:linear-gradient(170deg,#fbf7ff,#fff)}
+    details.doc>summary::-webkit-details-marker{display:none}
+    details.doc>summary .chev{color:var(--orange);font-family:var(--mono)}
+    details.doc[open]>summary .chev{transform:rotate(90deg)}
+    .docbody{padding:0 18px 4px}
+
+    /* run steps */
+    .runs{display:flex;flex-direction:column;gap:10px}
+    .rstep{display:grid;grid-template-columns:40px 1fr;gap:13px;background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-sm);padding:14px 16px}
+    .rstep .rn{width:40px;height:40px;border-radius:11px;background:var(--orange-soft);color:var(--orange);display:grid;place-items:center;font-weight:800;font-family:var(--mono);font-size:.82rem}
+    .rstep.pause .rn{background:var(--amber-soft);color:var(--amber)}
+    .rstep h5{font-size:.92rem;font-weight:800}
+    .rstep p{font-size:.84rem;color:var(--navy-soft);line-height:1.5;margin-top:2px}
+
+    /* brand banner + gallery */
+    .brandband{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:26px 0 10px}
+    .brandband h4{font-size:1.05rem;font-weight:800}
+    .badge{font-size:.66rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px;border-radius:20px}
+    .badge.fict{background:var(--blue-soft);color:var(--blue)}
+    .badge.concept{background:var(--amber-soft);color:var(--amber)}
+    .gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;align-items:start}
+    .gitem{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-sm)}
+    .gitem img{display:block;width:100%;height:auto}
+    .gcap{display:flex;justify-content:space-between;gap:8px;padding:8px 11px;font-family:var(--mono);font-size:10.5px;color:var(--navy-soft)}
+    .gcap b{color:var(--navy)}
+    .gmiss{border:1.5px dashed #c7cce0;border-radius:12px;display:grid;place-items:center;text-align:center;color:var(--amber);
+      font-family:var(--mono);font-size:11px;padding:20px 12px;background:var(--amber-soft);min-height:120px}
+
+    /* scorecard */
+    .score{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+    .sc{background:#fff;border:1px solid var(--border);border-radius:14px;padding:15px 17px;box-shadow:var(--shadow-sm);border-top:3px solid var(--c)}
+    .sc .st{font-family:var(--mono);font-size:.64rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:20px;display:inline-block}
+    .sc .st.pass{background:var(--green-soft);color:var(--green)}
+    .sc .st.mixed{background:var(--amber-soft);color:var(--amber)}
+    .sc .st.note{background:var(--blue-soft);color:var(--blue)}
+    .sc h5{font-size:.92rem;font-weight:800;margin:8px 0 4px}
+    .sc p{font-size:.82rem;color:var(--navy-soft);line-height:1.5}
+
+    .limits{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+    .lim{background:#fff;border-radius:14px;padding:16px 18px;box-shadow:var(--shadow-sm);border:1px dashed #c7cce0}
+    .lim h5{font-size:.9rem;font-weight:800;margin-bottom:5px}
+    .lim p{font-size:.8rem;color:var(--navy-soft);line-height:1.55}
+
+    footer{padding:44px 0 60px;border-top:1px solid var(--border);margin-top:20px}
+    footer p{color:var(--navy-soft);font-size:.84rem;text-align:center}
+    footer a{color:var(--orange);font-weight:700}
+  </style>
+</head>
+<body>
+
+  <header class="top">
+    <div class="bar">
+      <a class="back" href="../index.html">← Portfolio</a>
+      <div class="meta">
+        <span class="tag">Day 7 · 30 Day Challenge</span>
+        <h1>A playbook that ships a full ad pack</h1>
+      </div>
+      <a class="src" href="#batch">🖼️ <span>See the batch</span></a>
+    </div>
+  </header>
+
+<main>
+  <div class="hero">
+    <div class="wrap">
+      <div class="eyebrow">A PAM build · performance ad variations</div>
+      <h2>One brief in. A brand-consistent <span class="accent">ad pack</span> out.</h2>
+      <p class="lede">
+        I picked one high-value format — <b>performance ad variations</b> — and turned it into a repeatable
+        PAM <b>Playbook</b>: a <span class="mono">SKILL.md</span> of inputs → steps → checks → outputs. Then I
+        ran it on two brands and scored every output. The honest result: the playbook nails the hard part
+        (one identity across every size), but it doesn't yet emit the full placement set on its own.
+      </p>
+    </div>
+  </div>
+
+  <!-- 01 -->
+  <section class="wrap" id="format">
+    <div class="shead"><span class="n">01</span><h3 class="title">The format, and why it fits PAM</h3></div>
+    <p class="lede">
+      <b>Performance ad variations</b> = one approved key visual + offer, adapted into every placement a paid
+      campaign needs (Feed, Stories, Reels/TikTok, YouTube, display). It's the highest-frequency, most
+      repeatable job in a marketing team — the same message, many sizes, every week. That's exactly what a
+      Playbook is for, and it plays to PAM's two real strengths: <b>brand-aware generation</b> and
+      <b>recompose-to-ratio resizing</b> (not dumb cropping). If any format was going to prove
+      "reliably repeatable", this was the one.
+    </p>
+    <div class="note blue">
+      <b>Why a Playbook and not just a prompt.</b> A playbook separates the <em>method</em> from the
+      <em>facts</em>: the steps, safe-zone checks and stop conditions are written once, and each run only
+      supplies this campaign's brand, message and CTA. That separation is what turns a good one-off prompt into
+      output that's consistent instead of lucky.
+    </div>
+  </section>
+
+  <!-- 02 -->
+  <section class="wrap" id="playbook">
+    <div class="shead"><span class="n">02</span><h3 class="title">The playbook — inputs → steps → outputs</h3></div>
+    <p class="lede">
+      In PAM a Playbook is a <span class="mono">SKILL.md</span> (Header + when-to-use, required inputs, ordered
+      steps, checks, stop conditions). Here is the exact recipe I wrote and enabled, distilled to its three
+      moving parts:
+    </p>
+
+    <div class="flow">
+      <div class="fcol in">
+        <h5>Inputs (from the brief)</h5>
+        <ul>
+          <li>Brand: logo, palette, fonts, tone</li>
+          <li>Product / subject</li>
+          <li>Headline ≤ 6 words (+ optional subhead)</li>
+          <li>Primary CTA text</li>
+          <li>Optional offer / legal line</li>
+          <li>Placement set (default 5)</li>
+        </ul>
+      </div>
+      <div class="fcol step">
+        <h5>Steps (the method)</h5>
+        <ul>
+          <li>Validate inputs; if brand/CTA/message missing → STOP, ask</li>
+          <li>Compose the MASTER at 1:1 (4 concepts, pick strongest)</li>
+          <li>Lock the approved 1:1 as source of truth</li>
+          <li>Recompose (not crop) into each placement, keeping text in safe zones</li>
+          <li>Run the checks; regenerate any fail once</li>
+          <li>Name &amp; shortlist the pack</li>
+        </ul>
+      </div>
+      <div class="fcol out">
+        <h5>Outputs</h5>
+        <ul>
+          <li>1:1 1080² — Feed</li>
+          <li>4:5 — Feed portrait</li>
+          <li>9:16 — Stories / Reels / TikTok</li>
+          <li>16:9 — YouTube / display</li>
+          <li>1.91:1 — link / banner</li>
+          <li>All one identity, named, shortlisted</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="subh">The checks that define "reliable"</div>
+    <p class="lede" style="margin-bottom:12px">Every output must pass all five — this is the rubric I scored the batch against:</p>
+    <div class="note green">
+      <b>Brand</b> — logo + colours + fonts, same identity across sizes &nbsp;·&nbsp;
+      <b>Message</b> — headline matches brief, ≤ 6 words, spelled right, no gibberish &nbsp;·&nbsp;
+      <b>Legibility</b> — headline + CTA readable at 50% zoom, text inside safe margins &nbsp;·&nbsp;
+      <b>Composition</b> — product is focal; nothing important in the outer 8% edge &nbsp;·&nbsp;
+      <b>Consistency</b> — a viewer recognises all sizes as ONE campaign.
+    </div>
+
+    <details class="doc">
+      <summary><span class="chev">▸</span> Read the full SKILL.md (paste-ready)</summary>
+      <div class="docbody">
+<pre class="skill"><span class="k">## When to use</span>
+Use when a brief needs ONE campaign message adapted into MULTIPLE ad placements/sizes
+and brand consistency across sizes matters. NOT for a single one-off hero image.
+
+<span class="k">## Required inputs (else STOP and ask)</span>
+- Brand: logo, palette, fonts, tone (via @brand / brand workspace)
+- Product / subject being advertised
+- Core message / headline (<= 6 words) + optional subhead
+- Primary CTA text
+- Optional offer/claim and any mandatory legal text
+- Placement set (default = the 5 below) or a custom list
+
+<span class="k">## Steps (in order)</span>
+1. Validate inputs. If brand, message or CTA is missing -> STOP, request it.
+2. Compose the MASTER at 1:1 (product hero, headline top, CTA bottom, logo fixed
+   corner). Generate 4 concepts; pick the strongest.
+3. Lock the approved 1:1 as the single source of truth.
+4. RECOMPOSE (not crop) the master into each placement so headline + CTA + logo
+   stay legible and inside safe zones:
+     1:1 1080x1080 | 4:5 1080x1350 | 9:16 1080x1920 | 16:9 1200x675 | 1.91:1 1200x628
+5. Run the checks on every output. Regenerate any that fail (once).
+6. Name each &lt;campaign&gt;-&lt;placement&gt; and shortlist to the Gallery.
+
+<span class="k">## Checks (every output must pass all)</span>
+- Brand / Message / Legibility / Composition / Consistency (see rubric above)
+
+<span class="k">## Stop conditions</span>
+- Missing brand / CTA / message -> STOP, ask.
+- If >= 2 of the set still fail after one regen -> STOP: the MASTER is weak,
+  fix the 1:1 anchor, not the resizes.
+
+<span class="k">## Output</span>
+A pack of placement-ready ads (default 5), brand-consistent, named and shortlisted.</pre>
+      </div>
+    </details>
+  </section>
+
+  <!-- 03 -->
+  <section class="wrap" id="running">
+    <div class="shead"><span class="n">03</span><h3 class="title">How it actually ran</h3></div>
+    <p class="lede">
+      You don't press a "run" button — you <span class="mono">@mention</span> the playbook with a brief and PAM
+      loads its method before acting. Here's the real sequence, both runs behaved the same way:
+    </p>
+    <div class="runs">
+      <div class="rstep"><div class="rn">1</div><div><h5>@mention + brief</h5><p>Named the playbook and supplied only this campaign's facts (brand, product, headline, CTA).</p></div></div>
+      <div class="rstep"><div class="rn">2</div><div><h5>Ran "Load playbook" → asked the right question</h5><p>PAM loaded the SKILL.md, then asked its required-input question ("which product photo?") exactly where the recipe says to. With none, it composed the master without one.</p></div></div>
+      <div class="rstep"><div class="rn">3</div><div><h5>Composed the MASTER at 1:1</h5><p>Approved brief → Creative Studio → a 1:1 master with brand, headline, offer badge and CTA.</p></div></div>
+      <div class="rstep pause"><div class="rn">⏸</div><div><h5>Paused here — needed a manual "continue"</h5><p>The agent stopped after the master. It did <b>not</b> auto-run the resize step; I had to tell it to execute step 4 and enumerate the five placements.</p></div></div>
+      <div class="rstep"><div class="rn">4</div><div><h5>Recomposed into the placement sizes</h5><p>From the locked master, PAM recomposed (not cropped) the pack — repositioning text and CTA per ratio.</p></div></div>
+    </div>
+    <div class="note">
+      <b>First honest finding.</b> The playbook reliably drives the <em>method</em> and asks for the right
+      inputs, but it is <b>not autonomous end-to-end</b>: it hands you the master and waits. "Repeatable"
+      here means repeatable-with-one-nudge, not one-click.
+    </div>
+  </section>
+
+  <!-- 04 -->
+  <section class="wrap" id="batch">
+    <div class="shead"><span class="n">04</span><h3 class="title">The batch — two brands, real outputs</h3></div>
+    <p class="lede">
+      Every image below was generated by the playbook, unretouched. The on-image line
+      <span class="mono">"Hình ảnh minh họa được tạo bởi AI"</span> is PAM's own. Both brands are used as
+      creative subjects only.
+    </p>
+
+    <div class="brandband">
+      <h4>Run 1 · CarePlus <span style="font-weight:500;color:var(--navy-soft);font-size:.9rem">— health check-up</span></h4>
+      <span class="badge fict">Sample brand</span>
+    </div>
+    <div class="gallery">
+      <div class="gitem"><img src="creatives/1x1.png" alt="CarePlus ad 1:1" loading="lazy"><div class="gcap"><b>1:1</b><span>1024×1024 · Feed</span></div></div>
+      <div class="gitem"><img src="creatives/4x5.png" alt="CarePlus ad 4:5" loading="lazy"><div class="gcap"><b>4:5</b><span>1229×1536 · Feed portrait</span></div></div>
+      <div class="gitem"><img src="creatives/9x16.png" alt="CarePlus ad 9:16" loading="lazy"><div class="gcap"><b>9:16</b><span>864×1536 · Stories</span></div></div>
+      <div class="gitem"><img src="creatives/16x9.png" alt="CarePlus ad 16:9" loading="lazy"><div class="gcap"><b>16:9</b><span>1536×864 · YouTube</span></div></div>
+      <div class="gitem"><img src="creatives/1.91x1.png" alt="CarePlus ad 1.91:1" loading="lazy"><div class="gcap"><b>1.91:1</b><span>1528×800 · Banner</span></div></div>
+    </div>
+    <div class="note">
+      Full 5-size set delivered (plus an extra 2:1). Defect: on <b>4:5</b> and <b>9:16</b> the AI disclaimer
+      line overlaps the CTA button at the bottom edge — a safe-zone miss the checks should catch.
+    </div>
+
+    <div class="brandband">
+      <h4>Run 2 · GreenSM / Xanh SM <span style="font-weight:500;color:var(--navy-soft);font-size:.9rem">— electric ride-hailing</span></h4>
+      <span class="badge concept">Unofficial concept · not affiliated · AI-generated</span>
+    </div>
+    <div class="gallery">
+      <div class="gitem"><img src="creatives-greensm/gsm-1x1.png" alt="GreenSM concept ad 1:1" loading="lazy"><div class="gcap"><b>1:1</b><span>1024×1024 · Feed</span></div></div>
+      <div class="gitem"><img src="creatives-greensm/gsm-4x5.png" alt="GreenSM concept ad 4:5" loading="lazy"><div class="gcap"><b>4:5</b><span>1229×1536 · Feed portrait</span></div></div>
+      <div class="gitem"><img src="creatives-greensm/gsm-9x16.png" alt="GreenSM concept ad 9:16" loading="lazy"><div class="gcap"><b>9:16</b><span>864×1536 · Stories</span></div></div>
+      <div class="gitem"><img src="creatives-greensm/gsm-16x9.png" alt="GreenSM concept ad 16:9" loading="lazy"><div class="gcap"><b>16:9</b><span>1536×864 · YouTube</span></div></div>
+      <div class="gmiss">1.91:1<br>NOT emitted<br>this run</div>
+    </div>
+    <div class="note red">
+      <b>Second honest finding.</b> Same brief shape, different result: run 2 produced extra 1:1 concepts but
+      <b>dropped the 1.91:1 banner entirely</b>, and some vehicle-livery text rendered garbled
+      (<span class="mono">"2ANH SM"</span>). Brand identity and headline held perfectly; the <em>completeness</em>
+      of the set did not.
+    </div>
+  </section>
+
+  <!-- 05 -->
+  <section class="wrap" id="scorecard">
+    <div class="shead"><span class="n">05</span><h3 class="title">Reliability scorecard — measured, not claimed</h3></div>
+    <p class="lede">Scored against the five checks, across both runs (15 outputs). What held, what didn't:</p>
+    <div class="score">
+      <div class="sc" style="--c:var(--green)"><span class="st pass">Reliable</span><h5>Brand identity across sizes</h5><p>Logo, palette, fonts and layout system held on <b>15/15</b> outputs, both brands. This is the playbook's hardest job — and its strongest result.</p></div>
+      <div class="sc" style="--c:var(--green)"><span class="st pass">Reliable</span><h5>Headline &amp; CTA correctness</h5><p>Primary headline and CTA were correct and legible on every output. The recompose kept them in-frame at all ratios.</p></div>
+      <div class="sc" style="--c:var(--amber)"><span class="st mixed">Not reliable</span><h5>Complete placement set</h5><p>Run 1 delivered all 5 (+1 extra); run 2 dropped the 1.91:1. The set isn't emitted consistently without an explicit, enumerated resize instruction.</p></div>
+      <div class="sc" style="--c:var(--amber)"><span class="st mixed">Not reliable</span><h5>Autonomy</h5><p>Both runs paused after the master and needed a manual "continue". Repeatable-with-one-nudge, not one-click.</p></div>
+      <div class="sc" style="--c:var(--blue)"><span class="st note">Caveat</span><h5>Small-print &amp; micro-text</h5><p>Big type is clean; tiny text isn't. AI disclaimer overlapped the CTA (run 1) and vehicle livery garbled (run 2).</p></div>
+      <div class="sc" style="--c:var(--blue)"><span class="st note">Caveat</span><h5>Exact pixel dimensions</h5><p>Aspect ratios are correct, but PAM picks its own resolution (e.g. 4:5 = 1229×1536, not the spec 1080×1350). Fine for ratio-based placements; not pixel-exact.</p></div>
+    </div>
+    <div class="note">
+      <b>Verdict, stated plainly.</b> The playbook is <b>reliable where it matters most</b> — brand and message
+      hold across every size, on both brands. It is <b>not yet reliable</b> at emitting the full set
+      autonomously. Two runs is enough to show that pattern; it is not enough to quote a percentage, so I don't.
+    </div>
+  </section>
+
+  <!-- 06 -->
+  <section class="wrap" id="fix">
+    <div class="shead"><span class="n">06</span><h3 class="title">What I'd fix, and what I won't claim</h3></div>
+    <div class="limits">
+      <div class="lim"><h5>Make the resize step non-optional</h5><p>The SKILL.md should force step 4 to enumerate and emit all five ratios as one action, so a run can't stop at the master or drop a size.</p></div>
+      <div class="lim"><h5>Add a safe-zone check for micro-text</h5><p>An explicit "no disclaimer/legal text inside the CTA safe zone" rule would catch the 4:5 / 9:16 overlap before shortlisting.</p></div>
+      <div class="lim"><h5>Keep brand text off vehicles / props</h5><p>AI garbles small livery text. The playbook should place brand marks as clean overlays, not rely on the model to render them inside the scene.</p></div>
+      <div class="lim"><h5>Prove repeatability across more briefs</h5><p>Two runs shows the pattern but not a rate. Three to five briefs across verticals would turn "reliable where it matters" into a number worth stating.</p></div>
+    </div>
+  </section>
+</main>
+
+  <footer>
+    <div class="wrap">
+      <p>A repeatable PAM Playbook for performance ad variations, run and scored on two brands · <a href="../index.html">← back to the portfolio</a></p>
+    </div>
+  </footer>
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/assets/comments.js" data-page="day7"></script>
+</body>
+</html>

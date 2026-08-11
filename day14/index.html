@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ceiling — Rethinking the Browser for Agents | Giang Thanh Cong</title>
+<meta name="description" content="Ceiling: thiết kế lại trình duyệt cho người dùng chính là AI agent — ba định luật về giới hạn của bảo đảm, hai ngân sách, và một trace mua hàng nơi trần giá được giữ bởi thẻ ảo chứ không phải bởi policy." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧱</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --orange:#bd4800; --orange-soft:#ffe7d6; --navy:#111a3e; --navy-soft:#5a6488;
+  --navy-faint:#626c89; --border:#e7e9f2; --border-soft:#f0f2f8;
+  --bg:#f6f7fb; --card:#fff;
+  --green:#1e9257; --green-soft:#e4f3ea; --red:#c64b3e; --red-soft:#f8e6e3;
+  --amber:#b0771a; --amber-soft:#f7edda; --blue:#2f6fed; --blue-soft:#e2ecfd;
+  --shadow:0 18px 50px rgba(17,26,62,.12); --shadow-sm:0 6px 20px rgba(17,26,62,.08);
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --ok:#1e9257; --ok-bg:#e4f3ea;
+  --stop:#c64b3e; --stop-bg:#f8e6e3;
+  --warn:#b0771a; --warn-bg:#f7edda;
+  --accent:#f9660e; --accent-bg:#ffe7d6;
+  --line:#e7e9f2; --ink:#111a3e; --paper:#fff;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+body{font-family:"Plus Jakarta Sans",system-ui,sans-serif;background:var(--bg);color:var(--navy);line-height:1.62;-webkit-font-smoothing:antialiased}
+a{color:var(--orange);text-decoration:none}
+a:hover{text-decoration:underline}
+a:focus-visible{outline:2px solid var(--orange);outline-offset:2px;border-radius:3px}
+
+header.top{position:sticky;top:0;z-index:40;background:rgba(246,247,251,.93);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.bar{max-width:1600px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:16px}
+.back{font-family:var(--mono);font-size:12.5px;color:var(--navy-soft);white-space:nowrap}
+.back:hover{color:var(--orange);text-decoration:none}
+.bar .meta{flex:1;min-width:0}
+.bar .meta .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--orange);background:none;padding:0}
+.bar .meta h1{font-size:15px;font-weight:700;margin-top:1px;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.src{font-family:var(--mono);font-size:12px;color:var(--navy-soft);white-space:nowrap;border:1px solid var(--border);border-radius:20px;padding:6px 13px;background:var(--card)}
+.src:hover{color:var(--orange);border-color:var(--orange);text-decoration:none}
+
+.shell{display:grid;grid-template-columns:250px minmax(0,1fr);max-width:1600px;margin:0 auto}
+.main{min-width:0;padding:0 clamp(1.1rem,3vw,3rem) 6rem}
+.toc{position:sticky;top:57px;align-self:start;height:calc(100vh - 57px);overflow-y:auto;border-right:1px solid var(--border);padding:1.5rem 1rem 3rem 1.4rem}
+.toc-brand{display:block;margin-bottom:1.4rem;color:inherit}
+.toc-brand:hover{text-decoration:none}
+.toc-brand .day{font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--orange);display:block}
+.toc-brand .ttl{font-size:1rem;font-weight:800;letter-spacing:-.015em;display:block;color:var(--navy)}
+.toc h4{font-family:var(--mono);font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:var(--navy-faint);margin:0 0 .5rem;font-weight:700}
+.toc ol{list-style:none;margin:0}
+.toc a{display:flex;gap:.6rem;color:var(--navy-soft);font-size:.82rem;line-height:1.35;padding:.34rem .5rem;border-radius:7px;border-left:2px solid transparent;margin-left:-.5rem}
+.toc a .tn{font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--navy-faint);flex:none;width:14px}
+.toc a:hover{background:var(--border-soft);color:var(--navy);text-decoration:none}
+.toc a.on{color:var(--orange);border-left-color:var(--orange);background:var(--orange-soft);font-weight:700}
+.toc a.on .tn{color:var(--orange)}
+.toc-mobile{display:none}
+@media(max-width:960px){
+  .shell{grid-template-columns:1fr}
+  .toc{display:none}
+  .toc-mobile{display:block;position:sticky;top:57px;z-index:30;background:var(--bg);border-bottom:1px solid var(--border);padding:.5rem 0;margin-bottom:1rem}
+  .toc-mobile summary{cursor:pointer;font-weight:700;font-size:.85rem;list-style:none;padding:.35rem 0}
+  .toc-mobile summary::-webkit-details-marker{display:none}
+  .toc-mobile .inner{max-height:56vh;overflow-y:auto}
+  .toc-mobile ol{list-style:none;margin:0}
+  .toc-mobile a{display:flex;gap:.5rem;color:var(--navy-soft);font-size:.83rem;padding:.3rem 0}
+  .toc-mobile a .tn{font-family:var(--mono);font-size:.7rem;color:var(--navy-faint)}
+}
+
+header.doc{padding:clamp(2.2rem,6vw,4rem) 0 1.8rem;border-bottom:2px solid var(--navy);margin-bottom:.5rem}
+.kicker{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--navy-faint);margin-bottom:1rem}
+.kicker b{color:var(--orange);font-weight:700}
+header.doc h2{font-size:clamp(1.9rem,4.6vw,2.9rem);font-weight:800;letter-spacing:-.026em;line-height:1.08;text-wrap:balance;margin-bottom:.9rem;max-width:20ch;border:0;padding:0}
+.lede{font-size:1.1rem;color:var(--navy-soft);max-width:58ch;margin-bottom:1.3rem}
+.dmeta{display:flex;flex-wrap:wrap;gap:.35rem 1.4rem;font-family:var(--mono);font-size:.72rem;color:var(--navy-faint)}
+
+h2{font-size:clamp(1.35rem,2.9vw,1.72rem);font-weight:800;letter-spacing:-.02em;line-height:1.18;text-wrap:balance;margin:3rem 0 .8rem;padding-top:.9rem;border-top:1px solid var(--border);scroll-margin-top:75px}
+h2 .n{display:block;font-family:var(--mono);font-size:.68rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--orange);margin-bottom:.45rem}
+h3{font-size:1.05rem;font-weight:700;letter-spacing:-.008em;margin:2rem 0 .5rem}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem 1.3rem;max-width:70ch}
+li{margin-bottom:.3rem}
+strong{font-weight:700}
+sup{font-size:.7em;color:var(--navy-faint)}
+hr{border:0;border-top:1px solid var(--border);margin:3rem 0 0}
+.foot{margin-top:1.3rem;font-family:var(--mono);font-size:.73rem;color:var(--navy-faint)}
+code,.mono{font-family:var(--mono);font-size:.86em}
+:not(pre)>code{background:var(--border-soft);padding:.12em .38em;border-radius:4px;color:var(--navy)}
+pre{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;margin:1.1rem 0 1.6rem;overflow-x:auto;box-shadow:var(--shadow-sm)}
+pre code{font-size:.78rem;line-height:1.65;color:var(--navy-soft);background:none;padding:0}
+
+.tw{overflow-x:auto;margin:1.1rem 0 1.7rem;background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-sm)}
+table{border-collapse:collapse;width:100%;min-width:32rem;font-size:.87rem;line-height:1.45}
+caption{caption-side:top;text-align:left;font-size:.8rem;color:var(--navy-soft);padding:.85rem 1.1rem .55rem}
+th,td{text-align:left;padding:.6rem 1.1rem;border-bottom:1px solid var(--border-soft);vertical-align:top}
+th{font-family:var(--mono);font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--navy-faint);border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+.num,td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.tag{display:inline-block;font-family:var(--mono);font-size:.64rem;font-weight:700;letter-spacing:.05em;padding:.14em .5em;border-radius:5px;white-space:nowrap;background:var(--border-soft);color:var(--navy-soft)}
+.t-no{background:var(--stop-bg);color:var(--stop)}
+.t-mid{background:var(--amber-soft);color:var(--amber)}
+.t-n{background:var(--blue-soft);color:var(--blue)}
+.t-ok{background:var(--ok-bg);color:var(--ok)}
+
+.box{border:1px solid var(--border);border-left:3px solid var(--navy-faint);border-radius:10px;background:var(--card);padding:.95rem 1.1rem;margin:1.2rem 0;max-width:74ch;box-shadow:var(--shadow-sm)}
+.box .lbl{display:block;font-family:var(--mono);font-size:.66rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--navy-faint);margin-bottom:.35rem}
+.box p{margin:0;color:var(--navy-soft)}
+.box p+p{margin-top:.6rem}
+.box.stop{border-left-color:var(--stop)}
+.box.stop .lbl{color:var(--stop)}
+.box.warn{border-left-color:var(--warn)}
+.box.warn .lbl{color:var(--warn)}
+.box.law{border-left-color:var(--orange);background:linear-gradient(180deg,#fffaf6,#fff)}
+.box.law .lbl{color:var(--orange)}
+.box.law p{color:var(--navy);font-weight:600;font-size:1.02rem}
+
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px;margin:1.2rem 0 1.7rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem 1.1rem;box-shadow:var(--shadow-sm)}
+.card .h{font-family:var(--mono);font-size:.66rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--navy-faint);margin-bottom:.4rem}
+.card p{font-size:.88rem;margin:0;color:var(--navy-soft)}
+.card p+p{margin-top:.5rem}
+
+/* ── manifesto ─────────────────────────────────────────────── */
+.mani{display:grid;gap:10px;margin:1.3rem 0 1.8rem}
+.mp{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:.9rem 1.1rem;box-shadow:var(--shadow-sm);display:grid;grid-template-columns:1.7rem minmax(0,1fr);gap:.2rem .8rem}
+.mp .no{font-family:var(--mono);font-size:.78rem;font-weight:700;color:var(--orange);padding-top:.15rem}
+.mp .pr{font-weight:700;font-size:.98rem;letter-spacing:-.01em;grid-column:2}
+.mp .rows{grid-column:2;margin-top:.45rem;display:grid;gap:.3rem}
+.mp .row{display:grid;grid-template-columns:7.4rem minmax(0,1fr);gap:.7rem;font-size:.855rem;align-items:baseline}
+.mp .k{font-family:var(--mono);font-size:.62rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--navy-faint)}
+.mp .row.no-k .k{color:var(--stop)}
+.mp .v{color:var(--navy-soft)}
+@media(max-width:560px){.mp .row{grid-template-columns:1fr;gap:.1rem}}
+
+/* ── zones diagram ─────────────────────────────────────────── */
+.zones{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:1.3rem 0 1rem}
+.zone{border-radius:14px;padding:.95rem 1rem;border:1px solid var(--border);background:var(--card);box-shadow:var(--shadow-sm)}
+.zone .zh{font-family:var(--mono);font-size:.62rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:.5rem}
+.zone ul{margin:0;list-style:none}
+.zone li{font-size:.83rem;color:var(--navy-soft);margin-bottom:.22rem;padding-left:.85rem;position:relative}
+.zone li::before{content:"";position:absolute;left:0;top:.55em;width:4px;height:4px;border-radius:50%;background:currentColor;opacity:.45}
+.z-trust{border-color:#bfe0cc;background:linear-gradient(180deg,#f2fbf6,#fff)}
+.z-trust .zh{color:var(--ok)}
+.z-untrust{border-color:#f0c8c1;background:linear-gradient(180deg,#fdf5f3,#fff)}
+.z-untrust .zh{color:var(--stop)}
+.z-exec{border-color:#c9d8f7;background:linear-gradient(180deg,#f4f8ff,#fff)}
+.z-exec .zh{color:var(--blue)}
+
+/* ── architecture diagrams ─────────────────────────────────── */
+.trust-flow,.protocol-flow{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1rem;margin:1.25rem 0 1.7rem;box-shadow:var(--shadow-sm)}
+.tf-row,.pf-row{display:grid;grid-template-columns:minmax(150px,1fr) minmax(110px,.65fr) minmax(150px,1fr) minmax(110px,.65fr) minmax(150px,1fr);align-items:center;gap:.55rem;margin-bottom:.75rem}
+.tf-row:last-of-type,.pf-row:last-of-type{margin-bottom:0}
+.tf-node,.pf-node{min-height:72px;border:1px solid var(--border);border-radius:11px;padding:.65rem .75rem;background:#fff;display:flex;flex-direction:column;justify-content:center;text-align:center}
+.tf-node b,.pf-node b{font-family:var(--mono);font-size:.68rem;letter-spacing:.07em;text-transform:uppercase}
+.tf-node span,.pf-node span{font-size:.76rem;color:var(--navy-soft);margin-top:.2rem;line-height:1.35}
+.tf-node.untrusted{border-color:#f0c8c1;background:var(--stop-bg)}
+.tf-node.untrusted b{color:var(--stop)}
+.tf-node.trusted{border-color:#c9d8f7;background:var(--blue-soft)}
+.tf-node.trusted b{color:var(--blue)}
+.tf-node.authority{border-color:#bfe0cc;background:var(--ok-bg)}
+.tf-node.authority b{color:var(--ok)}
+.tf-edge,.pf-edge{font-family:var(--mono);font-size:.61rem;line-height:1.35;text-align:center;color:var(--navy-faint)}
+.tf-edge::after,.pf-edge::after{content:" →";color:var(--orange);font-weight:800}
+.tf-deny{margin-top:.9rem;border:1px dashed var(--stop);border-radius:9px;background:var(--stop-bg);color:var(--stop);font-family:var(--mono);font-size:.7rem;font-weight:700;padding:.55rem .75rem;text-align:center}
+.diagram-caption{font-size:.78rem;color:var(--navy-soft);margin:-.8rem 0 1.5rem;max-width:74ch}
+.pf-node{border-color:#c9d8f7;background:#f7f9ff}
+.pf-node b{color:var(--navy)}
+.pf-node.authority{border-color:#bfe0cc;background:var(--ok-bg)}
+.pf-node.authority b{color:var(--ok)}
+.pf-node.planner{border-color:#f0c8c1;background:var(--stop-bg)}
+.pf-node.planner b{color:var(--stop)}
+.pf-node.effect{border-color:#efd5a4;background:var(--warn-bg)}
+.pf-node.effect b{color:var(--warn)}
+@media(max-width:820px){
+  .tf-row,.pf-row{grid-template-columns:1fr;gap:.35rem;margin-bottom:1rem}
+  .tf-node,.pf-node{min-height:0;text-align:left}
+  .tf-edge,.pf-edge{text-align:left;padding-left:.6rem}
+  .tf-edge::after,.pf-edge::after{content:" ↓"}
+}
+
+/* ── demo ──────────────────────────────────────────────────── */
+.demo{background:var(--card);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin:1.6rem 0 2rem;box-shadow:var(--shadow)}
+.demo-h{padding:1rem 1.2rem .9rem;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#fff,#fbfcff)}
+.demo-h .lbl{display:block;font-family:var(--mono);font-size:.64rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--orange);margin-bottom:.3rem}
+.demo-h h3{margin:0 0 .3rem;font-size:1.06rem}
+.demo-h p{margin:0;font-size:.87rem;color:var(--navy-soft);max-width:64ch}
+.demo-body{display:grid;grid-template-columns:minmax(0,290px) minmax(0,1fr)}
+@media(max-width:820px){.demo-body{grid-template-columns:1fr}}
+.knobs{padding:1.1rem 1.2rem;border-right:1px solid var(--border);background:#fbfcff}
+@media(max-width:820px){.knobs{border-right:0;border-bottom:1px solid var(--border)}}
+.knob{margin:0 0 1.15rem;border:0;padding:0;min-width:0}
+.knob:last-child{margin-bottom:0}
+.knob .q{font-size:.83rem;font-weight:700;margin-bottom:.45rem;line-height:1.35}
+.knob .hint{font-family:var(--mono);font-size:.66rem;color:var(--navy-faint);margin-bottom:.5rem;line-height:1.45}
+.opts{display:grid;gap:6px}
+.opt{display:flex;gap:.55rem;align-items:flex-start;border:1px solid var(--border);background:var(--card);border-radius:9px;padding:.5rem .65rem;cursor:pointer;font-size:.82rem;line-height:1.35;transition:border-color .12s,background .12s}
+.opt:hover{border-color:var(--navy-faint)}
+.opt:has(input:focus-visible){outline:2px solid var(--orange);outline-offset:2px}
+.opt input{margin-top:.28rem;accent-color:var(--orange);flex:none}
+.opt.sel{border-color:var(--orange);background:var(--orange-soft)}
+.opt .ot{font-weight:600}
+.opt .od{display:block;color:var(--navy-soft);font-size:.76rem;font-weight:400;margin-top:.1rem}
+
+.verdict{padding:1.1rem 1.2rem;min-width:0}
+.vhead{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.15rem}
+.vcode{font-family:var(--mono);font-size:.86rem;font-weight:700;letter-spacing:-.01em}
+.vpill{font-family:var(--mono);font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.2em .6em;border-radius:20px}
+.v-stop{background:var(--stop-bg);color:var(--stop)}
+.v-warn{background:var(--warn-bg);color:var(--warn)}
+.v-ok{background:var(--ok-bg);color:var(--ok)}
+.vsub{font-size:.86rem;color:var(--navy-soft);margin:.35rem 0 .9rem;max-width:62ch}
+.vsub b{color:var(--navy)}
+.vrows{display:grid;gap:0;border:1px solid var(--border);border-radius:11px;overflow:hidden;margin-bottom:.9rem}
+.vrow{display:grid;grid-template-columns:11rem minmax(0,1fr);gap:.8rem;padding:.5rem .8rem;font-size:.83rem;border-bottom:1px solid var(--border-soft);background:var(--card)}
+.vrow:last-child{border-bottom:0}
+.vrow .vk{font-family:var(--mono);font-size:.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--navy-faint);padding-top:.15rem}
+.vrow .vv{color:var(--navy-soft);min-width:0;word-break:break-word}
+.vrow .vv code{font-size:.8rem}
+@media(max-width:520px){.vrow{grid-template-columns:1fr;gap:.1rem}}
+.vnote{border-left:3px solid var(--orange);background:#fffaf6;border-radius:0 9px 9px 0;padding:.7rem .9rem;font-size:.85rem;color:var(--navy-soft)}
+.vnote b{color:var(--navy)}
+.chain{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:.9rem}
+.step{font-family:var(--mono);font-size:.66rem;font-weight:600;padding:.3em .6em;border-radius:7px;border:1px solid var(--border);background:var(--card);color:var(--navy-faint)}
+.step.hit{border-color:var(--stop);background:var(--stop-bg);color:var(--stop);font-weight:700}
+.step.pass{border-color:#bfe0cc;background:var(--ok-bg);color:var(--ok)}
+
+.srcs{margin-top:1rem;font-size:.84rem}
+.srcs li{margin-bottom:.45rem;color:var(--navy-soft)}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="bar">
+    <a class="back" href="../">← gtc883</a>
+    <div class="meta">
+      <span class="tag">Day 14 · Systems</span>
+      <h1>Ceiling — Rethinking the Browser for Agents</h1>
+    </div>
+    <a class="src" href="#demo">🧱 Run the Demo</a>
+  </div>
+</header>
+
+<div class="shell">
+<nav class="toc">
+  <a class="toc-brand" href="#top"><span class="day">Day 14</span><span class="ttl">Ceiling</span></a>
+  <h4>Contents</h4>
+  <ol>
+    <li><a href="#p1"><span class="tn">1</span><span>What Changes First?</span></a></li>
+    <li><a href="#p2"><span class="tn">2</span><span>A New Objective Function</span></a></li>
+    <li><a href="#p3"><span class="tn">3</span><span>The Guarantee Ceiling</span></a></li>
+    <li><a href="#p4"><span class="tn">4</span><span>Two Scarce Budgets</span></a></li>
+    <li><a href="#p5"><span class="tn">5</span><span>Design Manifesto</span></a></li>
+    <li><a href="#p6"><span class="tn">6</span><span>Trust Architecture</span></a></li>
+    <li><a href="#p7"><span class="tn">7</span><span>Action Profiles &amp; Effect Rails</span></a></li>
+    <li><a href="#demo"><span class="tn">8</span><span>Who Enforces the Price Ceiling?</span></a></li>
+    <li><a href="#p9"><span class="tn">9</span><span>Guarantee Envelope</span></a></li>
+    <li><a href="#p10"><span class="tn">10</span><span>Five Browser Primitives</span></a></li>
+    <li><a href="#p11"><span class="tn">11</span><span>Agent-facing Interface</span></a></li>
+    <li><a href="#p12"><span class="tn">12</span><span>Prior Art &amp; Standards</span></a></li>
+    <li><a href="#p13"><span class="tn">13</span><span>What This Makes Worse</span></a></li>
+    <li><a href="#p14"><span class="tn">14</span><span>Open Problems</span></a></li>
+  </ol>
+</nav>
+
+<main class="main" id="top">
+
+<details class="toc-mobile">
+  <summary>Contents ▾</summary>
+  <div class="inner"><ol>
+    <li><a href="#p1"><span class="tn">1</span>What Changes First?</a></li>
+    <li><a href="#p2"><span class="tn">2</span>A New Objective Function</a></li>
+    <li><a href="#p3"><span class="tn">3</span>The Guarantee Ceiling</a></li>
+    <li><a href="#p4"><span class="tn">4</span>Two Scarce Budgets</a></li>
+    <li><a href="#p5"><span class="tn">5</span>Design Manifesto</a></li>
+    <li><a href="#p6"><span class="tn">6</span>Trust Architecture</a></li>
+    <li><a href="#p7"><span class="tn">7</span>Action Profiles &amp; Rails</a></li>
+    <li><a href="#demo"><span class="tn">8</span>Price Ceiling Demo</a></li>
+    <li><a href="#p9"><span class="tn">9</span>Guarantee Envelope</a></li>
+    <li><a href="#p10"><span class="tn">10</span>Five Browser Primitives</a></li>
+    <li><a href="#p11"><span class="tn">11</span>Agent-facing Interface</a></li>
+    <li><a href="#p12"><span class="tn">12</span>Prior Art</a></li>
+    <li><a href="#p13"><span class="tn">13</span>What This Makes Worse</a></li>
+    <li><a href="#p14"><span class="tn">14</span>Open Problems</a></li>
+  </ol></div>
+</details>
+
+<header class="doc">
+  <div class="kicker">Day 14 · <b>Ceiling</b> · Rethinking the Browser</div>
+  <h2>A Browser for Agents, Not Eyeballs</h2>
+  <p class="lede">Khi con người không còn trực tiếp quan sát từng trang, ta không thu được một phiên bản trình duyệt nhỏ hơn. Ta cần một runtime khác: nó biến web thành semantic state có nguồn, sử dụng quyền được ủy quyền và chỉ tạo external effect qua những ranh giới có thể kiểm toán.</p>
+  <div class="dmeta">
+    <span>03 · 08 · 2026</span>
+    <span>Design Document · 14 Parts</span>
+    <span>3 định luật · 2 ngân sách</span>
+    <span>24 nguồn</span>
+  </div>
+</header>
+
+<p>Với một trình duyệt dành cho agent, <code>rendering pipeline</code> không còn là giao diện chính. Nó trở thành một dependency để trang web hoạt động đúng và một kênh bằng chứng khi con người cần kiểm tra. Thứ phải xây lại là <strong>decision layer</strong> — trong khi chính thành phần ra quyết định có thể bị thao túng bởi nội dung nó đang đọc.</p>
+
+<p>Bài này không hỏi làm sao để AI click chính xác hơn. Nó hỏi: khi một hệ thống tự động hành động thay bạn trên web, <strong>ai thực sự có quyền hứa điều gì</strong> — và tài liệu ghi lại điều đó như thế nào để sáu tháng sau còn phân xử được.</p>
+
+<div class="box law">
+  <span class="lbl">Thesis</span>
+  <p>The native path provides contracts. The legacy path provides evidence. Neither path lets untrusted content grant authority.</p>
+</div>
+
+<h2 id="p1"><span class="n">Part 1</span>What Changes First?</h2>
+
+<p>Browser hiện tại được xây quanh một vòng lặp: tải trang, dựng giao diện, chờ con người nhìn, rồi nhận click và phím bấm. Agent không cần vòng lặp đó làm interface chính. Nó cần biết <strong>state nào đang tồn tại, claim nào đến từ đâu, action nào đang khả dụng và action nào thực sự được phép</strong>.</p>
+
+<div class="tw">
+<table>
+<caption>Bản đồ ngắn trước khi đi vào các giới hạn sâu hơn.</caption>
+<thead><tr><th>Browser hiện tại</th><th>Agent-native browser</th></tr></thead>
+<tbody>
+<tr><td>Pixel là interface chính</td><td>Semantic observation có provenance; pixel là evidence khi cần</td></tr>
+<tr><td>Click, gõ phím, selector</td><td>Typed proposal nhắm vào semantic handle</td></tr>
+<tr><td>Back/Forward và “page loaded”</td><td>Checkpoint, fork và goal-specific readiness</td></tr>
+<tr><td>Cookie hoặc credential cấp phiên</td><td>Delegated capability được chốt trước khi đọc web</td></tr>
+<tr><td>History và cache</td><td>Scoped memory có nguồn, phạm vi và hạn dùng</td></tr>
+<tr><td>Không có lỗi nghĩa là có thể đã thành công</td><td>Receipt hoặc structured error nêu rõ state nào còn unknown</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>One Task, One Real Interface</h3>
+
+<p>Nhiệm vụ mở đầu không liên quan đến mua sắm: <em>“Tìm thời hạn chính thức của một chương trình tài trợ và lưu lại một ghi chú có nguồn.”</em> Với automation hiện tại, script phải điều khiển selector và tự ghép text với URL:</p>
+
+<pre><code>// Human-browser automation
+await page.goto(searchUrl);
+await page.click(".result:nth-child(1) a");
+const text = await page.locator(".deadline").textContent();</code></pre>
+
+<p>Agent không trực tiếp đọc raw DOM hoặc pixel. <code>Semantic Runtime</code> biến những gì browser quan sát được thành một result set có version và provenance:</p>
+
+<pre><code>{
+  "state_version": "s_42",
+  "candidates": [
+    {
+      "handle": "h_101",
+      "claim": "Application deadline is 30 September 2026",
+      "source": "grants.gov.example/call-2026",
+      "basis": "primary_document",
+      "observed_at": "2026-08-03T09:00:00+07:00"
+    },
+    {
+      "handle": "h_102",
+      "claim": "Applications close in late September",
+      "source": "university.example/news",
+      "basis": "secondary_reporting",
+      "observed_at": "2026-08-03T09:02:00+07:00"
+    }
+  ],
+  "result_set_guarantees": "env://results_42"
+}</code></pre>
+
+<p>Planner có thể chọn claim được hỗ trợ tốt hơn và đề xuất lưu nó. Browser không lập kế hoạch; memory service chỉ chấp nhận proposal có source observation hợp lệ và scope được authority cho phép:</p>
+
+<pre><code>{
+  "assertion": "Application deadline is 30 September 2026",
+  "source_observation_id": "h_101",
+  "requested_scope": "task:grant-research",
+  "proposed_validity": { "ends_at": "2026-09-30T23:59:59+07:00" }
+}</code></pre>
+
+<p>Ba lớp phải được giữ tách biệt:</p>
+
+<div class="grid3">
+  <div class="card"><div class="h">1 · What the Web Claims</div><p>Site hoặc document đưa ra claim. Browser không biến claim đó thành sự thật chỉ vì đã parse được nó.</p></div>
+  <div class="card"><div class="h">2 · What the Browser Observes</div><p>Runtime ghi lại claim, nguồn, thời điểm và cách trích xuất. Nó bảo đảm tính toàn vẹn của provenance record, không bảo đảm nguồn đang nói thật.</p></div>
+  <div class="card"><div class="h">3 · What the Agent May Propose</div><p>Planner suy luận từ observation rồi tạo proposal. Proposal vẫn phải đi qua grant, policy và validation trước khi trở thành effect.</p></div>
+</div>
+
+<p>Năm câu hỏi xuất hiện trước khi cần bất kỳ thuật ngữ security nào:</p>
+
+<ul>
+  <li>Claim đến từ đâu, còn mới không và nguồn có chịu trách nhiệm không?</li>
+  <li>Có nguồn hoặc kết quả quan trọng nào bị bỏ khỏi tập ứng viên không?</li>
+  <li>Nếu trang chứa một chỉ thị giả trong nội dung, agent có làm theo không?</li>
+  <li>Ai cho phép planner biến một observation thành external effect?</li>
+  <li>Nếu effect thất bại giữa chừng, browser biết điều gì đã xảy ra và có được retry không?</li>
+</ul>
+
+<p>Phần còn lại của tài liệu trả lời các câu hỏi đó bằng ba định luật có thể bị phản bác và kiểm nghiệm — không bằng một danh sách feature.</p>
+
+<h2 id="p2"><span class="n">Part 2</span>A New Objective Function</h2>
+
+<p>Trình duyệt hôm nay tối ưu cho mili-giây mỗi khung hình. Agent không nhạy với 16ms; nó nhạy với <strong>số token phải đọc để ra một quyết định</strong> và <strong>số hành động thừa để xong một việc</strong>.</p>
+
+<div class="tw">
+<table>
+<caption>Đổi hàm mục tiêu là gốc rễ của mọi quyết định phía sau.</caption>
+<thead><tr><th></th><th>Human browser</th><th>Agent-native browser</th></tr></thead>
+<tbody>
+<tr><td>Tối ưu</td><td>ms mỗi frame, byte trên đường truyền</td><td><strong>tokens per decision</strong>, <strong>actions per task</strong>, <strong>bounded risk</strong></td></tr>
+<tr><td>Độ trễ</td><td>~16ms, ngưỡng cảm nhận</td><td>frame latency hạ cấp; <em>task</em> latency vẫn ràng buộc — state trôi, hold hết hạn</td></tr>
+<tr><td>Kiểu hỏng</td><td>người thấy sai và dừng</td><td>agent tự tin đi tiếp và commit một hiệu ứng không hoàn tác được</td></tr>
+<tr><td>Đầu ra</td><td>một frame được vẽ</td><td>một bản ghi <strong>ký được, tranh chấp được</strong> về những gì đã quan sát, quyết định, duyệt và thực thi</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Eyes-optional, Not Eyes-free</h3>
+
+<p>"Không có mắt người" là phát biểu về <em>đường mặc định</em>, không phải về năng lực hệ thống. Con người vẫn xuất hiện ở ba chỗ: lúc ủy quyền, lúc duyệt một hành động không hoàn tác được, và lúc tranh chấp. Nên renderer dựng pixel theo yêu cầu là bắt buộc — với vai trò <strong>nhân chứng</strong>, không bao giờ là <strong>quan tòa</strong>.</p>
+
+<p>Một ràng buộc kỹ thuật thường bị bỏ qua: nhiều front-end chỉ hoàn tất logic <em>sau</em> layout và paint — virtualized list, <code>IntersectionObserver</code>, lazy loading. Loại bỏ renderer đồng nghĩa với việc các trang này không còn hoạt động đúng. Điều có thể loại bỏ là việc <em>đọc</em> output của renderer, không phải bản thân renderer.</p>
+
+<h2 id="p3"><span class="n">Part 3</span>The Guarantee Ceiling — Three Laws</h2>
+
+<p>Toàn bộ thiết kế suy ra từ ba mệnh đề dưới đây. Muốn phản đối thiết kế này thì phản đối ở đây.</p>
+
+<div class="box law">
+  <span class="lbl">Law 1 · Enforcement boundary</span>
+  <p>A component can guarantee only properties enforced within a state boundary it controls.</p>
+</div>
+
+<p>Runtime bảo đảm được rằng credential không vào model context và không request nào vi phạm policy được gửi đi. Nó <strong>không</strong> bảo đảm được merchant sẽ không charge quá 3 triệu. Cả hai đều là bảo đảm thật; chúng khác <em>phạm vi</em>, và gộp chúng lại là cách một bản thiết kế nói dối.</p>
+
+<p>Hệ quả quan trọng: <strong>bên cưỡng chế không nhất thiết là đối tác.</strong> Thẻ ảo có hạn mức cứng, payment processor, escrow — bất kỳ authority nào kiểm soát state liên quan đều cưỡng chế được. Đây là chỗ cứu được đường legacy, nơi merchant sẽ không hợp tác nhưng payment rail thì đã sẵn sàng.</p>
+
+<div class="box law">
+  <span class="lbl">Law 2 · Oracle dependency</span>
+  <p>A policy decision is only as trustworthy as the oracle supplying its facts. Without an independent oracle, enforcement is enforcing a guess.</p>
+</div>
+
+<p>Một <code>Reference Monitor</code> chặn <code>purchase($5,000)</code> vì grant chỉ cho $500 — đó là an ninh thật trước một planner đã bị chiếm quyền, <em>với điều kiện nó biết số tiền là $5,000</em>. Trên web hiện tại, con số đó được suy ra từ nội dung do đối thủ kiểm soát. Trung gian hoàn hảo trên một lời nói dối thì vẫn là lời nói dối.</p>
+
+<p>Vì vậy mọi quyết định policy phải khai báo oracle của nó, và khai luôn phần nó <em>không</em> bảo đảm:</p>
+
+<pre><code>{
+  "decision": "allow",
+  "policy": "total_lte_3000000_vnd",
+  "oracle": {
+    "claim": "total = 2490000 VND",
+    "basis": "browser_inference",
+    "independent_enforcement": false
+  },
+  "guarantee": "dispatch_conforms_to_observed_price",
+  "not_guaranteed": ["merchant_final_charge", "absence_of_recurring_fees"]
+}</code></pre>
+
+<div class="box law">
+  <span class="lbl">Law 3 · Authority monotonicity</span>
+  <p>Web content may influence choices inside pre-authorized actions. It may never create new authority, new actions, or new sinks.</p>
+</div>
+
+<p>Quyền được chốt tại thời điểm cấp grant, <strong>trước</strong> khi đọc bất kỳ nội dung nào:</p>
+
+<pre><code>Authority(P after reading w)  ⊆  Authority(P before reading w)</code></pre>
+
+<p>Chi tiết này khác có chủ đích với kiểu taint-tracking <em>giảm</em> quyền khi đọc. Biến thể đó trao cho kẻ tấn công một nguyên thủy từ chối dịch vụ: chèn một chuỗi vào bất kỳ trang nào là tước được quyền hợp lệ của tác vụ. Dưới monotonicity, đọc nội dung thù địch không đổi được tập quyền — nó chỉ khiến agent dùng ít quyền hơn.</p>
+
+<h2 id="p4"><span class="n">Part 4</span>Two Scarce Budgets</h2>
+
+<h3>Attention Budget — Human Attention Is Finite</h3>
+
+<p>Quy tắc "không rõ tác dụng thì hỏi người dùng" đúng khi đứng riêng và thảm họa khi triển khai. Trên web hiện tại hầu như mọi thứ đều không rõ, nên quy tắc này sinh ra bốn mươi lần hỏi mỗi ngày — và một người duyệt bốn mươi lần một ngày là một người <em>đã ngừng đọc</em>.</p>
+
+<p>Nghiên cứu của Akhawe và Felt trên 25 triệu màn cảnh báo cho con số cụ thể, và nó hữu ích hơn phiên bản dân gian:</p>
+
+<div class="tw">
+<table>
+<caption>Cùng một nhóm người, hai loại cảnh báo, chênh nhau bảy lần.</caption>
+<thead><tr><th>Loại cảnh báo</th><th class="num">Chrome</th><th class="num">Firefox</th></tr></thead>
+<tbody>
+<tr><td>SSL — bấm qua</td><td class="num">70,2%</td><td class="num">~33%</td></tr>
+<tr><td>Malware / phishing — bấm qua</td><td class="num">25%</td><td class="num">10%</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Nên bài học không phải "con người luôn bấm bừa". Bài học là: <strong>cảnh báo xuất hiện thường xuyên và trình bày kém thì bị bỏ qua; cảnh báo hiếm và trình bày rõ thì được đọc.</strong> Điều đó đặt ra hai mục tiêu chứ không phải một — giảm số lần hỏi <em>và</em> nâng chất lượng từng lần. Và nó biện minh trực tiếp cho việc xây giao diện phê duyệt quanh <strong>chỗ các nguồn bất đồng nhau</strong>, thay vì trưng ra năm khối bằng chứng đồng ý nhau.</p>
+
+<pre><code>minimize( expected_harm + attention_cost )</code></pre>
+
+<div class="box warn">
+  <span class="lbl">Cost</span>
+  <p>Khi ngân sách cạn, agent <strong>từ chối tác vụ</strong> thay vì tiêu một lần làm phiền vào một trường hợp biên. Người dùng sẽ trải nghiệm điều này như việc agent kém hữu ích — và đôi khi họ đúng.</p>
+</div>
+
+<h3>Leakage Budget — Measure and Bound Leakage</h3>
+
+<p>Trường có kiểu ràng buộc <em>hình dạng</em>, không ràng buộc <em>lượng thông tin</em>. Khi một kế hoạch đã đọc nội dung từ origin A, mọi ô văn bản tự do trong hành động nhắm tới origin B đều là một kênh rò. Cơ chế cưỡng chế được là <strong>provenance theo từng trường</strong>, khai báo và kiểm tra bên ngoài model:</p>
+
+<div class="tw">
+<table>
+<thead><tr><th>Provenance class</th><th>Nghĩa</th><th>Sink policy</th></tr></thead>
+<tbody>
+<tr><td><code>destination_selection</code></td><td>Giá trị nằm trong tập chính site đích công bố</td><td><span class="tag t-ok">rộng rãi</span></td></tr>
+<tr><td><code>approved_constant</code></td><td>Chốt trong grant, trước khi đọc nội dung</td><td><span class="tag t-ok">cho phép</span></td></tr>
+<tr><td><code>sealed_reference</code></td><td>Handle mờ, broker giải lúc dispatch</td><td><span class="tag t-ok">planner không giữ plaintext</span></td></tr>
+<tr><td><code>model_composed</code></td><td>Planner tự soạn chuỗi</td><td><span class="tag t-mid">tùy sink, có trần</span></td></tr>
+<tr><td><code>cross_origin_derived</code></td><td>Chịu ảnh hưởng từ origin khác đích đến</td><td><span class="tag t-no">chặn mặc định</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Chặn hiển nhiên của selection cần kèm điều kiện. Chọn một trong 200 lựa chọn thì rò tối đa ~7,6 bit — nhưng chỉ đúng với một tập cố định và lành tính. <strong>Destination kiểm soát N.</strong> Một site cấu kết có thể công bố tập một triệu phần tử, hoặc đổi tập theo từng vòng, biến "chọn" thành một kênh rộng.</p>
+
+<p>Nên mục tiêu là một <em>ngân sách</em> có trần và có kiểm toán, không phải rò-bằng-không. Bất kỳ thiết kế nào tuyên bố không rò rỉ xuyên qua một LLM đều không đang mô tả một cơ chế.</p>
+
+<h2 id="p5"><span class="n">Part 5</span>Design Manifesto</h2>
+
+<p>Mỗi nguyên tắc nêu điều tin, cái giá phải trả khi tin điều đó, và thứ bị từ chối. Một nguyên tắc không cấm gì cả là một nguyên tắc trang trí.</p>
+
+<div class="mani" id="mani">
+  <div class="mp"><div class="no">01</div><div class="pr">Semantic state is the interface; pixels are evidence</div><div class="rows"><div class="row"><span class="k">Trade-off</span><span class="v">Độ chính xác trên canvas, WebGL, bản đồ và nội dung trong ảnh.</span></div><div class="row no-k"><span class="k">We Refuse</span><span class="v">Gửi full DOM sau mỗi thay đổi hoặc coi screenshot là observation mặc định.</span></div></div></div>
+  <div class="mp"><div class="no">02</div><div class="pr">Provenance before inference</div><div class="rows"><div class="row"><span class="k">Trade-off</span><span class="v">State object ít gọn hơn và phải mang uncertainty.</span></div><div class="row no-k"><span class="k">We Refuse</span><span class="v">Trình bày model inference dưới cùng hình dạng với site commitment.</span></div></div></div>
+  <div class="mp"><div class="no">03</div><div class="pr">Content influences; it never authorizes</div><div class="rows"><div class="row"><span class="k">Trade-off</span><span class="v">Trang không thể dạy agent capability mới giữa task.</span></div><div class="row no-k"><span class="k">We Refuse</span><span class="v">Mọi đường mà web content sửa policy, cấp quyền hoặc tạo sink mới.</span></div></div></div>
+  <div class="mp"><div class="no">04</div><div class="pr">Secrets stay outside reasoning</div><div class="rows"><div class="row"><span class="k">Trade-off</span><span class="v">Thêm một hop qua Credential Broker.</span></div><div class="row no-k"><span class="k">We Refuse</span><span class="v">Cookie, token hoặc số thẻ xuất hiện trong model context.</span></div></div></div>
+  <div class="mp"><div class="no">05</div><div class="pr">No unknown effect is safe</div><div class="rows"><div class="row"><span class="k">Trade-off</span><span class="v">Giảm mạnh automation coverage trên legacy web.</span></div><div class="row no-k"><span class="k">We Refuse</span><span class="v">Auto-commit effect chưa phân loại hoặc auto-retry khi idempotency không có enforcer.</span></div></div></div>
+  <div class="mp"><div class="no">06</div><div class="pr">Speculation stops at the effect boundary</div><div class="rows"><div class="row"><span class="k">Trade-off</span><span class="v">Các nhánh có mutation không còn chạy song song tự do.</span></div><div class="row no-k"><span class="k">We Refuse</span><span class="v">Nhiều nhánh cùng giữ effect lease hoặc coi checkpoint local là undo cho remote commit.</span></div></div></div>
+  <div class="mp"><div class="no">07</div><div class="pr">Approval binds to exact state</div><div class="rows"><div class="row"><span class="k">Trade-off</span><span class="v">Approval hết hiệu lực khi terms thay đổi.</span></div><div class="row no-k"><span class="k">We Refuse</span><span class="v">Commit bằng approval có proposal hash không còn khớp.</span></div></div></div>
+  <div class="mp"><div class="no">08</div><div class="pr">Human attention is a budgeted resource</div><div class="rows"><div class="row"><span class="k">Trade-off</span><span class="v">Một số task bị từ chối thay vì tiếp tục hỏi.</span></div><div class="row no-k"><span class="k">We Refuse</span><span class="v">Leo thang mọi trường hợp biên cho con người.</span></div></div></div>
+  <div class="mp"><div class="no">09</div><div class="pr">Compatibility is not circumvention</div><div class="rows"><div class="row"><span class="k">Trade-off</span><span class="v">Không đạt coverage trên mọi site.</span></div><div class="row no-k"><span class="k">We Refuse</span><span class="v">Coi vượt bot protection là legacy support hoặc phớt lờ machine-readable refusal.</span></div></div></div>
+  <div class="mp"><div class="no">10</div><div class="pr">Memory is scoped evidence, never inherited instruction</div><div class="rows"><div class="row"><span class="k">Trade-off</span><span class="v">Tổng hợp xuyên origin và reuse preference trở nên khó hơn.</span></div><div class="row no-k"><span class="k">We Refuse</span><span class="v">Lưu fact không có source, scope, validity hoặc để content ghi vào policy memory.</span></div></div></div>
+</div>
+
+<h2 id="p6"><span class="n">Part 6</span>Trust Architecture</h2>
+
+<p>Bốn vùng. Ranh giới quan trọng nhất nằm giữa Z2 và Z3, và nó chỉ được vượt qua bởi <strong>hành động có kiểu, rút từ một tập đã cấp trước</strong> — không bao giờ bởi chỉ thị tự do, URL hay đích đến.</p>
+
+<div class="zones">
+  <div class="zone z-trust">
+    <div class="zh">Z1 · Trusted authority</div>
+    <ul><li>User / organization</li><li>Grant &amp; consent service</li><li>Approval service</li><li><strong>Effect Broker</strong></li></ul>
+  </div>
+  <div class="zone z-untrust">
+    <div class="zh">Z2 · Untrusted reasoning</div>
+    <ul><li><strong>Agent planner</strong></li><li>Không credential</li><li>Không egress trực tiếp</li><li>Luôn giả định đã bị chiếm quyền</li></ul>
+  </div>
+  <div class="zone z-exec">
+    <div class="zh">Z3 · Trusted execution</div>
+    <ul><li>Semantic runtime</li><li>Declassification gateway</li><li>Reference monitor</li><li>Effect &amp; evidence ledger</li></ul>
+  </div>
+  <div class="zone z-untrust">
+    <div class="zh">Z4 · Untrusted external web</div>
+    <ul><li>Web UI / content</li><li>Site backend</li><li>Cả hai đều là đầu vào thù địch</li></ul>
+  </div>
+</div>
+
+<div class="trust-flow" role="img" aria-label="Trust flow from the untrusted web through the trusted runtime to the untrusted planner, then back through validation and authority before execution">
+  <div class="tf-row">
+    <div class="tf-node untrusted"><b>Z4 · External Web</b><span>UI, content và backend đều untrusted</span></div>
+    <div class="tf-edge">observation only</div>
+    <div class="tf-node trusted"><b>Z3 · Semantic Runtime</b><span>Parse, label provenance, preserve evidence</span></div>
+    <div class="tf-edge">structured data</div>
+    <div class="tf-node untrusted"><b>Z2 · Planner</b><span>Reasoning; giả định có thể đã bị chiếm quyền</span></div>
+  </div>
+  <div class="tf-row">
+    <div class="tf-node untrusted"><b>Z2 · Planner</b><span>Chỉ được tạo typed candidate action</span></div>
+    <div class="tf-edge">typed proposal</div>
+    <div class="tf-node trusted"><b>Z3 · Gateway + Monitor</b><span>Validate provenance, grant, sink và policy</span></div>
+    <div class="tf-edge">approval request</div>
+    <div class="tf-node authority"><b>Z1 · Authority</b><span>User/org duyệt proposal đã được runtime dựng</span></div>
+  </div>
+  <div class="tf-row">
+    <div class="tf-node authority"><b>Z1 · Signed Authority</b><span>Grant hoặc approval gắn với exact terms</span></div>
+    <div class="tf-edge">authorized commit</div>
+    <div class="tf-node trusted"><b>Z3 · Executor + Broker</b><span>Resolve secret, serialize effect, record evidence</span></div>
+    <div class="tf-edge">controlled effect</div>
+    <div class="tf-node untrusted"><b>Z4 · Site or Rail</b><span>External outcome; guarantee phụ thuộc boundary</span></div>
+  </div>
+  <div class="tf-deny">BLOCKED: Planner → credential · Planner → direct network egress · Web content → authority</div>
+</div>
+<p class="diagram-caption">Mũi tên không biểu thị cùng một mức tin cậy. Chỉ typed proposal được đi từ Z2 sang Z3; authority không bao giờ nằm trong model context.</p>
+
+<p>Cạnh đầu tiên thường bị diễn giải sai. <code>Semantic Runtime</code> đổi <strong>cách biểu diễn</strong>, không đổi <strong>mức tin cậy</strong>. Chuỗi thù địch vẫn vào context của planner, chỉ là có nhãn. Không có gì ở đây làm sạch chúng — và một thiết kế tuyên bố ngược lại là đang tự nhận đã giải xong prompt injection.</p>
+
+<div class="box stop">
+  <span class="lbl">Non-negotiable Assumption</span>
+  <p>Planner được coi là <strong>có thể đã bị chiếm quyền</strong>. Đây là chỗ phần lớn thiết kế thất bại: họ phòng thủ trước site thù địch nhưng tin tuyệt đối vào model. Dưới giả định đó, prompt injection thắng theo định nghĩa.</p>
+  <p>Và đây không phải sự thận trọng — đó là trạng thái quan sát được của sản phẩm đang chạy. Brave giấu text trong một Reddit spoiler tag; Comet làm theo và rút ra email cùng mã OTP của người dùng. Zenity Labs sau đó công bố kỹ thuật chiếm quyền <em>zero-click</em> qua lời mời lịch. OpenAI nói công khai rằng prompt injection có thể sẽ không bao giờ được "giải quyết" cho browser agent.</p>
+</div>
+
+<h2 id="p7"><span class="n">Part 7</span>Action Profiles and Effect Rails</h2>
+
+<p>Khái quát đúng không phải "thanh toán là đặc biệt", mà là: <strong>chen một rail vào bất cứ chỗ nào hiệu ứng đi qua hạ tầng ta kiểm soát.</strong> Nhưng phải chặt, nếu không mọi thứ đều tự xưng là rail. Ba điều kiện, thiếu một là không phải:</p>
+
+<div class="grid3">
+  <div class="card"><div class="h">1 · Complete mediation</div><p>Mọi hiệu ứng thuộc loại đó <em>bắt buộc</em> đi qua nó. Không có đường vòng.</p></div>
+  <div class="card"><div class="h">2 · Boundary control</div><p>Nó kiểm soát ranh giới trạng thái liên quan, chứ không chỉ <em>quan sát</em> một giao diện.</p></div>
+  <div class="card"><div class="h">3 · Observable outcome</div><p>Nó phát ra biên nhận, hoặc một kết quả cho/chặn xác minh được từ bên ngoài.</p></div>
+</div>
+
+<p>Ba điều kiện này làm việc thật, và chúng loại bỏ nhiều thứ trông giống rail. Gửi tin nhắn bằng cách <em>điền form của chính site</em> không phải outbox rail — giao diện của site vẫn là ranh giới hiệu ứng, điều kiện 2 hỏng, và không biên nhận nào được tạo ra. Soft delete chỉ là rail nếu dịch vụ lưu trữ thật sự hỗ trợ khôi phục <em>và</em> mọi thao tác xóa đều đi qua nó.</p>
+
+<h3>A Domain-neutral Action Profile</h3>
+
+<p>Domain không phải primitive. Browser không cần kiến trúc riêng cho shopping, email hay government forms. Nó cần một profile nhất quán cho mọi proposal. Năm nhóm dưới đây không bị nén thành một <code>assurance_level</code>; mỗi nhóm trả lời một câu hỏi khác nhau:</p>
+
+<pre><code>type ActionProfile = {
+  information_flow: {
+    sources: Origin[];
+    sinks: Sink[];
+    sensitivity: DataClass[];
+    visibility: "private" | "restricted" | "public";
+  };
+  authority: {
+    grant: GrantRef;
+    approval: "not_required" | "required" | "prohibited";
+  };
+  effect: {
+    presence: "none" | "external";
+    boundaries: StateBoundary[];
+    scopes: ("remote" | "cross_account" | "public" | "financial")[];
+    reversibility: "reversible" | "revocable" | "compensatable" | "irreversible" | null;
+  };
+  guarantees: GuaranteeClaim[];
+  outcome: {
+    required_evidence: EvidenceRequirement[];
+    ambiguity_policy: "verify" | "human_review" | "refuse";
+    retry_policy: "safe" | "verify_first" | "forbidden";
+  };
+};</code></pre>
+
+<p><code>GuaranteeClaim</code> vẫn tách riêng epistemic basis, issuer, oracle, enforcer và accountability. <code>browser_inferred</code> không bao giờ bị đặt trên cùng một thang với <code>site_enforced</code>: cái đầu nói ta biết bằng cách nào; cái sau nói ai kiểm soát state boundary.</p>
+
+<p><code>compensatable</code> cũng khác <code>revocable</code>. Xóa một tin nhắn sau khi gửi không thu hồi notification, bản export hay ký ức của người đã đọc. Đó là một hành động bù, không phải undo.</p>
+
+<h3>Cross-domain Validation</h3>
+
+<div class="tw">
+<table>
+<caption>Một interface, nhiều task; khác nhau ở profile và guarantee chứ không ở architecture.</caption>
+<thead><tr><th>Task</th><th>Information &amp; authority</th><th>Effect boundary</th><th>Outcome evidence</th><th>Residual uncertainty</th></tr></thead>
+<tbody>
+<tr><td>Đọc và tóm tắt nguồn</td><td>Query egress; read grant</td><td>Không có intended business mutation</td><td>Source bundle + observation hashes</td><td>Tập nguồn có đầy đủ hay không</td></tr>
+<tr><td>Gửi email</td><td>Cross-origin content; recipient + send grant</td><td>Controlled Outbox nếu ta sở hữu đường gửi; nếu không là provider API</td><td>Queued/sent receipt</td><td>Người nhận đã đọc hoặc hiểu thế nào</td></tr>
+<tr><td>Đặt lịch họp</td><td>Calendar capability; participant scope</td><td>Calendar provider kiểm soát event state</td><td>Event ID + invitation state</td><td>Người được mời có tham dự không</td></tr>
+<tr><td>Đăng bài công khai</td><td>Public sink; publish approval</td><td>Platform kiểm soát publication state</td><td>Publication ID + trusted readback</td><td>Nội dung đã bị sao chép hoặc lan truyền</td></tr>
+<tr><td>Nộp hồ sơ xin việc</td><td>PII xuyên origin; explicit submission grant</td><td>Employer platform; không có independent rail</td><td>Site receipt hoặc email, đều site-asserted</td><td>Hồ sơ đã được xử lý thế nào</td></tr>
+<tr><td>Mua hàng</td><td>Payment grant + sealed credentials</td><td>Merchant order service và payment rail là hai boundary khác nhau</td><td>Order receipt + payment outcome</td><td>Đúng sản phẩm, fulfillment và hậu quả sau giao hàng</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Read-only chỉ mô tả <em>intended business effect</em>. Request đọc vẫn có thể gửi cookie, tiêu quota, để lại access log hoặc đánh dấu một message là đã đọc; vì vậy Reference Monitor và provenance vẫn áp dụng. Ngược lại, nộp hồ sơ xin việc không phải tình huống “không ai cưỡng chế”: site backend kiểm soát submission state, nhưng không có oracle độc lập. Runtime có thể commit theo explicit grant và báo <code>site_asserted</code>, yêu cầu approval nếu uncertainty vượt policy, hoặc từ chối — approval không biến lời site thành sự thật.</p>
+
+<h3>A Price Ceiling Must Name Its Enforcement Stage</h3>
+
+<p>Thanh toán thẻ không phải một sự kiện đơn. <code>authorization</code> và <code>capture</code> là hai giai đoạn khác nhau, và incremental authorization, partial authorization cùng <strong>overcapture</strong> đều phá vỡ cách hiểu ngây thơ về "hạn mức cứng".</p>
+
+<pre><code>{
+  "claim": "An authorization above 3000000 VND will be declined",
+  "enforcer": {
+    "party": "virtual-card-provider.example",
+    "boundary": "authorization",
+    "mechanism": "hard_transaction_limit",
+    "parameters": { "incremental_authorization": "denied", "recurring": "denied" }
+  }
+}</code></pre>
+
+<p>Claim này áp dụng cho <code>authorization</code>, không phải <code>capture</code>. Một trần ở capture là claim <em>mạnh hơn</em> và cần cam kết riêng — overcapture sống đúng trong khe giữa hai giai đoạn. <strong>Đặt tên claim theo giai đoạn mạnh hơn giai đoạn mình thực sự cưỡng chế là cách một envelope nói dối trong khi trông rất chỉn chu.</strong></p>
+
+<h2 id="demo"><span class="n">Part 8</span>Commerce Stress Test — Who Enforces the Price Ceiling?</h2>
+
+<p>Commerce không phải phạm vi của browser; nó là stress test vì order state và payment state nằm ở hai boundary khác nhau. Tình huống: bạn cho phép agent mua một món dưới 3.000.000 VND. Nó quan sát giá 2.890.000, bạn duyệt, rồi <strong>giá đổi thành 3.150.000 trước khi giao dịch chạy xong</strong>.</p>
+
+<div class="tw">
+<table>
+<caption>Compact end-to-end trace trước khi phân nhánh failure.</caption>
+<thead><tr><th>Stage</th><th>What happens</th><th>What is trusted</th></tr></thead>
+<tbody>
+<tr><td><code>delegate</code></td><td>Authority cấp grant: total ≤ 3.000.000 VND, recurring denied</td><td>Signed grant; cấp trước khi đọc web</td></tr>
+<tr><td><code>observe</code></td><td>Runtime ghi product, price và semantic handle</td><td>Observation integrity; merchant claim vẫn untrusted</td></tr>
+<tr><td><code>propose</code></td><td>Planner gửi <code>order.submit</code>; browser tạo terms hash</td><td>Proposal validation, không phải planner judgment</td></tr>
+<tr><td><code>approve</code></td><td>User approval gắn với đúng proposal hash</td><td>Approval signature; không bảo đảm merchant behavior</td></tr>
+<tr><td><code>commit</code></td><td>Runtime re-observe rồi dispatch nếu terms còn khớp</td><td>Local policy; TOCTOU phía server vẫn còn</td></tr>
+<tr><td><code>verify</code></td><td>Ledger tách payment outcome khỏi order outcome</td><td>Chỉ receipt của boundary đã thực sự phát hành nó</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Câu hỏi không phải "có chặn được không". Câu hỏi là <em>ai</em> chặn, và sau đó bạn có <strong>biết đơn hàng đã được tạo hay chưa</strong>. Hai câu trả lời đó khác nhau tùy hai điều kiện — và bốn tổ hợp cho bốn kết cục khác nhau.</p>
+
+<section class="demo" id="demoBox">
+  <div class="demo-h">
+    <span class="lbl">Interactive</span>
+    <h3>Price Ceiling: 3,000,000 VND → 3,150,000 VND</h3>
+    <p>Chọn hai điều kiện bên trái. Bên phải là chuỗi phòng thủ, chỗ nào bắt được, và — quan trọng nhất — trạng thái đơn hàng sau đó có xác định hay không.</p>
+  </div>
+  <div class="demo-body">
+    <div class="knobs">
+      <fieldset class="knob">
+        <legend class="q">When does the price change?</legend>
+        <div class="hint">Runtime quan sát lại ngay trước khi gửi request.</div>
+        <div class="opts" id="k1">
+          <label class="opt sel"><input type="radio" name="when" value="before" checked><span><span class="ot">Before the final observation</span><span class="od">Runtime nhìn thấy 3.150.000</span></span></label>
+          <label class="opt"><input type="radio" name="when" value="after"><span><span class="ot">After the final observation</span><span class="od">Local state trông vẫn hợp lệ</span></span></label>
+        </div>
+      </fieldset>
+      <fieldset class="knob">
+        <legend class="q">Which enforcement infrastructure exists?</legend>
+        <div class="hint">Thẻ ảo là thứ ta tự phát hành. Conditional commit thì phải merchant hỗ trợ.</div>
+        <div class="opts" id="k2">
+          <label class="opt sel"><input type="radio" name="infra" value="card" checked><span><span class="ot">Single-use Virtual Card</span><span class="od">Legacy merchant, không hợp tác</span></span></label>
+          <label class="opt"><input type="radio" name="infra" value="none"><span><span class="ot">Regular Card — No Effect Rail</span><span class="od">Không có price ceiling được payment provider cưỡng chế</span></span></label>
+          <label class="opt"><input type="radio" name="infra" value="native"><span><span class="ot">Virtual Card + Conditional Commit</span><span class="od">Merchant hỗ trợ native protocol</span></span></label>
+        </div>
+      </fieldset>
+    </div>
+    <div class="verdict" id="verdict" role="status" aria-live="polite"></div>
+  </div>
+</section>
+
+<p>Kết quả quan trọng không nằm ở các ô chặn được, mà ở ô <strong>"sau lần quan sát cuối × không có rail"</strong>: không lỗi nào được sinh ra, khoản tiền 3.150.000 vẫn bị trừ, và trần chi tiêu chưa bao giờ tồn tại như một ràng buộc. Nó chỉ tồn tại như một ý định trong một policy engine đọc HTML do chính bên bán phát hành.</p>
+
+<div class="box">
+  <span class="lbl">Core Argument</span>
+  <p>Một chính sách do trình duyệt tự cưỡng chế là trình duyệt tự từ chối bấm nút. Nó chặn được agent ngu và agent bị chiếm quyền, nhưng nó không ràng buộc được người bán. Muốn có ràng buộc thật thì phải có <em>một bên thứ ba đang giữ tiền</em> — hoặc một đối tác chịu ký cam kết.</p>
+</div>
+
+<h2 id="p9"><span class="n">Part 9</span>Guarantee Envelope — One Shape for Every Claim</h2>
+
+<p>Không nén mức bảo đảm thành một con số. Một hành động có thể đồng thời có ngữ nghĩa do site khai báo, số tiền do browser suy luận, idempotency do server cưỡng chế, và tính đầy đủ của hiệu ứng thì không xác định.</p>
+
+<pre><code>type GuaranteeClaim = {
+  claim: string | null;
+  epistemic_basis: EvidenceBasis | null;
+  issuer: Party | null;
+  oracle: Oracle | null;
+  enforcer: Enforcer | null;
+  validity: { starts_at: string; ends_at: string } | null;
+  accountable_party: Party | null;
+  remedy: Remedy | null;      // decline | refund | chargeback | restoration
+  recourse: Recourse | null;  // "contractual_dispute" — đường đòi, không phải remedy
+  scope: Record&lt;string, unknown&gt; | null;
+  evidence: EvidenceRef | null;      // ở proposal stage: chỉ policy/manifest
+  outcome_evidence?: EvidenceRef;    // biên nhận — chỉ tồn tại sau commit
+  not_guaranteed: string[];
+};</code></pre>
+
+<p>Trường không áp dụng để <code>null</code>, không bao giờ lặng lẽ bỏ đi — vì một trường vắng mặt và một thuộc tính không được cưỡng chế trông giống hệt nhau với người đọc.</p>
+
+<div class="grid3">
+  <div class="card"><div class="h">remedy ≠ recourse</div><p><code>contractual_dispute</code> không phải remedy. Chính tài liệu này nói một phân bổ trách nhiệm không có tiền phía sau chỉ là một vụ kiện — mà với phần lớn giá trị giao dịch thì kiện tương đương không có gì.</p></div>
+  <div class="card"><div class="h">evidence có thì</div><p>Ở giai đoạn đề xuất, chưa tồn tại biên nhận nào. Trộn kết quả tương lai vào một proposal là lỗi nhất quán thời gian.</p></div>
+  <div class="card"><div class="h">at most one ≠ exactly one</div><p>Idempotency key cho <em>nhiều nhất một</em> đơn mỗi key. <em>Đúng một</em> còn đòi bằng chứng commit đã thành công — nên nó nằm trong <code>not_guaranteed</code>.</p></div>
+</div>
+
+<p>Điều đáng nói nhất về schema này: trên đường legacy, phần lớn trường sẽ là <code>null</code>. Đó không phải thất bại của schema — đó là schema đang làm đúng việc của nó. Một <code>enforcer: null</code> đọc được là một khoảng trống được thừa nhận; một trường bị bỏ đi thì không.</p>
+
+<h3>Result-set Provenance</h3>
+
+<p>Provenance của từng fact không cho biết những kết quả nào đã bị loại trước khi browser nhìn thấy. Vì vậy comparative observation cần một envelope cho cả candidate set. Các con số coverage dưới đây vẫn chỉ là claim của provider; schema không nâng chúng thành sự thật:</p>
+
+<pre><code>{
+  "result_set": {
+    "query": "official grant application deadline 2026",
+    "provider": "search.example",
+    "coverage_claim": {
+      "value": { "known_sources": 18, "queried_sources": 12 },
+      "epistemic_basis": "provider_declared",
+      "issuer": "search.example",
+      "independently_verified": false
+    },
+    "ranking_claim": {
+      "value": { "method": "relevance", "commercial_influence": true },
+      "epistemic_basis": "provider_declared",
+      "issuer": "search.example"
+    },
+    "not_guaranteed": ["result_set_completeness", "absence_of_undisclosed_sponsorship"]
+  }
+}</code></pre>
+
+<p>Giảm thiểu bằng cách tách sponsored result, truy vấn nhiều nguồn và lưu toàn bộ candidate set. Nhưng browser không thể chứng minh completeness khi provider kiểm soát thứ bị bỏ qua — một biểu hiện trực tiếp của Law 1.</p>
+
+<h2 id="p10"><span class="n">Part 10</span>Five Browser Primitives Reconsidered</h2>
+
+<p>Đề bài hỏi cái gì <em>đổi</em>, nên mỗi trục trình bày theo delta: hôm nay thế nào → hạ cấp cái gì → thay bằng gì → trả giá gì.</p>
+
+<div class="tw">
+<table>
+<thead><tr><th>Trục</th><th>Hạ cấp</th><th>Thay bằng</th><th>Cái giá</th></tr></thead>
+<tbody>
+<tr>
+  <td><strong>DOM · render</strong></td>
+  <td>Raster khỏi đường mặc định; DOM thô thôi làm interface</td>
+  <td>Semantic state có version, stream <em>delta</em>; <code>semantic handle</code> hết hạn ồn ào thay vì lặng lẽ trỏ nhầm</td>
+  <td>Đối chiếu thực thể đắt và không hoàn hảo; hết hạn quá sớm thì đốt ngân sách quan sát</td>
+</tr>
+<tr>
+  <td><strong>Navigation</strong></td>
+  <td>Back-as-undo; readiness của cả trang như một boolean</td>
+  <td>Checkpoint/fork; điều kiện sẵn sàng hướng mục tiêu; <code>effect lease</code> — chỉ một nhánh được gây hiệu ứng ra ngoài</td>
+  <td>Nhánh suy đoán chỉ-đọc thì mất throughput; xung đột xuyên runtime không đóng được từ local</td>
+</tr>
+<tr>
+  <td><strong>Auth</strong></td>
+  <td>Quyền lơ lửng ở cấp session; CAPTCHA như phép thử tính người</td>
+  <td>Chuỗi ủy quyền principal → delegate → runtime; <code>TaskGrant</code> nên là profile của <code>authorization_details</code> (RFC 9396), không phải từ vựng mới</td>
+  <td>Thêm một hop qua broker; định danh agent làm giảm tính ẩn danh</td>
+</tr>
+<tr>
+  <td><strong>Memory</strong></td>
+  <td>Kho lưu trữ không phân loại; ý niệm memory là một vector DB</td>
+  <td>Bốn lớp có kiểu; lớp policy <em>chỉ</em> ghi được bởi authority; consent gắn với <code>consent_epoch</code>, không chỉ <code>expires_at</code></td>
+  <td>Scope theo origin làm tổng hợp đa nguồn vụng về; trigger xin lại đồng ý cắt ngang automation đang chạy tốt</td>
+</tr>
+<tr>
+  <td><strong>Action API</strong></td>
+  <td>Tọa độ và selector làm primitive; retry như thao tác miễn phí</td>
+  <td>Hành động ở mức ý định, hai pha đề xuất/commit, <code>Decision Surface</code> ngắn cho planner, envelope đầy đủ cho ledger</td>
+  <td>Độ phủ. Rất nhiều flow legacy không còn tự động hóa được — đó là chủ đích, và nó đắt</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="box">
+  <span class="lbl">Operational Detail</span>
+  <p>Không tồn tại một trạng thái "trang đã xong" phổ quát. Trang có websocket, polling hoặc quảng cáo tự refresh thì không bao giờ tĩnh. Agent không cần trang xong — nó cần <em>điều kiện cho bước tiếp theo của nó</em> đúng. Playwright đã khuyến cáo rõ ràng không dùng <code>networkidle</code> và hướng người dùng sang assertion trên đúng thứ họ quan tâm.</p>
+</div>
+
+<h2 id="p11"><span class="n">Part 11</span>Agent-facing Interface</h2>
+
+<p>Planner không nằm trong browser và không được tin cậy. Nó chỉ nhận observation rồi gửi typed proposal. Browser giữ các primitive có thể cưỡng chế: observation, navigation state, proposal validation, commit, verification, scoped memory và evidence.</p>
+
+<div class="protocol-flow" role="img" aria-label="Action lifecycle where authority is granted before web observation, the untrusted planner creates a proposal, and the trusted browser validates, commits, and verifies the result">
+  <div class="pf-row">
+    <div class="pf-node authority"><b>1 · Delegate</b><span>Authority cấp TaskGrant trước khi đọc web</span></div>
+    <div class="pf-edge">scoped capability</div>
+    <div class="pf-node"><b>2 · Observe</b><span>Browser trả semantic delta + provenance</span></div>
+    <div class="pf-edge">untrusted data</div>
+    <div class="pf-node planner"><b>3 · Reason</b><span>Planner chọn phương án; không sở hữu authority</span></div>
+  </div>
+  <div class="pf-row">
+    <div class="pf-node planner"><b>4 · Propose</b><span>Typed action, target và provenanced arguments</span></div>
+    <div class="pf-edge">candidate action</div>
+    <div class="pf-node"><b>5 · Validate</b><span>Gateway kiểm grant, sink, effect và freshness</span></div>
+    <div class="pf-edge">only if required</div>
+    <div class="pf-node authority"><b>6 · Approve</b><span>Approval gắn proposal hash; không mở quyền ngầm</span></div>
+  </div>
+  <div class="pf-row">
+    <div class="pf-node"><b>7 · Commit</b><span>Reference Monitor dispatch qua đúng boundary</span></div>
+    <div class="pf-edge">external mutation</div>
+    <div class="pf-node effect"><b>8 · Effect</b><span>Site, provider hoặc Effect Rail thay đổi state</span></div>
+    <div class="pf-edge">receipt/readback</div>
+    <div class="pf-node"><b>9 · Verify</b><span>Tách known, rejected và unknown; quyết định retry</span></div>
+  </div>
+</div>
+<p class="diagram-caption">Đây là execution protocol, không phải thesis của bài. Hai điểm chịu lực là grant xuất hiện trước observation và planner không bao giờ tự chuyển proposal thành authority.</p>
+
+<pre><code>// Supporting transport/domain types are named but omitted for brevity.
+// DecisionSurface, SemanticAction, Proposal and Receipt are defined below.
+interface AgentBrowser {
+  // Observation
+  observe(q?: ObservationQuery): Promise&lt;StateDelta&gt;;
+  resolve(handle: Handle): Promise&lt;ResolvedTarget&gt;;
+
+  // Navigation and speculative state
+  navigate(target: ResourceTarget): Promise&lt;NavigationResult&gt;;
+  waitFor(predicate: ReadinessPredicate): Promise&lt;ReadinessResult&gt;;
+  checkpoint(label?: string): Promise&lt;Checkpoint&gt;;
+  fork(checkpointId: string): Promise&lt;Session&gt;;       // read-only mặc định
+  requestEffectLease(scope: EffectScope): Promise&lt;Lease&gt;;
+
+  // Staged effects
+  propose(action: SemanticAction): Promise&lt;Proposal&gt;;
+  commit(proposalId: string, approval?: ApprovalToken): Promise&lt;Receipt&gt;;
+  verify(postcondition: Postcondition): Promise&lt;VerificationResult&gt;;
+
+  // Scoped memory
+  proposeMemoryWrite(entry: MemoryWriteProposal): Promise&lt;MemoryWriteReceipt&gt;;
+  recall(query: MemoryQuery): Promise&lt;ScopedFact[]&gt;;
+
+  // Evidence
+  explain(decisionId: string, detail?: "summary" | "full"): Promise&lt;DecisionExplanation&gt;;
+  trace(operationId: string): Promise&lt;DisputeBundle&gt;;
+}</code></pre>
+
+<p><code>AuthorityPlane</code> là surface riêng cho user hoặc organization admin. Planner có thể tạo proposal để runtime chuyển tiếp, nhưng không được gọi trực tiếp các method cấp, sửa hoặc thu hồi authority:</p>
+
+<pre><code>interface AuthorityPlane {
+  issueGrant(spec: GrantSpec): Promise&lt;Grant&gt;;
+  revoke(grantId: string, cascade?: boolean): Promise&lt;RevocationReceipt&gt;;
+  reviewProposal(proposalId: string): Promise&lt;ApprovalDecision&gt;;
+  setPolicy(policy: PolicyDocument): Promise&lt;PolicyVersion&gt;;
+}</code></pre>
+
+<h3>The Decision Surface</h3>
+
+<p><code>Guarantee Envelope</code> đầy đủ nằm trong control plane và evidence ledger. Đưa toàn bộ envelope vào model context sẽ chống lại trực tiếp mục tiêu giảm token. Planner chỉ nhận hệ quả đã được dẫn xuất:</p>
+
+<pre><code>{
+  "handle": "h_882",
+  "action": "application.submit",
+  "decision_surface": {
+    "executable": false,
+    "requires": "human_approval",
+    "reason": "cross_origin_pii_and_site_asserted_outcome",
+    "retryable": false,
+    "decision_id": "d_992"
+  }
+}</code></pre>
+
+<p>Muốn biết vì sao, planner gọi <code>explain("d_992")</code>. Nó không được tự diễn giải lại envelope rồi quyết định bỏ qua một điều kiện.</p>
+
+<h3>Central Types</h3>
+
+<pre><code>type SemanticAction = {
+  action: string;
+  target: EntityId | Handle;
+  arguments: Record&lt;string, TypedValue&gt;;
+  constraints?: Constraint[];
+  grant_id: string;
+  idempotency_key?: string;
+};
+
+type TypedValue = {
+  value: unknown;
+  provenance:
+    | "destination_selection"
+    | "approved_constant"
+    | "user_supplied"
+    | "sealed_reference"
+    | "deterministic_derivation"
+    | "model_composed"
+    | "cross_origin_derived";
+  source_observation_id?: string;
+  candidate_set_size?: number;
+};
+
+type DecisionSurface = {
+  executable: boolean;
+  requires?: "human_approval" | "authority_grant" | "site_contract";
+  reason?: string;
+  retryable: boolean;
+  decision_id: string;
+};
+
+type NextAction =
+  | "observe_delta"
+  | "resolve_target"
+  | "request_new_grant"
+  | "reauthorize"
+  | "prepare_new_proposal"
+  | "verify_remote_state"
+  | "verify_application_status"
+  | "human_review"
+  | "refuse_retry"
+  | "refuse_task";
+
+type Proposal = {
+  proposal_id: string;
+  state_version: string;
+  terms_summary: Record&lt;string, unknown&gt;;
+  terms_hash: string;
+  commit_conditions: Condition[];
+  decision: DecisionSurface;
+  guarantee_ref: string;
+  conflicts: SourceDisagreement[];
+  visual_evidence?: EvidenceRef;
+  expires_at: string;
+};
+
+type Receipt = {
+  operation_id: string;
+  dispatch_state: "not_sent" | "sent" | "unknown";
+  remote_state: "committed" | "rejected" | "unknown";
+  observed_effects: Effect[];
+  unverified_effects: EffectClaim[];
+  outcome_evidence: EvidenceRef[];
+  retry_policy: "safe" | "verify_first" | "forbidden";
+  next_actions?: NextAction[];
+};</code></pre>
+
+<h3>Structured Failures</h3>
+
+<div class="tw">
+<table>
+<thead><tr><th>Error</th><th>Meaning</th><th>Safe next action</th></tr></thead>
+<tbody>
+<tr><td><code>STALE_OR_AMBIGUOUS_TARGET</code></td><td>Handle không còn resolve chắc chắn</td><td><code>observe_delta</code>, rồi resolve lại</td></tr>
+<tr><td><code>CAPABILITY_DENIED</code></td><td>Action, origin hoặc sink nằm ngoài grant</td><td>Refuse; chỉ authority mới được cấp grant mới</td></tr>
+<tr><td><code>CONSENT_CONTEXT_CHANGED</code></td><td>Điều kiện ngữ cảnh của grant không còn đúng</td><td>Re-authorize nếu attention policy cho phép</td></tr>
+<tr><td><code>APPROVAL_STALE</code></td><td>Terms hiện tại không khớp proposal hash</td><td>Tạo proposal mới</td></tr>
+<tr><td><code>UNKNOWN_EXTERNAL_EFFECT</code></td><td>Không xác lập được effect class</td><td>Approval theo policy hoặc refusal</td></tr>
+<tr><td><code>COMMIT_CONDITION_FAILED</code></td><td>Counterparty xét điều kiện nguyên tử và từ chối</td><td>Không retry proposal cũ</td></tr>
+<tr><td><code>IDEMPOTENCY_NOT_GUARANTEED</code></td><td>Retry có thể tạo effect trùng</td><td>Verify trước; nếu không verify được thì refuse</td></tr>
+<tr><td><code>REMOTE_STATE_CONFLICT</code></td><td>Có writer khác thay đổi state</td><td>Observe lại và re-plan</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Three Tasks, One Control Model</h3>
+
+<pre><code>// Epistemic: lưu một fact có nguồn
+await browser.proposeMemoryWrite({
+  assertion: deadline,
+  source_observation_id: "h_101",
+  requested_scope: "task:grant-research"
+});
+
+// Communication: draft hồ sơ; chưa được submit
+await browser.propose({
+  action: "application.submit",
+  grant_id: "grant_job_4",
+  target: "h_job_22",
+  arguments: {
+    resume: { value: "sealed:resume_v3", provenance: "sealed_reference" },
+    cover_letter: { value: draft, provenance: "model_composed" }
+  }
+});
+
+// Transaction: cùng API, guarantee khác
+await browser.propose({
+  action: "order.submit",
+  grant_id: "grant_purchase_9",
+  target: "h_product_8142",
+  constraints: [{ kind: "total_lte", amount: 3000000, currency: "VND" }],
+  arguments: {
+    quantity: { value: 1, provenance: "approved_constant" },
+    payment: { value: "sealed:card_once", provenance: "sealed_reference" }
+  }
+});</code></pre>
+
+<p>Observation và memory có typed surface riêng; mọi external effect đi qua cùng protocol <code>propose → optional approval → commit → verify</code>. Domain chỉ thay đổi provenance của argument, authority, effect boundary, guarantee và outcome evidence.</p>
+
+<h3>A Non-financial Ambiguous Outcome</h3>
+
+<p>Với job application trên legacy form, user có thể duyệt đúng resume, cover letter và employer. Approval đó cho phép dispatch; nó không khiến site backend trở thành independent oracle. Nếu connection đứt sau khi submit, receipt phải giữ lại uncertainty thay vì báo <code>SUCCESS</code> hoặc retry mù:</p>
+
+<pre><code>{
+  "operation_id": "op_job_44",
+  "dispatch_state": "sent",
+  "remote_state": "unknown",
+  "observed_effects": [],
+  "unverified_effects": ["application_record_created"],
+  "outcome_evidence": [
+    { "type": "http_response_fragment", "issuer": "jobs.example", "independent": false }
+  ],
+  "retry_policy": "forbidden",
+  "next_actions": ["verify_application_status", "human_review", "refuse_retry"]
+}</code></pre>
+
+<p>Đây là cùng bài toán với payment timeout nhưng không có financial rail. Browser vẫn kiểm soát authority, credential và dispatch; nó chỉ từ chối hứa điều mà không thành phần nào xác nhận được.</p>
+
+<h2 id="p12"><span class="n">Part 12</span>Prior Art and Emerging Standards</h2>
+
+<p>Đây là một bản tích hợp, không phải một phát minh, và nói ra điều đó là quan trọng: một đề xuất ánh xạ được vào các chuẩn đang triển khai thì kiểm chứng được, còn một đề xuất tự chế từ vựng song song thì không.</p>
+
+<div class="tw">
+<table>
+<thead><tr><th>Cơ chế trong bài</th><th>Tên thật</th><th>Trạng thái</th></tr></thead>
+<tbody>
+<tr><td>Native agent contract</td><td><strong>WebMCP</strong> — <code>document.modelContext</code></td><td>W3C CG Draft 28/07/2026</td></tr>
+<tr><td>Effect Broker, sealed reference</td><td><strong>Shared Payment Token</strong> trong <strong>ACP</strong></td><td><span class="tag t-ok">đang chạy</span> OpenAI + Stripe</td></tr>
+<tr><td>Approval gắn đúng điều khoản</td><td><strong>Checkout Mandate</strong> trong <strong>AP2</strong></td><td>Spec mở, 60+ đối tác</td></tr>
+<tr><td>Declared delegate identity</td><td><strong>Web Bot Auth</strong>, built on HTTP Message Signatures (RFC 9421)</td><td>IETF work in progress</td></tr>
+<tr><td>Tách Z2/Z3, declassification</td><td><strong>CaMeL</strong></td><td>Nghiên cứu, mã mở</td></tr>
+<tr><td>Quyền con ⊆ quyền cha</td><td><strong>Macaroons</strong></td><td>NDSS 2014, đã triển khai</td></tr>
+<tr><td><code>idempotency: site_enforced</code></td><td>Stripe <code>Idempotency-Key</code></td><td><span class="tag t-ok">production</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Hai quan sát dưới đây là bằng chứng trực tiếp cho luận điểm trung tâm của tài liệu.</p>
+
+<p><strong>Native path không đóng được chuyện "site đang nói dối" — và chính tác giả của nó nói vậy.</strong> WebMCP là Community Group Draft, không phải W3C Recommendation, và mục security nói thẳng rằng không có bảo đảm nào rằng hành vi của một tool khớp với ý định nó khai. Đó là bằng chứng mạnh nhất cho bất đối xứng trung tâm: một hợp đồng có chữ ký tạo ra <em>trách nhiệm và chế tài</em>, không tạo ra <em>sự thật</em>.</p>
+
+<p><strong>Chi phí của bảo đảm chứng minh được là một đại lượng đo được, và thấp hơn dự đoán thông thường.</strong> CaMeL giải được 77% tác vụ AgentDojo <em>với provable security</em>, so với 84% của baseline không phòng thủ — khoảng bảy điểm phần trăm. So sánh với phòng thủ kiểu lọc: prompt sandwiching đạt 65,7% utility dưới tấn công nhưng vẫn để lại 30,8% tỉ lệ tấn công thành công. Cưỡng chế cấu trúc vừa an toàn hơn vừa rẻ hơn làm sạch đầu vào.</p>
+
+
+<h2 id="p13"><span class="n">Part 13</span>What This Design Makes Worse</h2>
+
+<p>Các chi phí dưới đây được nêu trực tiếp thay vì gộp vào một bảng đánh đổi khái quát ở cuối tài liệu.</p>
+
+<ol>
+  <li><strong>Web hiện tại khó tự động hóa hơn nhiều.</strong> "Không rõ tác dụng thì không an toàn" cộng "không rõ idempotency thì không retry" loại bỏ một phần lớn flow thật khỏi vận hành không người trông.</li>
+  <li><strong>Phê duyệt hiếm hơn và nặng hơn.</strong> Cấp ngân sách cho sự chú ý nghĩa là từ chối những việc mà một hệ thống lỏng hơn đã làm xong.</li>
+  <li><strong>Handle hết hạn đốt đúng ngân sách token mà thiết kế tuyên bố tối ưu.</strong> Hai mục tiêu xung đột trực tiếp và không có giá trị mặc định nào đúng phổ quát.</li>
+  <li><strong>Effect Broker là một khoản thuế độ trễ và một điểm hỏng đơn lẻ.</strong> Thành phần có nhiều quyền cưỡng chế nhất cũng là mục tiêu hấp dẫn nhất.</li>
+  <li><strong>Trace ký và lưu lâu là rủi ro riêng tư.</strong> Một hồ sơ tranh chấp là bản ghi chi tiết việc duyệt web và mua sắm của một con người.</li>
+  <li><strong>Native protocol có lợi cho site lớn.</strong> Open banking là bản diễn tập: Plaid ước tính một ngân hàng tự xây API mất 3–4 năm và 10–20 triệu USD mỗi năm. Một web hai tầng, nơi merchant nhỏ vĩnh viễn ở hạng <code>inferred</code>, là kết cục <em>khi thiết kế này thành công</em>, không phải rủi ro khi nó thất bại.</li>
+  <li><strong>Tính đầy đủ của kết quả tìm kiếm là bất khả.</strong> Nếu nhà cung cấp kiểm soát cái gì bị bỏ qua thì không lượng provenance nào phát hiện được sự bỏ sót.</li>
+</ol>
+
+<h2 id="p14"><span class="n">Part 14</span>Open Problems</h2>
+
+<ul>
+  <li><strong>Ngữ nghĩa của đồng ý cho vận hành không người trông.</strong> Grant duyệt 10h sáng thứ Hai được thi hành 3h sáng thứ Bảy. Chưa ai biết cách diễn đạt "hoàn cảnh khiến việc này hợp lý vẫn còn đúng" dưới dạng máy kiểm tra được. NIST reauthentication và OpenID CAEP là hàng xóm gần nhất, nhưng chúng hỏi <em>session có đổi không</em>, không hỏi <em>bối cảnh có còn đúng không</em>.</li>
+  <li><strong>Tuần tự hóa xuyên runtime.</strong> Ba agent trên cùng một tài khoản với credential độc lập thì mỗi cái đều tin mình là writer duy nhất.</li>
+  <li><strong>Kinh tế của adapter.</strong> Adapter được bảo trì là oracle mạnh nhất trên đường legacy và là thành phần khó tài trợ nhất. Ai trả tiền, và điều gì xảy ra với những site không ai tài trợ?</li>
+  <li><strong>Oracle cho hiệu ứng phi tài chính.</strong> Khoảng trống lớn nhất. Một chuẩn biên nhận có chữ ký cho các hiệu ứng ngoài thanh toán sẽ đưa nhiều phần của web từ <em>không bảo đảm</em> sang <em>được cưỡng chế</em> hơn bất kỳ thay đổi nào ở DOM.</li>
+  <li><strong>Đo rò rỉ qua giá trị do model soạn.</strong> Không có cách nào nói token đầu ra nào mang ảnh hưởng của input nào xuyên qua attention. Ngân sách rò rỉ là một kỷ luật, không phải một phép đo.</li>
+</ul>
+
+<hr>
+
+<h3>References</h3>
+<ul class="srcs">
+  <li>Akhawe &amp; Felt — <a href="https://www.usenix.org/conference/usenixsecurity13/technical-sessions/presentation/akhawe">Alice in Warningland</a>, USENIX Security 2013 · 25 triệu cảnh báo</li>
+  <li>Debenedetti et al. — <a href="https://arxiv.org/abs/2503.18813">Defeating Prompt Injections by Design (CaMeL)</a> · bản sửa báo cáo 77% với provable security so với baseline 84%; metadata arXiv trước đó ghi 67%</li>
+  <li><a href="https://openreview.net/forum?id=m1YYAQjO3w">AgentDojo</a> · 97 user task, 629 security case</li>
+  <li><a href="https://webmachinelearning.github.io/webmcp/">WebMCP</a>, W3C WebML CG Draft 28/07/2026 · <a href="https://developer.chrome.com/docs/ai/webmcp/imperative-api">Chrome Imperative API</a> — <code>navigator.modelContext</code> deprecated ở Chrome 150</li>
+  <li><a href="https://docs.stripe.com/agentic-commerce/acp">Agentic Commerce Protocol</a>, Stripe · <a href="https://openai.com/index/buy-it-in-chatgpt/">Instant Checkout</a>, OpenAI</li>
+  <li><a href="https://ap2-protocol.org/ap2/checkout_mandate/">AP2 Checkout Mandate</a> · <a href="https://cloud.google.com/blog/products/ai-machine-learning/announcing-agents-to-payments-ap2-protocol">Announcing AP2</a>, Google Cloud</li>
+  <li><a href="https://blog.cloudflare.com/verified-bots-with-cryptography/">Web Bot Auth</a>, Cloudflare · <a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/browser-web-bot-auth.html">Reducing CAPTCHAs with Web Bot Auth</a>, AWS</li>
+  <li><a href="https://research.google/pubs/pub41892/">Macaroons</a>, NDSS 2014 · <a href="https://www.rfc-editor.org/rfc/rfc9396.html">RFC 9396</a> · <a href="https://www.rfc-editor.org/rfc/rfc9421.html">RFC 9421</a> · <a href="https://www.rfc-editor.org/rfc/rfc9110.html">RFC 9110</a></li>
+  <li><a href="https://docs.stripe.com/payments/incremental-authorization">Incremental authorization</a> &amp; <a href="https://docs.stripe.com/payments/overcapture">Overcapture</a>, Stripe · <a href="https://developer.visa.com/capabilities/vctc">Visa Transaction Controls</a></li>
+  <li><a href="https://brave.com/blog/comet-prompt-injection/">Indirect Prompt Injection in Perplexity Comet</a>, Brave · <a href="https://cyberscoop.com/agentic-ai-browsers-allow-hijacking-zenity-labs-comet/">Zenity Labs</a>, CyberScoop</li>
+  <li><a href="https://plaid.com/blog/api-progress-update/">Building an Open Finance Future</a>, Plaid · <a href="https://playwright.dev/docs/api/class-page">Playwright — networkidle</a></li>
+</ul>
+
+<p class="foot">Day 14 · 03 · 08 · 2026 — design document, 14 parts, 24 sources.</p>
+
+</main>
+</div>
+
+<script>
+/* ── demo ──────────────────────────────────────────────────────── */
+const CASES = {
+  'before|card': {
+    pill:['v-warn','Blocked Locally'], code:'APPROVAL_STALE',
+    chain:[['Re-observe','hit'],['Reference Monitor','hit'],['Virtual Card','idle'],['Merchant','idle']],
+    sub:'Runtime nhìn thấy 3.150.000. Approval gắn với <b>terms_hash</b> cũ nên không còn khớp. Reference Monitor chặn <b>trước khi</b> bất cứ thứ gì rời runtime.',
+    rows:[['enforced_by','<code>reference_monitor</code> · trong ranh giới của ta'],
+          ['dispatch_attempted','<code>false</code>'],
+          ['order_state','<code>not_created</code> — <b>đã biết</b>'],
+          ['tiền','không có authorization nào được gửi']],
+    note:'Đây là giá trị của cưỡng chế cục bộ: không phải nó mạnh hơn, mà là <b>nó hỏng một cách chắc chắn</b>. Không có gì được gửi đi, nên trạng thái đơn hàng là xác định.'
+  },
+  'before|none': {
+    pill:['v-warn','Blocked Locally'], code:'APPROVAL_STALE',
+    chain:[['Re-observe','hit'],['Reference Monitor','hit'],['No Effect Rail','idle'],['Merchant','idle']],
+    sub:'Giống trên. Khi runtime <em>quan sát được</em> thay đổi thì không cần rail nào cả — nguyên tắc <b>approval binds to exact state</b> là đủ.',
+    rows:[['enforced_by','<code>reference_monitor</code>'],
+          ['dispatch_attempted','<code>false</code>'],
+          ['order_state','<code>not_created</code> — <b>đã biết</b>'],
+          ['tiền','không bị trừ']],
+    note:'Không có rail vẫn an toàn <b>trong đúng trường hợp này</b>. Đổi một điều kiện bên trái thì kết cục khác hẳn — đó là điều đáng chú ý.'
+  },
+  'after|card': {
+    pill:['v-stop','Blocked by Effect Rail'], code:'PAYMENT_AUTHORIZATION_DECLINED',
+    chain:[['Re-observe','pass'],['Reference Monitor','pass'],['Virtual Card','hit'],['Merchant','hit']],
+    sub:'Local state trông vẫn hợp lệ nên request được gửi. Merchant xin authorization 3.150.000 trên một thẻ ảo phát hành đúng 3.000.000. <b>Rail từ chối.</b>',
+    rows:[['enforced_by','<code>effect_broker</code> · thẻ ảo, boundary <code>authorization</code>'],
+          ['dispatch_attempted','<code>true</code>'],
+          ['order_state','<code>unknown</code> — <b>chưa biết</b>'],
+          ['automatic_retry','<code>false</code> — idempotency không có enforcer'],
+          ['tiền','không bị trừ trên thẻ này']],
+    note:'Trần giữ được với <b>zero cooperation</b> từ merchant — đây mới là trường hợp biện minh cho rail, vì không mức cẩn thận cục bộ nào bắt được nó. Nhưng chú ý rail <em>không</em> xác lập điều gì: merchant có thể đã tạo đơn ở trạng thái <code>pending</code>, hoặc thử lại trên một instrument khác. Nên không được retry mù — phải <code>verify</code> trước.'
+  },
+  'after|none': {
+    pill:['v-stop','Not Enforced'], code:'— NO ERROR —',
+    chain:[['Re-observe','pass'],['Reference Monitor','pass'],['No Effect Rail','pass'],['Merchant','hit']],
+    sub:'Local state trông hợp lệ, request được gửi, Regular Card không có price ceiling riêng cho task. Merchant charge <b>3.150.000</b>. Không thành phần nào sinh ra lỗi, vì không thành phần nào biết là có gì sai.',
+    rows:[['enforced_by','<code>null</code>'],
+          ['dispatch_attempted','<code>true</code>'],
+          ['order_state','<code>created</code>'],
+          ['tiền','<b>bị trừ 3.150.000 VND</b> — vượt trần 150.000']],
+    note:'Trần 3 triệu bạn đặt ra <b>chưa bao giờ tồn tại như một ràng buộc</b>. Nó chỉ tồn tại như một ý định trong một policy engine đọc HTML do chính người bán viết. Đây là Law 1 và Law 2 gặp nhau: không có bên cưỡng chế nào trong ranh giới của ta, và oracle duy nhất là đối tác đang tính tiền.'
+  }
+};
+const box = document.getElementById('demoBox');
+function render(){
+  const when = box.querySelector('input[name=when]:checked').value;
+  const infra = box.querySelector('input[name=infra]:checked').value;
+  const key = infra === 'native' ? null : when + '|' + infra;
+  box.querySelectorAll('.opt').forEach(o=>o.classList.toggle('sel', o.querySelector('input').checked));
+
+  let c;
+  if(infra === 'native'){
+    c = {
+      pill:['v-ok','Atomically Rejected'], code:'COMMIT_CONDITION_FAILED',
+      chain:[['Re-observe', when==='before'?'hit':'pass'],['Reference Monitor', when==='before'?'hit':'pass'],['Conditional Commit','hit'],['Merchant','pass']],
+      sub:'Điều kiện được gửi kèm commit và <b>merchant đánh giá nguyên tử</b> cùng với việc tạo đơn. Đây là cách duy nhất đóng hẳn TOCTOU — kiểm tra lại ở phía client chỉ thu hẹp cửa sổ, vì kiểm tra lại đòi quan sát lại, mà quan sát lại thì mở lại cửa sổ.',
+      rows:[['enforced_by','<code>merchant_order_service</code> · boundary <code>order_creation</code>'],
+            ['changed_fields','<code>total: 2890000 → 3150000</code>'],
+            ['order_state','<code>not_created</code> — <b>đối tác xác nhận</b>'],
+            ['tiền','không bị trừ'],
+            ['thêm','<code>Idempotency-Key</code> khiến retry an toàn']],
+      note:'Khác biệt so với trường hợp thẻ ảo: ở đây <b>đối tác đã xét điều kiện của ta và từ chối</b>, nên trạng thái đơn hàng là <em>đã biết</em>. Ở rail thì ta chỉ biết tiền không bị trừ trên một instrument. Gộp hai lỗi này làm một sẽ giấu đi đúng cái bất định quyết định việc retry có an toàn hay không.'
+    };
+  } else { c = CASES[key]; }
+
+  document.getElementById('verdict').innerHTML = `
+    <div class="vhead">
+      <span class="vcode">${c.code}</span>
+      <span class="vpill ${c.pill[0]}">${c.pill[1]}</span>
+    </div>
+    <p class="vsub">${c.sub}</p>
+    <div class="chain">${c.chain.map(s=>`<span class="step ${s[1]==='idle'?'':s[1]}">${s[0]}</span>`).join('')}</div>
+    <div class="vrows">${c.rows.map(r=>`<div class="vrow"><span class="vk">${r[0]}</span><span class="vv">${r[1]}</span></div>`).join('')}</div>
+    <div class="vnote">${c.note}</div>`;
+}
+box.addEventListener('change', render);
+render();
+
+/* ── toc scrollspy ─────────────────────────────────────────────── */
+const links = [...document.querySelectorAll('.toc a[href^="#"]')];
+const targets = links.map(a=>document.getElementById(a.getAttribute('href').slice(1))).filter(Boolean);
+const spy = new IntersectionObserver(es=>{
+  es.forEach(e=>{
+    if(!e.isIntersecting) return;
+    links.forEach(l=>l.classList.toggle('on', l.getAttribute('href') === '#'+e.target.id));
+  });
+},{rootMargin:'-70px 0px -72% 0px'});
+targets.forEach(t=>spy.observe(t));
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/assets/comments.js" data-page="day14"></script>
+</body>
+</html>

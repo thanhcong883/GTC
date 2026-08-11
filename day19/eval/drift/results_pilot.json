@@ -1,0 +1,49 @@
+{
+  "experiment": "recursive summarization drift",
+  "framing": "External model stress test. Recursive summary-of-summary is forbidden by the proposed architecture; this run demonstrates why. Not a measurement of any product's error rate.",
+  "model": "gpt-4o-mini-2024-07-18",
+  "temperature": 1.0,
+  "prompt": "Summarize the following meeting notes in 2-3 sentences for the project record.",
+  "run_at": "2026-08-10T07:47:18.185694+00:00",
+  "pilot": true,
+  "unit_of_analysis": "chain",
+  "chains": 2,
+  "generations_per_chain": 3,
+  "total_calls": 6,
+  "promotion": {
+    "chains_with_promotion": 0,
+    "rate": 0.0,
+    "wilson_95_ci": [
+      0.0,
+      0.6576
+    ],
+    "first_promotion_generation": {},
+    "chains_never_promoted": 2
+  },
+  "by_generation": {
+    "1": {
+      "PRESERVED": 0,
+      "PROMOTED": 0,
+      "DROPPED": 1,
+      "AMBIGUOUS": 1
+    },
+    "2": {
+      "PRESERVED": 0,
+      "PROMOTED": 0,
+      "DROPPED": 1,
+      "AMBIGUOUS": 1
+    },
+    "3": {
+      "PRESERVED": 0,
+      "PROMOTED": 0,
+      "DROPPED": 1,
+      "AMBIGUOUS": 1
+    }
+  },
+  "usage": {
+    "input_tokens": 1386,
+    "output_tokens": 558,
+    "total_tokens": 1944
+  },
+  "elapsed_seconds": 17.0
+}

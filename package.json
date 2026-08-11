@@ -1,0 +1,10 @@
+{
+  "type": "module",
+  "dependencies": {
+    "@upstash/redis": "^1.38.2",
+    "@vercel/analytics": "^2.0.1"
+  },
+  "devDependencies": {
+    "yaml": "^2.9.0"
+  }
+}

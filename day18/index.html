@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 18 — A self-extending agent runtime | Giang Thanh Cong</title>
+  <meta name="description" content="A minimal but real agent runtime — orchestration loop, tool-calling, two-layer memory — that also writes new tools for itself mid-task. One line makes self-extension work. Day 18 of a 30-day build challenge." />
+  <meta property="og:title" content="Day 18 — A self-extending agent runtime" />
+  <meta property="og:description" content="The loop, the tool interface, memory, and the one line — schemas recomputed every iteration — that lets an agent write and immediately use its own tools." />
+  <meta property="og:type" content="article" />
+  <meta name="theme-color" content="#f4f5f7" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛠️</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --orange:#f9660e; --orange-soft:#fff0e5;
+      --indigo:#3b5bdb; --indigo-soft:#e8ecfb;
+      --amber:#c77800; --amber-soft:#fbead2;
+      --green:#1f7a4d; --green-soft:#e4f3ea;
+      --red:#c02a2a; --red-soft:#f8e6e3;
+      --ink:#161a22; --muted:#5b6472; --faint:#8b95a5;
+      --bg:#f4f5f7; --card:#fff; --border:#e2e5ea; --border-soft:#edeff2; --code:#eef0f4;
+      --shadow:0 18px 50px rgba(22,26,34,.10);
+      --shadow-sm:0 6px 20px rgba(22,26,34,.07);
+      --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+      --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.65;-webkit-font-smoothing:antialiased}
+    a{text-decoration:none;color:inherit}
+    .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+    h1,h2,h3{line-height:1.18;letter-spacing:-.015em}
+    code,.mono{font-family:var(--mono)}
+    svg{max-width:100%}
+    ::selection{background:var(--indigo-soft);color:var(--indigo)}
+
+    header.top{background:#fffc;backdrop-filter:blur(10px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+    .bar{display:flex;align-items:center;justify-content:space-between;gap:16px;height:60px;max-width:900px;margin:0 auto;padding:0 24px}
+    .back{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:.85rem;color:var(--muted);font-family:var(--mono)}
+    .back:hover{color:var(--orange)}
+    .meta{text-align:center;flex:1;min-width:0}
+    .meta .tag{display:inline-block;background:var(--indigo-soft);color:var(--indigo);font-size:.64rem;
+      font-weight:700;letter-spacing:.11em;text-transform:uppercase;padding:3px 10px;border-radius:20px;font-family:var(--mono)}
+    .meta h1{font-size:.92rem;font-weight:600;letter-spacing:-.005em;white-space:nowrap;overflow:hidden;
+      text-overflow:ellipsis;margin-top:3px}
+    .src{display:inline-flex;align-items:center;gap:7px;background:var(--ink);color:#fff;font-weight:600;
+      font-size:.8rem;padding:8px 15px;border-radius:24px;white-space:nowrap;font-family:var(--mono)}
+    .src:hover{background:var(--indigo)}
+    @media(max-width:680px){ .meta h1{font-size:.76rem} .src span{display:none} }
+
+    .hero{padding:52px 0 30px}
+    .eyebrow{color:var(--indigo);font-weight:600;text-transform:uppercase;letter-spacing:.13em;font-size:.72rem;
+      margin-bottom:14px;font-family:var(--mono);display:flex;align-items:center;gap:9px}
+    .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--amber)}
+    .hero h2{font-size:clamp(1.9rem,4.4vw,2.7rem);font-weight:700;max-width:19ch;letter-spacing:-.02em}
+    .hero p.lede{color:var(--muted);max-width:66ch;margin-top:16px;font-size:1.03rem}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:28px}
+    .stat{padding:13px 14px;border:1px solid var(--border);border-radius:12px;background:var(--card);box-shadow:var(--shadow-sm)}
+    .stat b{display:block;font-size:1.4rem;font-weight:700;letter-spacing:-.02em;font-family:var(--mono)}
+    .stat span{display:block;color:var(--faint);font-size:.7rem;margin-top:3px}
+    @media(max-width:680px){.stats{grid-template-columns:repeat(2,1fr)}}
+
+    section{padding:44px 0}
+    section + section{border-top:1px solid var(--border-soft)}
+    .kicker{color:var(--indigo);font-weight:600;font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;
+      margin-bottom:10px;font-family:var(--mono)}
+    h2.h{font-size:1.55rem;font-weight:700;margin-bottom:14px;letter-spacing:-.015em}
+    p{margin-bottom:14px;max-width:74ch}
+    p.tight{margin-bottom:8px}
+    ul{margin:0 0 14px 20px;max-width:72ch}
+    li{margin-bottom:6px}
+    strong{font-weight:600}
+
+    pre{background:var(--ink);color:#e6e9ef;border-radius:12px;padding:18px 20px;overflow-x:auto;
+      font:13px/1.65 var(--mono);margin:18px 0;box-shadow:var(--shadow-sm)}
+    pre .c{color:#8b95a5}
+    code.inline{background:var(--code);padding:1px 6px;border-radius:5px;font-size:.88em;color:var(--indigo)}
+
+    .box{margin:20px 0;padding:16px 19px;border:1px solid var(--border);border-left:3px solid var(--faint);
+      border-radius:10px;background:var(--card);box-shadow:var(--shadow-sm)}
+    .box .label{display:block;margin-bottom:6px;font:700 .68rem var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+    .box p{margin:0;color:var(--muted);max-width:none}
+    .box.centerpiece{border-left-color:var(--amber);background:linear-gradient(180deg,var(--amber-soft),var(--card) 60%)}
+    .box.centerpiece .label{color:var(--amber)}
+    .box.ok{border-left-color:var(--green)}
+    .box.ok .label{color:var(--green)}
+
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0}
+    @media(max-width:680px){.grid-2{grid-template-columns:1fr}}
+    .card{padding:16px 17px;border:1px solid var(--border);border-radius:12px;background:var(--card);box-shadow:var(--shadow-sm)}
+    .card b{display:block;font-size:.95rem;margin-bottom:5px}
+    .card p{margin:0;color:var(--muted);font-size:.88rem;max-width:none}
+    .card .k{font:700 .68rem var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--indigo);display:block;margin-bottom:6px}
+
+    .table-wrap{overflow-x:auto;margin:18px 0;border:1px solid var(--border);border-radius:12px;background:var(--card);box-shadow:var(--shadow-sm)}
+    table{width:100%;min-width:520px;border-collapse:collapse;font-size:.85rem}
+    th,td{padding:11px 14px;border-bottom:1px solid var(--border-soft);text-align:left;vertical-align:top}
+    th{color:var(--faint);font:700 .66rem var(--mono);letter-spacing:.07em;text-transform:uppercase;border-bottom-color:var(--border)}
+    tbody tr:last-child td{border-bottom:0}
+    td code{font-size:.82rem}
+
+    .trace-frame{margin:20px 0;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+    .trace-frame iframe{display:block;width:100%;height:640px;border:0;background:var(--card)}
+    .trace-caption{padding:10px 16px;border-top:1px solid var(--border);background:var(--card);
+      color:var(--faint);font:.76rem var(--mono);display:flex;justify-content:space-between;gap:12px}
+    .trace-caption a{color:var(--indigo)}
+
+    footer{padding:40px 0 60px;border-top:1px solid var(--border-soft)}
+    .links{display:flex;flex-wrap:wrap;gap:10px}
+    .links a{padding:8px 14px;border:1px solid var(--border);border-radius:20px;background:var(--card);
+      color:var(--muted);font:600 .82rem var(--mono)}
+    .links a:hover{border-color:var(--indigo);color:var(--indigo)}
+    .fine{color:var(--faint);font-size:.78rem;margin-top:20px;max-width:none}
+  </style>
+</head>
+<body>
+
+  <header class="top">
+    <div class="bar">
+      <a class="back" href="/">← Home</a>
+      <div class="meta">
+        <span class="tag">Agent · Day 18</span>
+        <h1>A self-extending agent runtime</h1>
+      </div>
+      <a class="src" href="/day18/agent-runtime/README.md" target="_blank" rel="noopener"><span>View</span> code →</a>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="wrap">
+      <p class="eyebrow"><span class="dot"></span> Minimal but real · loop, tools, memory</p>
+      <h2>An agent's memory shouldn't only hold facts. It should hold skills.</h2>
+      <p class="lede">The brief: build a minimal but real agent runtime — an orchestration loop, tool-calling, and memory,
+        enough to complete a multi-step task. Built one, then pushed it one step further: when the built-in tools can't
+        do what a task needs, the agent <strong>writes a new tool for itself</strong>, uses it on the very next step,
+        and keeps it for future sessions. One line in the loop is the entire difference between that working and the
+        tool being permanently invisible.</p>
+      <div class="stats">
+        <div class="stat"><b>39</b><span>offline tests, no key</span></div>
+        <div class="stat"><b>1</b><span>line that makes self-extension work</span></div>
+        <div class="stat"><b>2</b><span>swappable backends: OpenAI + scripted</span></div>
+        <div class="stat"><b>0</b><span>frameworks</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <p class="kicker">01 — The Loop</p>
+      <h2 class="h">A stateless API, turned into something that finishes a task on its own</h2>
+      <p>An LLM API is stateless: you send messages, you get one reply. The runtime is the thin layer that turns that
+        single reply into autonomous, multi-step work — call the model, and if it asks for a tool, run it, feed the
+        result back, and call again. Repeat until the model stops asking for tools or a step cap is hit.</p>
+      <pre>add the user's task to working memory
+repeat up to max_steps:
+    response = model(system, messages, tools)
+    append the response to working memory        <span class="c"># BEFORE acting on it</span>
+    if response is not asking for tools:
+        return its text                          <span class="c"># the model is done</span>
+    for each tool the model asked for:
+        result = run it
+        collect a tool_result (carrying the tool's id)
+    append ALL results as ONE user message
+stop: hit max_steps                               <span class="c"># guaranteed termination</span></pre>
+      <p>The pivot is the model's <code class="inline">stop_reason</code>. <code class="inline">"tool_use"</code> means
+        the model paused to ask for something; anything else means it produced its final answer. That loop is written
+        by hand rather than through a vendor SDK's tool-runner — the whole point of the exercise is showing the harness
+        is understood, and owning the loop is what makes a step cap, per-step tracing, and total control over tool
+        errors possible.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <p class="kicker">02 — The Tool Interface</p>
+      <h2 class="h">Four fields, and failures that never crash the loop</h2>
+      <p>A tool is a name, a description (the field the model actually reads to decide when to call it), a JSON Schema
+        for its arguments, and the Python function that does the work. A registry turns registered tools into the
+        schema list an API expects and dispatches calls by name.</p>
+      <div class="grid-2">
+        <div class="card">
+          <span class="k">Failures are data</span>
+          <b>Never an exception into the loop</b>
+          <p>A missing file, bad arguments, an unknown tool name, a raised exception — all become
+            <code class="inline">ToolResult(is_error=True)</code>, fed back as a normal tool result the model can read
+            and recover from.</p>
+        </div>
+        <div class="card">
+          <span class="k">Sandboxed at one choke point</span>
+          <b>No path escapes the workspace</b>
+          <p>Every file tool resolves the model-supplied path against a fixed root and rejects anything that escapes
+            it. The calculator is a whitelist-only AST evaluator — no names, no builtins, no <code class="inline">__import__</code>.</p>
+        </div>
+      </div>
+      <p class="tight">Adding a tool by hand is one decorator:</p>
+      <pre>@registry.add("weather", "Get current weather for a city.",
+              {"type": "object", "properties": {"city": {"type": "string"}},
+               "required": ["city"]})
+def weather(city): ...</pre>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <p class="kicker">03 — Memory</p>
+      <h2 class="h">Working memory is context. Long-term memory is knowledge.</h2>
+      <p>Conflating the two is a common mistake, so they're kept apart. <strong>Working memory</strong> is the running
+        transcript of this task — user turn, assistant turns, tool results, in order. Because the API is stateless,
+        this list <em>is</em> the conversation; it's large, ephemeral, and rebuilt each task.</p>
+      <p><strong>Long-term memory</strong> is a small key/value store persisted to JSON on disk, curated by the model
+        itself through <code class="inline">remember</code> / <code class="inline">recall</code> tools, and rendered
+        into the system prompt at startup — so the agent begins each session already aware of what it learned before.
+        A fact saved in one session is recallable by a brand-new <code class="inline">Memory</code> instance in the
+        next; that's tested, not assumed.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <p class="kicker">04 — Self-Extension</p>
+      <h2 class="h">The tool surface grows mid-task — and one line is why</h2>
+      <p>A meta-tool, <code class="inline">create_tool(name, description, input_schema, code)</code>, lets the agent
+        supply a tool definition <em>and its own Python implementation</em>. The runtime screens the code, executes it,
+        registers the result into the live registry, and writes it to disk so it's still there next session.</p>
+      <div class="box centerpiece">
+        <span class="label">The line that makes or breaks it</span>
+        <p>The obvious way to write the loop computes the tool schema list once, before the loop starts. That is
+          subtly, permanently broken here: a tool the agent creates at step 2 would never appear in the schema list
+          sent to the model, so it could never call the thing it just wrote. The fix is
+          <code class="inline">self.tools.schemas()</code> recomputed on <strong>every</strong> iteration — one line,
+          and it's the entire feature. The honest cost: tools sit at the front of the prompt in most vendor APIs, so
+          changing them mid-conversation can invalidate a prompt cache from that point on. Stated plainly rather than
+          hidden.</p>
+      </div>
+      <p>Executing model-authored code is the genuinely dangerous part. The screening is layered — an AST pre-scan
+        rejects imports outside a small pure-computation allowlist, dunder attribute access (the classic
+        <code class="inline">().__class__.__bases__[0].__subclasses__()</code> escape), and
+        <code class="inline">eval</code>/<code class="inline">exec</code>/<code class="inline">open</code>; execution
+        then runs with a stripped <code class="inline">__builtins__</code>. That raises the cost of an escape
+        considerably and is <strong>not a security boundary</strong> — in-process execution of untrusted Python has too
+        many reachable paths for a static screen to be airtight. A production version needs real isolation: a
+        subprocess, seccomp/gVisor, or a container per call. Saying otherwise would be the one dishonest line in this
+        page.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <p class="kicker">05 — Watch It Happen</p>
+      <h2 class="h">A real, offline run — step through it</h2>
+      <p>The panel below is the actual output of <code class="inline">python -m agent_runtime --demo --trace</code>:
+        the agent reads a file, finds no word-counting tool, writes one, calls it, and remembers the result. Step with
+        the arrows — the tool-surface panel visibly grows the moment the new tool is registered.</p>
+      <div class="trace-frame">
+        <iframe src="/day18/trace.html" title="Agent run trace replay" loading="lazy"></iframe>
+        <div class="trace-caption">
+          <span>Runs entirely in this frame — no network, no key.</span>
+          <a href="/day18/trace.html" target="_blank" rel="noopener">Open full-screen →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <p class="kicker">06 — The Provider Boundary</p>
+      <h2 class="h">OpenAI as a translation layer, not a rewrite</h2>
+      <p>The loop, tools, memory, and trace recorder never see any vendor's wire format — only the runtime's own
+        block-shaped internal representation. <code class="inline">OpenAILLM</code> converts in both directions on
+        every call, and the conversion surfaces two real contract differences worth knowing about, not one:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>What</th><th>This runtime's internal shape</th><th>OpenAI's actual wire format</th></tr></thead>
+          <tbody>
+            <tr><td>System prompt</td><td>its own parameter</td><td><code>{"role":"system",...}</code> as <code>messages[0]</code></td></tr>
+            <tr><td>Tool results for one turn</td><td>batched into <strong>one</strong> user message</td><td><strong>one message per result</strong>, <code>role:"tool"</code> + <code>tool_call_id</code></td></tr>
+            <tr><td>"Model wants a tool" signal</td><td><code>stop_reason == "tool_use"</code></td><td><code>finish_reason == "tool_calls"</code>, normalized at the boundary</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Get the tool-result direction backwards and the API returns a 400 — an explicit rejection, not a quiet failure.
+        That's what "true understanding of the harness" has to mean once the harness isn't one vendor's document: the loop's
+        contract is the invariant; the bytes on the wire that satisfy it are not, and are worth getting exactly right
+        in both directions.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <p class="kicker">What Was Left Out</p>
+      <h2 class="h">On purpose</h2>
+      <p>Streaming, context compaction, concurrency, and subagents are all real harness concerns — and all beyond
+        "minimal." The transcript is serializable for compaction, and <code class="inline">on_event</code> is where
+        a streaming UI would hook in, but adding them would trade the one virtue asked for — minimal — for breadth
+        that wasn't. And one thing self-extension invites and doesn't solve: an agent that writes tools will eventually
+        write <em>bad</em> ones. Nothing here evaluates, benchmarks, or retires a learned skill — the surface only
+        grows. That's a real problem, and it's outside this scope on purpose.</p>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <div class="links">
+        <a href="/day18/agent-runtime/README.md" target="_blank" rel="noopener">📖 README (start here)</a>
+        <a href="/day18/agent-runtime/DESIGN.md" target="_blank" rel="noopener">📄 DESIGN.md</a>
+        <a href="/day18/trace.html" target="_blank" rel="noopener">▶ Trace replay</a>
+        <a href="/">← All days</a>
+      </div>
+      <p class="fine">Day 18 of a 30-day build challenge. Built with <a href="https://claude.com/claude-code" style="color:var(--indigo)">Claude Code</a>.</p>
+    </div>
+  </footer>
+
+<script defer src="/assets/comments.js" data-page="day18"></script>
+</body>
+</html>

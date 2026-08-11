@@ -1,0 +1,17 @@
+{
+  "chain": 6,
+  "generation": 3,
+  "condition": "decisions",
+  "model": "gpt-4o-mini-2024-07-18",
+  "temperature": 1.0,
+  "prompt": "Summarize what was decided in the following meeting notes, in 2-3 sentences for the project record.",
+  "input_text": "During the Northwind Logistics project kickoff, it was decided to implement a three-phase rollout beginning with a discovery phase in April, followed by a pilot at the Hai Phong depot in early May, and a decision gate before wider deployment. Integration will require connectors to operate within the client's on-premise network, and a budget of up to $50,000 will be reviewed by the finance committee in June after assessing pilot results. Action items include revising the pilot schedule, documenting the integration approach, and confirming coordinator allocation.",
+  "output_text": "During the Northwind Logistics project kickoff, a three-phase rollout was approved, starting with a discovery phase in April, followed by a pilot at the Hai Phong depot in early May, and a decision gate for wider deployment. Integration will require on-premise network connectors, and a budget of up to $50,000 will be reviewed by the finance committee in June based on pilot outcomes. Action items include revising the pilot schedule, documenting the integration plan, and confirming coordinator allocation.",
+  "classification": "PRESERVED",
+  "usage": {
+    "input_tokens": 134,
+    "output_tokens": 97,
+    "total_tokens": 231
+  },
+  "recorded_at": "2026-08-10T08:02:00.887106+00:00"
+}

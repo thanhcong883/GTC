@@ -1,0 +1,17 @@
+{
+  "chain": 18,
+  "generation": 3,
+  "condition": "decisions",
+  "model": "gpt-4o-mini-2024-07-18",
+  "temperature": 1.0,
+  "prompt": "Summarize what was decided in the following meeting notes, in 2-3 sentences for the project record.",
+  "input_text": "In the kickoff meeting for Northwind Logistics' RFP response, a three-phase rollout was established, beginning with a discovery phase in April, followed by a pilot at the Hai Phong depot in early May, contingent on finance committee approval of the $50,000 budget. Mai confirmed the site's readiness and the assignment of two part-time coordinators, while action items were assigned to Sarah for a revised pilot schedule, Tom for documentation of the on-premise connector, and Duc for presenting the proposal to the finance committee after the pilot evaluation in June.",
+  "output_text": "In the kickoff meeting for Northwind Logistics' RFP response, a three-phase rollout was established, starting with a discovery phase in April, followed by a pilot at the Hai Phong depot in early May, pending finance committee approval of a $50,000 budget. Mai confirmed site readiness and the assignment of two part-time coordinators, while action items were designated to Sarah for revising the pilot schedule, Tom for documenting the on-premise connector, and Duc for presenting the proposal to the finance committee after the pilot evaluation in June.",
+  "classification": "PRESERVED",
+  "usage": {
+    "input_tokens": 140,
+    "output_tokens": 108,
+    "total_tokens": 248
+  },
+  "recorded_at": "2026-08-10T08:05:24.155335+00:00"
+}

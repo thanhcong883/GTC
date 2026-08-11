@@ -1,0 +1,69 @@
+{
+  "id": "fixture-b",
+  "title": "Dangerous data path",
+  "why": "bulk_sync is irreversible and carries customer_pii, so it needs approval on its own merits. That is exactly why it cannot be used to test parameter-awareness — the baseline already requires approval. Here it tests only what the data path adds.",
+  "tool": "acme.crm.bulk_sync",
+  "baseline": {
+    "principal": "user:cong",
+    "workspace": "ws_default",
+    "policy": "standard",
+    "grant": null,
+    "arguments": {
+      "segment_id": "segment_eu_q3",
+      "fields": ["email", "phone", "consent_status"],
+      "destination": "enrich.acme-partner.example",
+      "dry_run": false
+    },
+    "system_supplied": ["idempotency_key", "workflow_run_id", "policy_revision"],
+    "effect_manifest": {
+      "record_count": 10000,
+      "scale_source": "pal_resolved_segment",
+      "note": "record_count is not an argument. It is an output field, and the tool's input_schema is closed, so passing it would be rejected. PAL resolves the segment and composes the number into the EffectManifest — so the figure a person approves is one PAL measured, not one the plugin asserted about its own blast radius."
+    },
+    "inputs": {
+      "web_content_used": false,
+      "prompt_injection_suspected": false
+    }
+  },
+  "cases": [
+    {
+      "name": "No web content, standard policy",
+      "change": {},
+      "expect": { "verdict": "require_approval", "reason": "IRREVERSIBLE_BULK_WRITE" }
+    },
+    {
+      "name": "Web content consumed, no injection suspected",
+      "change": { "inputs.web_content_used": true },
+      "expect": { "verdict": "require_approval", "reason": "UNTRUSTED_TO_EXTERNAL_WRITE" },
+      "note": "The label is untrusted/external_content whether or not injection is suspected. Detection is not what makes web content untrustworthy."
+    },
+    {
+      "name": "Injection suspected, standard policy",
+      "change": {
+        "inputs.web_content_used": true,
+        "inputs.prompt_injection_suspected": true
+      },
+      "expect": { "verdict": "require_approval", "reason": "INJECTION_SUSPECTED_ELEVATED_RISK" }
+    },
+    {
+      "name": "Injection suspected, strict policy",
+      "change": {
+        "inputs.web_content_used": true,
+        "inputs.prompt_injection_suspected": true,
+        "policy": "strict"
+      },
+      "expect": { "verdict": "deny", "reason": "PROMPT_INJECTION_TO_EXTERNAL_WRITE" }
+    },
+    {
+      "name": "Injection suspected, strict policy, human approves anyway",
+      "change": {
+        "inputs.web_content_used": true,
+        "inputs.prompt_injection_suspected": true,
+        "policy": "strict",
+        "approval_offered": true
+      },
+      "expect": { "verdict": "deny", "reason": "HARD_DENY_NOT_OVERRIDABLE" },
+      "note": "Approval grants authority for an action. It cannot lift a policy that forbids the action outright."
+    }
+  ]
+}

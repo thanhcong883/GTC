@@ -1,0 +1,77 @@
+/* layout.css
+   The app shell: two-column grid, the sidebar and the main column. */
+
+.app{display:grid;grid-template-columns:clamp(244px,18.5vw,324px) minmax(0,1fr);min-height:100vh}
+
+/* ════════ SIDEBAR ════════ */
+.side{background:var(--surface);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;padding:16px 14px;gap:2px;
+  position:sticky;top:0;height:100vh;overflow:hidden}
+.brandrow{display:flex;align-items:center;gap:9px;margin-bottom:14px}
+.logo{width:36px;height:36px;border-radius:10px;background:var(--brand);color:var(--on-brand);
+  display:grid;place-items:center;font-weight:700;font-size:.72rem;letter-spacing:-.02em}
+.wssel{flex:1;min-width:0;display:flex;align-items:center;gap:6px;padding:7px 10px;
+  border:1px solid var(--line);border-radius:10px;font-weight:500;font-size:.9rem}
+.wssel:hover{border-color:var(--brand-track);background:var(--brand-soft)}
+.wssel span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+.wssel svg{color:var(--faint)}
+.wssel small{display:block;font-size:.68rem;font-weight:600;color:var(--brand);
+  letter-spacing:.04em;text-transform:uppercase}
+
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;
+  font-weight:500;color:var(--ink-2);width:100%;text-align:left;font-size:.95rem}
+.nav button:hover{background:var(--line-soft);color:var(--ink)}
+.nav button[aria-current]{background:var(--brand-soft);color:var(--brand-deep);font-weight:600}
+.nav .ct{margin-left:auto;font-family:var(--mono);font-size:.78rem;color:var(--faint)}
+.nav button[aria-current] .ct{color:var(--brand)}
+
+.runshead{display:flex;align-items:center;gap:6px;margin:16px 4px 6px}
+.runshead .t{font-size:.9rem;font-weight:600;color:var(--ink-2);display:flex;align-items:center;gap:6px}
+.runshead .acts{margin-left:auto;display:flex;gap:2px}
+.runshead .acts button{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;color:var(--faint)}
+.runshead .acts button:hover{background:var(--line-soft);color:var(--ink-2)}
+
+/* the run list is its own bounded scroll region — the sidebar itself never overflows */
+.runlist{overflow-y:auto;min-height:0;flex:1;margin-right:-4px;padding-right:4px}
+.runlist a{display:flex;align-items:center;gap:9px;padding:7px 11px;border-radius:8px;
+  font-size:.86rem;color:var(--ink-2)}
+.runlist a:hover{background:var(--line-soft)}
+.runlist a .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.runlist a i{width:7px;height:7px;border-radius:50%;flex:none}
+.runlist a i.ok{background:var(--good)} .runlist a i.sp{background:var(--warn)} .runlist a i.bd{background:var(--bad)}
+.runlist::-webkit-scrollbar{width:5px}
+.runlist::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+
+/* quota meters — the unfilled track is a lighter step of the same ramp, so the
+   whole bar reads as one scale; the fill carries severity as the quota runs down */
+.meters{display:flex;flex-direction:column;gap:11px;padding:13px 6px 3px;
+  margin-top:10px;border-top:1px solid var(--line)}
+.meter .r{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px}
+.meter .l{font-size:.83rem;color:var(--ink-2);font-weight:500}
+.meter .v{font-family:var(--mono);font-size:.79rem;font-variant-numeric:tabular-nums}
+.meter .v small{color:var(--faint)}
+.meter .tr{height:6px;border-radius:3px;background:var(--brand-track);overflow:hidden}
+.meter .fi{height:100%;border-radius:3px;background:var(--brand);transition:width .2s}
+.meter .fi.low{background:var(--warn)}
+.meter .fi.out{background:var(--bad)}
+
+.me{display:flex;align-items:center;gap:9px;padding:8px 6px 2px;margin-top:8px}
+.me .av{width:32px;height:32px;border-radius:50%;background:var(--avatar);color:var(--on-brand);
+  display:grid;place-items:center;font-weight:700;font-size:.78rem}
+.me .n{font-size:.9rem;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.me .moon{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;color:var(--faint)}
+.me .moon:hover{background:var(--line-soft);color:var(--ink-2)}
+
+/* ════════ MAIN ════════ */
+/* no pixel cap — content fills whatever width it is given, at any zoom level.
+   Only the composer keeps a cap, because a 5000px-wide text box is unusable. */
+.main{padding:26px var(--gut) 56px;width:100%;min-width:0}
+
+/* plan row — a paying workspace is told what it has, not sold what it lacks */
+.planrow{display:block;margin-top:12px;padding:10px 12px;border:1px solid var(--line);
+  border-radius:10px;background:var(--brand-soft)}
+
+.pl-name{display:block;font-size:.86rem;font-weight:700;color:var(--brand-deep)}
+.pl-meta{display:block;font-size:.72rem;color:var(--muted);margin-top:1px}
+

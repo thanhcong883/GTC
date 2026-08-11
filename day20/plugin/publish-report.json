@@ -1,0 +1,97 @@
+{
+  "manifest": "acme-crm.plugin.yaml",
+  "manifest_sha256": "2f12b4afcfe003803a64fd51801488412339a49a4315bf526a231a142f1d375d",
+  "manifest_bytes": 13677,
+  "validator": "tools/validate-plugin.mjs",
+  "plugin": {
+    "id": "acme.crm",
+    "version": "2.3.1"
+  },
+  "tools": [
+    "acme.crm.search_contacts",
+    "acme.crm.get_contact",
+    "acme.crm.add_tag",
+    "acme.crm.remove_tag",
+    "acme.crm.bulk_sync"
+  ],
+  "gates": [
+    {
+      "gate": "ui-resource-tool-exists",
+      "result": "pass"
+    },
+    {
+      "gate": "undo-tool-exists",
+      "result": "pass"
+    },
+    {
+      "gate": "output-schema",
+      "result": "pass"
+    },
+    {
+      "gate": "effect-declared",
+      "result": "pass"
+    },
+    {
+      "gate": "reversibility-declared",
+      "result": "pass"
+    },
+    {
+      "gate": "idempotency",
+      "result": "pass"
+    },
+    {
+      "gate": "no-silent-write-fallback",
+      "result": "pass"
+    },
+    {
+      "gate": "no-retry-on-irreversible",
+      "result": "pass"
+    },
+    {
+      "gate": "approval-required",
+      "result": "pass"
+    },
+    {
+      "gate": "host-rendered-surface",
+      "result": "pass"
+    },
+    {
+      "gate": "closed-input-schema",
+      "result": "pass"
+    },
+    {
+      "gate": "required-is-declared",
+      "result": "pass"
+    },
+    {
+      "gate": "no-system-field-in-schema",
+      "result": "pass"
+    },
+    {
+      "gate": "destination-declared",
+      "result": "pass"
+    },
+    {
+      "gate": "data-class-declared",
+      "result": "pass"
+    },
+    {
+      "gate": "ui-origin-declared",
+      "result": "pass"
+    },
+    {
+      "gate": "approval-sla-declared",
+      "result": "pass"
+    },
+    {
+      "gate": "task-ttl-floor-declared",
+      "result": "pass"
+    },
+    {
+      "gate": "approval-sla-fits-ttl",
+      "result": "pass"
+    }
+  ],
+  "result": "accepted",
+  "note": "Regenerate with: node tools/validate-plugin.mjs <manifest> --report <path>"
+}

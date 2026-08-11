@@ -1,2 +1,24 @@
-*.pptx
+# Secrets — this is a static site, so every file left here is publicly fetchable.
+# .gitignore does not govern deployments; this file does.
+.env
+.env.*
+*.pem
+*.key
+
+# Personal — contains phone number, DOB, home address.
 Giang-Thanh-Cong-CV.pdf
+*.pptx
+
+# Moderation tooling — runs on your machine, never served
+tools/
+
+# Local / build junk
+.vercel
+node_modules
+Thumbs.db
+Desktop.ini
+.DS_Store
+_shots/
+_slides_raw/
+_raw/
+_tmp/

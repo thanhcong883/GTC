@@ -1,0 +1,2219 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PAL Tool Fabric — từ tích hợp công cụ đến nền tảng mở rộng có quản trị</title>
+<meta name="description" content="PAL đã có App Integrations, Custom API Tools và MCP. Thứ còn thiếu là một developer platform: PublishedPlugin, parameter-aware policy, host-rendered Decision Surface. Kèm một policy engine chạy ngay trong trang.">
+<meta property="og:title" content="PAL Tool Fabric">
+<meta property="og:description" content="Open at the edge. Governed at the core.">
+<meta property="og:type" content="article">
+<meta name="theme-color" content="#f6f7fb">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23f9660e%22/><text x=%2250%22 y=%2270%22 text-anchor=%22middle%22 font-family=%22monospace%22 font-size=%2262%22 font-weight=%22700%22 fill=%22white%22>P</text></svg>">
+<style>
+@font-face{font-family:"IBM Plex Sans";src:url("./fonts/ibm-plex-sans-latin-ext.woff2") format("woff2");font-style:normal;font-weight:100 700;font-display:swap}
+@font-face{font-family:"IBM Plex Mono";src:url("./fonts/ibm-plex-mono-400-latin-ext.woff2") format("woff2");font-style:normal;font-weight:400;font-display:swap}
+@font-face{font-family:"IBM Plex Mono";src:url("./fonts/ibm-plex-mono-700-latin-ext.woff2") format("woff2");font-style:normal;font-weight:700;font-display:swap}
+:root{
+  --orange:#f9660e; --orange-soft:#ffe7d6; --orange-ink:#a94208;
+  --navy:#111a3e; --navy-soft:#5a6488; --navy-faint:#8b95b5;
+  --blue:#2f6fed; --blue-soft:#e2ecfd;
+  --amber:#b0771a; --amber-soft:#f7edda;
+  --red:#c64b3e; --red-soft:#f8e6e3;
+  --green:#1e9257; --green-soft:#e4f3ea;
+  --purple:#6e55d9; --purple-soft:#eeeafe;
+  --bg:#f6f7fb; --card:#fff; --surface-soft:#fbfcff; --surface-muted:#eceef4;
+  --border:#e7e9f2; --border-soft:#f0f2f8;
+  --ink-dark:#0f1730; --diag-text:#dfe4f0; --on-accent:#fff;
+  --shadow:0 18px 50px rgba(17,26,62,.12);
+  --shadow-sm:0 6px 20px rgba(17,26,62,.08);
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --sans:"IBM Plex Sans","Segoe UI",sans-serif;
+  --measure:72ch;
+}
+:root[data-theme="dark"]{
+  --orange:#ff8a46; --orange-soft:#41291d; --orange-ink:#ffb58b;
+  --navy:#f2f4ff; --navy-soft:#b8c0da; --navy-faint:#8792b2;
+  --blue:#82aaff; --blue-soft:#1c2b4c; --amber:#e8bd69; --amber-soft:#3b3020;
+  --red:#ff9387; --red-soft:#432421; --green:#7bd3a6; --green-soft:#1c382b;
+  --purple:#b5a5ff; --purple-soft:#2d2749;
+  --bg:#0d1224; --card:#151b30; --surface-soft:#12182c; --surface-muted:#242b40;
+  --border:#2b334c; --border-soft:#222a40;
+  --ink-dark:#090d19; --diag-text:#dfe4f0; --on-accent:#fff;
+  --shadow:0 18px 50px rgba(0,0,0,.3); --shadow-sm:0 6px 20px rgba(0,0,0,.2)
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --orange:#ff8a46; --orange-soft:#41291d; --orange-ink:#ffb58b;
+    --navy:#f2f4ff; --navy-soft:#b8c0da; --navy-faint:#8792b2;
+    --blue:#82aaff; --blue-soft:#1c2b4c; --amber:#e8bd69; --amber-soft:#3b3020;
+    --red:#ff9387; --red-soft:#432421; --green:#7bd3a6; --green-soft:#1c382b;
+    --purple:#b5a5ff; --purple-soft:#2d2749;
+    --bg:#0d1224; --card:#151b30; --surface-soft:#12182c; --surface-muted:#242b40;
+    --border:#2b334c; --border-soft:#222a40;
+    --ink-dark:#090d19; --diag-text:#dfe4f0; --on-accent:#fff;
+    --shadow:0 18px 50px rgba(0,0,0,.3); --shadow-sm:0 6px 20px rgba(0,0,0,.2)
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{font-family:var(--sans);background:var(--bg);color:var(--navy);
+  line-height:1.68;-webkit-font-smoothing:antialiased}
+a{color:var(--orange);text-decoration:none}
+a:hover{text-decoration:underline}
+button{font:inherit}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+h1,h2,h3,h4{line-height:1.2;letter-spacing:-.018em;text-wrap:balance}
+p,ul,ol{max-width:var(--measure)}
+p{margin:0 0 14px}
+ul,ol{margin:0 0 16px 21px}
+li{margin-bottom:7px}
+code{font-family:var(--mono)}
+code.i{background:var(--border-soft);border:1px solid var(--border);border-radius:5px;
+  padding:1px 5px;font-size:.86em;color:var(--purple)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* header */
+header.top{position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--bg) 93%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.bar{max-width:1500px;margin:0 auto;padding:11px 24px;display:flex;align-items:center;gap:16px}
+.back{font:600 12px var(--mono);color:var(--navy-soft);white-space:nowrap}
+.back:hover{color:var(--orange);text-decoration:none}
+.meta{flex:1;min-width:0;text-align:center}
+.meta span{display:block;font:700 9px var(--mono);letter-spacing:.15em;color:var(--orange)}
+.meta b{display:block;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.src{font:600 11.5px var(--mono);color:var(--navy-soft);border:1px solid var(--border);
+  background:var(--card);border-radius:99px;padding:6px 13px;white-space:nowrap;transition:.18s}
+.src:hover{border-color:var(--orange);color:var(--orange);text-decoration:none}
+@media(max-width:700px){.meta b{font-size:11.5px}.src{display:none}}
+
+/* shell */
+.shell{max-width:1500px;margin:0 auto;padding:0 24px;display:grid;
+  grid-template-columns:238px minmax(0,1fr);gap:38px}
+.toc{position:sticky;top:70px;align-self:start;max-height:calc(100vh - 92px);
+  overflow-y:auto;padding:28px 0 40px}
+.toc h4{font:700 9px var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--navy-faint);margin:0 0 10px}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc a{display:flex;gap:9px;margin-left:-9px;padding:6px 9px;border-left:2px solid transparent;
+  color:var(--navy-soft);font-size:12.5px;line-height:1.35}
+.toc a:hover,.toc a.on{background:var(--card);color:var(--navy);border-left-color:var(--orange);
+  text-decoration:none;box-shadow:var(--shadow-sm)}
+.toc a.on{font-weight:700}
+.toc .tn{width:15px;flex:none;font:700 10px var(--mono);color:var(--navy-faint)}
+.toc-mobile{display:none}
+.doc{min-width:0;max-width:1140px;padding-bottom:100px}
+@media(max-width:940px){
+  .shell{grid-template-columns:minmax(0,1fr);gap:0}
+  .toc{display:none}
+  .toc-mobile{display:block;margin:20px 0 0}
+  .toc-mobile summary{cursor:pointer;font:700 11px var(--mono);letter-spacing:.1em;
+    text-transform:uppercase;color:var(--navy-soft);padding:11px 14px;background:var(--card);
+    border:1px solid var(--border);border-radius:11px}
+  .toc-mobile ol{list-style:none;margin:10px 0 0;padding:0}
+  .toc-mobile a{display:block;padding:8px 14px;color:var(--navy-soft);font-size:13.5px}
+}
+
+/* hero */
+.hero{padding:60px 0 26px}
+.kicker{font:700 11px var(--mono);letter-spacing:.15em;text-transform:uppercase;
+  color:var(--orange);margin-bottom:16px}
+.hero h1{font-size:clamp(30px,4.5vw,53px);letter-spacing:-.035em;max-width:17ch;margin-bottom:20px}
+.subtitle{font-size:15px;color:var(--navy-soft);max-width:62ch;margin:-8px 0 20px;font-style:normal}
+.lede{font-size:17.5px;color:var(--navy-soft);max-width:68ch}
+.lede b{color:var(--navy);font-weight:700}
+.thesis{margin:30px 0 0;border:1px solid var(--border);border-left:1px solid var(--orange);
+  background:linear-gradient(180deg,var(--orange-soft),var(--card) 70%);
+  border-radius:13px;padding:20px 24px;box-shadow:var(--shadow-sm)}
+.thesis b{display:block;font-size:20px;letter-spacing:-.02em;margin-bottom:8px}
+.thesis p{margin:0;color:var(--navy-soft);max-width:62ch}
+
+/* sections */
+section{padding:44px 0 8px;scroll-margin-top:72px}
+section>h2{font-size:clamp(22px,2.6vw,30px);letter-spacing:-.028em;margin-bottom:6px}
+.snum{font:700 10px var(--mono);letter-spacing:.16em;color:var(--orange);display:block;margin-bottom:9px}
+.sdek{color:var(--navy-soft);font-size:15.5px;max-width:68ch;margin-bottom:22px}
+h3{font-size:17.5px;margin:30px 0 9px}
+h4{font-size:14px;margin:22px 0 7px}
+hr{border:0;border-top:1px solid var(--border);margin:46px 0 0}
+
+/* diagnostic block */
+.diag{background:var(--ink-dark);color:var(--diag-text);border-radius:13px;padding:19px 21px;
+  margin:20px 0;font:12.5px/1.62 var(--mono);overflow-x:auto;box-shadow:var(--shadow)}
+.diag .e{color:#ff8f6b;font-weight:700}
+.diag .w{color:#e8bf6a;font-weight:700}
+.diag .ok{color:#79d3a5;font-weight:700}
+.diag .g{color:#7f8db3}
+.diag .c{color:#9fb4e8}
+.diag b{color:var(--on-accent)}
+
+/* boxes */
+.box{border:1px solid var(--border);border-left:1px solid var(--navy-faint);background:var(--card);
+  border-radius:11px;padding:16px 19px;margin:20px 0;box-shadow:var(--shadow-sm)}
+.box .lab{display:block;font:700 9px var(--mono);letter-spacing:.12em;text-transform:uppercase;
+  color:var(--navy-faint);margin-bottom:7px}
+.box p{margin:0;max-width:none;color:var(--navy-soft)}
+.box p+p{margin-top:10px}
+.box.key{border-left-color:var(--orange);background:linear-gradient(180deg,var(--orange-soft),var(--card) 60%)}
+.box.key .lab{color:var(--orange)}
+.box.warn{border-left-color:var(--amber)}.box.warn .lab{color:var(--amber)}
+.box.stop{border-left-color:var(--red)}.box.stop .lab{color:var(--red)}
+.box.good{border-left-color:var(--green)}.box.good .lab{color:var(--green)}
+
+/* tables */
+.tw{overflow-x:auto;margin:20px 0;border:1px solid var(--border);border-radius:13px;
+  background:var(--card);box-shadow:var(--shadow-sm)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:13.5px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--border-soft);vertical-align:top}
+th{font:700 9.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;
+  color:var(--navy-faint);background:var(--surface-soft);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td small{display:block;color:var(--navy-faint);font-size:11.5px;margin-top:2px}
+td code{font-size:12px}
+
+/* tags */
+.tag{display:inline-block;font:700 9.5px var(--mono);letter-spacing:.06em;padding:2px 7px;
+  border-radius:5px;white-space:nowrap;text-transform:uppercase}
+.tag.ok{background:var(--green-soft);color:var(--green)}
+.tag.warn{background:var(--amber-soft);color:var(--amber)}
+.tag.stop{background:var(--red-soft);color:var(--red)}
+.tag.info{background:var(--blue-soft);color:var(--blue)}
+.tag.pal{background:var(--purple-soft);color:var(--purple)}
+
+/* code */
+pre{background:var(--ink-dark);color:var(--diag-text);border-radius:13px;padding:18px 20px;
+  margin:18px 0;font:12.3px/1.6 var(--mono);overflow-x:auto;box-shadow:var(--shadow)}
+pre .k{color:#9fb4e8}pre .s{color:#79d3a5}pre .c{color:#6f7da3;font-style:italic}
+pre .n{color:#e8bf6a}pre .r{color:#ff8f6b;font-weight:700}
+
+/* figures */
+figure{margin:24px 0 8px}
+.fb{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:20px 16px;overflow-x:auto;box-shadow:var(--shadow-sm)}
+.fb svg{display:block;margin:0 auto;min-width:600px}
+figcaption{font-family:var(--mono);font-size:.72rem;color:var(--navy-faint);
+  margin-top:9px;line-height:1.55;max-width:70ch}
+
+/* evidence shots */
+.shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px;margin:22px 0}
+.fig{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  overflow:hidden;box-shadow:var(--shadow-sm);margin:0}
+.fig .shot{display:block;background:var(--surface-muted)}
+.fig img{display:block;width:100%;height:auto}
+.fig figcaption{padding:13px 16px 15px;margin:0}
+.fig figcaption .t{font-weight:700;font-size:.87rem;margin-bottom:4px;
+  color:var(--navy);font-family:var(--sans)}
+.fig figcaption .d{font-size:.75rem;color:var(--navy-soft);line-height:1.55}
+
+/* ---------- Firewall ---------- */
+.fw{border:1px solid var(--border);border-radius:16px;background:var(--card);
+  box-shadow:var(--shadow);overflow:hidden;margin:26px 0}
+.fw-head{padding:15px 20px;border-bottom:1px solid var(--border);background:var(--surface-soft);
+  display:flex;flex-wrap:wrap;gap:10px;align-items:baseline}
+.fw-head b{font-size:15px}
+.fw-head span{font:600 11px var(--mono);color:var(--navy-faint)}
+.fw-body{padding:20px}
+
+.ctrls{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));
+  gap:14px;margin-bottom:22px}
+.ctrl{min-width:0}
+.ctrl>span{display:block;font:700 9px var(--mono);letter-spacing:.11em;text-transform:uppercase;
+  color:var(--navy-faint);margin-bottom:6px}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg button{flex:1 1 auto;min-width:0;padding:7px 9px;border:1px solid var(--border);
+  background:var(--card);color:var(--navy-soft);border-radius:8px;cursor:pointer;
+  font:600 11.5px var(--mono);transition:.15s;white-space:nowrap}
+.seg button:hover{border-color:var(--navy-faint)}
+.seg button.on{background:var(--navy);color:var(--bg);border-color:var(--navy)}
+
+.graph{display:flex;gap:0;overflow-x:auto;padding:4px 0 14px;align-items:stretch}
+.gnode{flex:0 0 auto;width:186px;border:1px solid var(--border);border-radius:12px;
+  padding:11px 12px;background:var(--surface-soft);position:relative}
+.gnode.sel{border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-soft)}
+.gnode.off{opacity:.42}
+.garrow{flex:0 0 auto;width:22px;display:flex;align-items:center;justify-content:center;
+  color:var(--navy-faint);font:700 14px var(--mono)}
+.gn{font:700 9px var(--mono);letter-spacing:.1em;color:var(--navy-faint);margin-bottom:4px}
+.gt{font:700 11.5px var(--mono);color:var(--navy);word-break:break-all;line-height:1.4;margin-bottom:3px}
+.gk{font-size:11px;color:var(--navy-soft);margin-bottom:8px}
+.chips{display:flex;flex-wrap:wrap;gap:3px}
+.chip{font:700 8.5px var(--mono);padding:2px 5px;border-radius:4px;letter-spacing:.03em}
+.chip.s0{background:var(--surface-muted);color:var(--navy-soft)}
+.chip.s1{background:var(--blue-soft);color:var(--blue)}
+.chip.s2{background:var(--amber-soft);color:var(--amber)}
+.chip.s3{background:var(--red-soft);color:var(--red)}
+.chip.i0{background:var(--green-soft);color:var(--green)}
+.chip.i2{background:var(--red-soft);color:var(--red)}
+.chip.f0{background:var(--surface-muted);color:var(--navy-soft)}
+.chip.f1{background:var(--red-soft);color:var(--red)}
+.chip.f2{background:var(--purple-soft);color:var(--purple)}
+button.gnode{text-align:left;font:inherit;width:186px}
+
+.payload{background:var(--surface-soft);border:1px solid var(--border);border-radius:12px;
+  padding:15px 17px;margin:6px 0 18px}
+.payload>span{display:block;font:700 9px var(--mono);letter-spacing:.11em;text-transform:uppercase;
+  color:var(--navy-faint);margin-bottom:10px}
+.prow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.prow label{font:600 11.5px var(--mono);color:var(--navy-soft);min-width:132px}
+.prow input,.prow select{flex:1 1 200px;min-width:0;padding:6px 9px;border:1px solid var(--border);
+  border-radius:7px;background:var(--card);color:var(--navy);font:12px var(--mono)}
+.pnote{font-size:11.5px;color:var(--navy-faint);margin:8px 0 0;max-width:none}
+
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:4px 0 0}
+.btn{padding:10px 18px;border-radius:9px;border:1px solid transparent;cursor:pointer;
+  font:700 12.5px var(--mono);transition:.15s}
+.btn.primary{background:var(--orange);color:#fff}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.ghost{background:var(--card);border-color:var(--border);color:var(--navy-soft)}
+.btn.ghost:hover{border-color:var(--navy-faint);color:var(--navy)}
+
+/* two surfaces */
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));
+  gap:16px;margin:20px 0 0}
+.surf{border:1px solid var(--border);border-radius:13px;overflow:hidden;background:var(--card)}
+.surf>header{padding:10px 14px;font:700 10px var(--mono);letter-spacing:.09em;
+  text-transform:uppercase;border-bottom:1px solid var(--border)}
+.surf.plugin>header{background:var(--surface-muted);color:var(--navy-soft)}
+.surf.host>header{background:var(--orange-soft);color:var(--orange-ink)}
+.surf .in{padding:15px 17px;font-size:13px}
+.surf.plugin .in{color:var(--navy-soft)}
+.surf .big{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:8px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font:12px var(--mono);margin-top:8px}
+.kv dt{color:var(--navy-faint)}
+.kv dd{color:var(--navy);word-break:break-word}
+.kv dd.hot{color:var(--red);font-weight:700}
+
+/* fixture runner */
+.fixres{margin:18px 0 0}
+.fixres table{min-width:640px}
+.fixres td.v{font:700 11px var(--mono)}
+.pass{color:var(--green);font-weight:700}
+.fail{color:var(--red);font-weight:700}
+
+.badge{display:inline-flex;flex-direction:column;gap:3px;border:1px solid var(--border);
+  border-left:1px solid var(--purple);background:var(--card);border-radius:9px;
+  padding:9px 13px;margin:16px 0 0;box-shadow:var(--shadow-sm)}
+.badge b{font:700 10px var(--mono);letter-spacing:.12em;color:var(--purple)}
+.badge span{font-size:11.5px;color:var(--navy-soft);max-width:56ch}
+
+/* invariants */
+.inv{counter-reset:iv;list-style:none;margin:20px 0;padding:0;max-width:none}
+.inv li{counter-increment:iv;position:relative;padding:13px 16px 13px 52px;
+  border:1px solid var(--border);border-radius:11px;background:var(--card);
+  margin-bottom:9px;box-shadow:var(--shadow-sm);font-size:14px}
+.inv li::before{content:counter(iv);position:absolute;left:15px;top:13px;
+  font:700 13px var(--mono);color:var(--orange)}
+
+footer.end{border-top:1px solid var(--border);margin-top:56px;padding:28px 0 70px;
+  color:var(--navy-faint);font:600 12px var(--mono)}
+footer.end a{color:var(--navy-soft)}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="bar">
+    <a class="back" href="/">← gtc883</a>
+    <div class="meta"><span>Day 20 · Platform design</span><b>PAL Tool Fabric</b></div>
+    <a class="src" href="/day20/plugin/acme-crm.plugin.yaml">sample plugin ↗</a>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="toc" aria-label="Mục lục">
+    <h4>Nội dung</h4>
+    <ol id="tocList">
+      <li><a href="#s1"><span class="tn">01</span>Bề mặt hiện tại</a></li>
+      <li><a href="#s2"><span class="tn">02</span>PublishedPlugin</a></li>
+      <li><a href="#s3"><span class="tn">03</span>Tool Contract</a></li>
+      <li><a href="#s4"><span class="tn">04</span>Policy evaluation</a></li>
+      <li><a href="#s5"><span class="tn">05</span>Runtime &amp; Tasks</a></li>
+      <li><a href="#s6"><span class="tn">06</span>Auth &amp; Decision</a></li>
+      <li><a href="#s7"><span class="tn">07</span>Sandbox &amp; egress</a></li>
+      <li><a href="#s8"><span class="tn">08</span>Versioning &amp; drift</a></li>
+      <li><a href="#s9"><span class="tn">09</span>Developer experience</a></li>
+      <li><a href="#s10"><span class="tn">10</span>Security properties</a></li>
+      <li><a href="#s11"><span class="tn">11</span>Đánh đổi &amp; giới hạn</a></li>
+    </ol>
+  </nav>
+
+  <main class="doc">
+
+    <div class="hero">
+      <div class="kicker">Day 20 · Platform design</div>
+      <h1>Từ tích hợp công cụ đến nền tảng mở rộng có quản trị</h1>
+      <p class="subtitle">Thiết kế SDK, runtime governance và security model cho hệ sinh thái plugin bên thứ ba của PAL.</p>
+      <p class="lede">PAL hiện có <b>App Integrations</b>, <b>Custom API Tools</b> và
+      <b>MCP</b>. Cơ hội không nằm ở việc thêm một định dạng connector nữa. Nó nằm ở
+      lớp còn thiếu: một developer platform để bên thứ ba <b>xuất bản một lần</b>, và
+      để workspace <b>cài, cấp quyền, quan sát, nâng cấp và thu hồi</b> thứ họ đã cài.</p>
+
+      <div class="thesis">
+        <b>Open at the edge. Governed at the core.</b>
+        <p>MCP giữ cho plugin portable, nên developer không bị khoá vào PAL ở tầng protocol. Lợi thế có khả năng bảo vệ của PAL nằm ở lớp governance — workflow embedding, policy, approval và operational history — thay vì ở tính độc quyền của protocol.</p>
+      </div>
+    </div>
+
+    <details class="toc-mobile">
+      <summary>Mục lục</summary>
+      <ol>
+        <li><a href="#s1">01 · Bề mặt hiện tại</a></li>
+        <li><a href="#s2">02 · PublishedPlugin</a></li>
+        <li><a href="#s3">03 · Tool Contract</a></li>
+        <li><a href="#s4">04 · Policy evaluation</a></li>
+        <li><a href="#s5">05 · Runtime &amp; Tasks</a></li>
+        <li><a href="#s6">06 · Auth &amp; Decision</a></li>
+        <li><a href="#s7">07 · Sandbox &amp; egress</a></li>
+        <li><a href="#s8">08 · Versioning &amp; drift</a></li>
+        <li><a href="#s9">09 · Developer experience</a></li>
+        <li><a href="#s10">10 · Security properties</a></li>
+        <li><a href="#s11">11 · Đánh đổi &amp; giới hạn</a></li>
+      </ol>
+    </details>
+
+    <hr>
+
+    <!-- ============================================= 01 -->
+    <section id="s1">
+      <span class="snum">01</span>
+      <h2>Các bề mặt mở rộng quan sát được trong PAL hiện tại</h2>
+      <p class="sdek">PAL đã có ba cơ chế mở rộng. Phần này xác định phạm vi của từng cơ chế và khoảng trống giữa chúng.</p>
+
+      <div class="shots">
+        <figure class="fig">
+          <a class="shot" href="/day20/evidence/app-integrations.png" target="_blank" rel="noopener">
+            <img src="/day20/evidence/app-integrations.png" alt="Màn hình App Integrations của MindPal, tiêu đề ghi 39 app integrations, bên dưới là lưới thẻ Twitter, Outlook, LinkedIn, Gmail, Google Analytics, Airtable, Google Docs, Google Drive, mỗi thẻ ghi trạng thái Not connected và số action khả dụng." loading="lazy">
+          </a>
+          <figcaption>
+            <div class="t">39 app integrations</div>
+            <div class="d">Mỗi integration mang bề mặt action riêng, và một số có
+            bề mặt rất rộng. Ảnh chỉ hiện tám thẻ đầu, nên đây là ảnh chụp một
+            phần — đủ để thấy quy mô, không đủ để cộng thành tổng.</div>
+          </figcaption>
+        </figure>
+        <figure class="fig">
+          <a class="shot" href="/day20/evidence/custom-api-tool.png" target="_blank" rel="noopener">
+            <img src="/day20/evidence/custom-api-tool.png" alt="Modal New custom API tool của MindPal với ô dán sample API request dạng curl, ô purpose tuỳ chọn, và bốn nút: Generate with AI, Use a template, Import from JSON, Start from scratch. Sidebar hiển thị Tools nằm dưới mục Assets." loading="lazy">
+          </a>
+          <figcaption>
+            <div class="t">Custom API Tool — bốn lối tạo, và một vị trí đáng chú ý</div>
+            <div class="d">PAL đặt <em>Generate with AI</em> từ một sample request ở
+            vị trí chính, bên cạnh template, JSON import và from scratch. Ở sidebar,
+            <em>Tools</em> nằm dưới <em>Assets</em>, cạnh Knowledge Sources và Notes.</div>
+          </figcaption>
+        </figure>
+      </div>
+
+      <p>Vị trí của <em>Tools</em> trong cây điều hướng cho biết PAL phân loại nó là
+      gì. Nó nằm dưới <em>Assets</em>, cùng cấp với Knowledge Sources, Notes và Brand
+      Guidelines — tức cùng nhóm với những thứ <b>một workspace tạo ra và giữ cho
+      riêng mình</b>.</p>
+
+      <p>Cách phân loại đó kéo theo ba hệ quả về mặt sản phẩm. Một asset thuộc workspace <b>không có publisher</b>: không tồn tại một bên chịu trách nhiệm tách khỏi người đã tạo. Nó <b>không có version</b> mà bên khác pin được. Và nó <b>không có vòng đời độc lập</b> với workspace nguồn: không có thao tác cài đặt, gỡ bỏ hay thu hồi. Ba thuộc tính này là điều kiện cần để hình thành mức độ tin cậy đủ cho third-party adoption.</p>
+
+      <div class="box">
+        <span class="lab">Evidence status: suy luận, chưa kiểm chứng</span>
+        <p><b>Chưa quan sát thấy một bề mặt <code class="i">PublishedPlugin</code>
+        trong bằng chứng hiện có.</b> Bằng chứng hiện có chưa bao gồm việc kiểm thử publish flow, sharing flow, hoặc contract do Custom API Tool sinh ra. Nên những gì viết dưới đây
+        về version, phân phối và khai báo effect là <b>các khả năng không xuất hiện trong
+        bề mặt được quan sát</b> — không phải bằng chứng rằng chúng không tồn tại ở đâu đó.</p>
+      </div>
+
+      <div class="tw">
+        <table>
+          <caption class="sr-only">So sánh ba bề mặt mở rộng hiện có của PAL và lớp còn thiếu</caption>
+          <thead><tr><th>Bề mặt</th><th>Ai tạo</th><th>Phạm vi</th><th>Điểm mạnh</th><th>Khoảng trống</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><b>App Integrations</b></td><td>PAL / đối tác</td><td>Platform</td>
+              <td>Nhiều action sẵn, connection UX đã có</td>
+              <td>Bên thứ ba không có đường publish</td>
+            </tr>
+            <tr>
+              <td><b>Custom API Tools</b></td><td>Người dùng workspace</td><td>Một workspace</td>
+              <td>Nhanh, linh hoạt, bốn lối tạo</td>
+              <td>One-off. Không version, không phân phối, không khai effect</td>
+            </tr>
+            <tr>
+              <td><b>MCP</b></td><td>Developer bên ngoài</td><td>Portable</td>
+              <td>Chuẩn mở, chạy được ở nhiều host</td>
+              <td>Không mang sẵn policy và workflow semantics của PAL</td>
+            </tr>
+            <tr>
+              <td><b>Plugin SDK</b> <span class="tag pal">đề xuất</span></td>
+              <td>Developer bên thứ ba</td><td>Platform + workspace</td>
+              <td>Publish một lần, nhiều nơi cài</td>
+              <td>Chính là thứ Day 20 phải thiết kế</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="box key">
+        <span class="lab">Vấn đề nền tảng</span>
+        <p><b>The missing primitive is not <code class="i">Tool</code>. It is
+        <code class="i">PublishedPlugin</code>.</b></p>
+        <p>MCP chuẩn hoá giao thức tương tác giữa client và tool server. Những gì chưa được chuẩn hoá cho PAL là: publisher chịu trách nhiệm cho tool, phiên bản đang chạy trong từng workflow, phạm vi dữ liệu được phép rời hệ thống, và failure semantics khi publisher hoặc plugin không còn khả dụng.</p>
+      </div>
+
+      <figure>
+        <div class="fb">
+          <svg viewBox="0 0 700 250" role="img" aria-label="Sơ đồ: ba bề mặt hiện có — managed app actions, custom API tools và MCP servers — cùng với published plugins đề xuất, tất cả hội tụ vào một PAL Tool Contract duy nhất, từ đó đi ra agents và workflows.">
+            <defs>
+              <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0 0 L10 5 L0 10 z" fill="#8b95b5"/>
+              </marker>
+            </defs>
+            <g font-family="IBM Plex Mono, monospace" font-size="11">
+              <g fill="#5a6488">
+                <rect x="8" y="14" width="176" height="38" rx="9" fill="#eceef4" stroke="#e7e9f2"/>
+                <text x="96" y="38" text-anchor="middle">Managed app actions</text>
+                <rect x="8" y="64" width="176" height="38" rx="9" fill="#eceef4" stroke="#e7e9f2"/>
+                <text x="96" y="88" text-anchor="middle">Custom API tools</text>
+                <rect x="8" y="114" width="176" height="38" rx="9" fill="#eceef4" stroke="#e7e9f2"/>
+                <text x="96" y="138" text-anchor="middle">MCP servers</text>
+                <rect x="8" y="164" width="176" height="38" rx="9" fill="#eeeafe" stroke="#6e55d9" stroke-dasharray="4 3"/>
+                <text x="96" y="182" text-anchor="middle" fill="#6e55d9">Published plugins</text>
+                <text x="96" y="195" text-anchor="middle" fill="#6e55d9" font-size="9">đề xuất</text>
+              </g>
+              <g stroke="#8b95b5" fill="none" marker-end="url(#ar)">
+                <path d="M188 33 C 240 33, 240 100, 288 106"/>
+                <path d="M188 83 C 240 83, 240 100, 288 108"/>
+                <path d="M188 133 C 240 133, 240 110, 288 110"/>
+                <path d="M188 183 C 240 183, 240 118, 288 112"/>
+              </g>
+              <rect x="292" y="70" width="150" height="80" rx="11" fill="#f9660e"/>
+              <text x="367" y="102" text-anchor="middle" fill="#fff" font-weight="700" font-size="12">PAL Tool</text>
+              <text x="367" y="120" text-anchor="middle" fill="#fff" font-weight="700" font-size="12">Contract</text>
+              <path d="M446 110 L 508 110" stroke="#8b95b5" fill="none" marker-end="url(#ar)"/>
+              <rect x="512" y="56" width="176" height="42" rx="9" fill="#fff" stroke="#e7e9f2"/>
+              <text x="600" y="82" text-anchor="middle" fill="#111a3e">Agents</text>
+              <rect x="512" y="122" width="176" height="42" rx="9" fill="#fff" stroke="#e7e9f2"/>
+              <text x="600" y="148" text-anchor="middle" fill="#111a3e">Workflows</text>
+              <path d="M446 110 C 480 110, 480 77, 508 77" stroke="#8b95b5" fill="none" marker-end="url(#ar)"/>
+              <path d="M446 110 C 480 110, 480 143, 508 143" stroke="#8b95b5" fill="none" marker-end="url(#ar)"/>
+              <text x="367" y="222" text-anchor="middle" fill="#8b95b5" font-size="10">một hợp đồng, bốn nguồn — thay vì bốn mô hình rời</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption>Hình 1 — Bốn nguồn tool hội tụ vào một hợp đồng. Đường đứt nét là
+        lớp Day 20 đề xuất; ba đường liền là thứ PAL đã có.</figcaption>
+      </figure>
+    </section>
+
+    <!-- ============================================= 02 -->
+    <section id="s2">
+      <span class="snum">02</span>
+      <h2><code class="i">PublishedPlugin</code>: đơn vị phân phối và quản trị</h2>
+      <p class="sdek">Luận điểm rằng primitive còn thiếu là <code class="i">PublishedPlugin</code> chỉ có giá trị nếu deliverable định nghĩa được nó. Một tool schema bổ sung vài trường không đáp ứng yêu cầu này.</p>
+
+      <pre><span class="c"># day20/plugin/acme-crm.plugin.yaml — trích</span>
+<span class="k">api_version</span>: pal.ai/v1
+<span class="k">kind</span>: PublishedPlugin
+
+<span class="k">metadata</span>:
+  <span class="k">id</span>: acme.crm
+  <span class="k">version</span>: 2.3.1
+  <span class="k">publisher</span>:
+    <span class="k">id</span>: acme
+    <span class="k">verified_domain</span>: acme.example
+    <span class="k">signing_key_id</span>: key_2026_01
+
+<span class="k">spec</span>:
+  <span class="k">protocol</span>:
+    <span class="k">type</span>: mcp
+    <span class="k">version</span>: <span class="s">"2026-07-28"</span>
+    <span class="k">extensions</span>: [io.modelcontextprotocol/tasks]
+
+  <span class="k">runtime</span>:
+    <span class="k">mode</span>: remote              <span class="c"># remote | hosted</span>
+    <span class="k">endpoint</span>: https://plugins.acme.example/mcp
+
+  <span class="k">ui</span>:
+    <span class="k">requested_csp_origins</span>:     <span class="c"># ← bề mặt egress thứ hai</span>
+      <span class="k">script_src</span>: [static.acme.example]
+      <span class="k">connect_src</span>: [api.acme.example]
+
+  <span class="k">egress</span>:
+    <span class="k">destinations</span>: [api.acme.example, enrich.acme-partner.example]
+    <span class="k">data_classes</span>: [customer_pii]
+    <span class="k">retention_days</span>: <span class="n">30</span>
+    <span class="k">subprocessors</span>: [{name: Acme Partner Enrichment, ...}]
+
+  <span class="k">tools</span>: [...]                <span class="c"># mỗi entry là một Tool Contract → §03</span>
+
+  <span class="k">lifecycle</span>:
+    <span class="k">deprecation_policy</span>: 90_days_notice
+    <span class="k">on_unavailable</span>: fail
+
+<span class="k">signature</span>:
+  <span class="k">manifest_digest</span>: sha256:3f1c9a0e...</pre>
+
+      <p>Năm tool, mỗi tool phục vụ một mục đích cụ thể trong tài liệu:</p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Tool</th><th><code>effect.classes</code></th><th>Reversibility</th><th>Vai trò</th></tr></thead>
+          <tbody>
+            <tr><td><code>search_contacts</code></td><td><span class="tag ok">read</span></td><td>—</td>
+              <td>Đường đọc. Có <code class="i">cached_read</code> kèm <code class="i">max_staleness</code></td></tr>
+            <tr><td><code>get_contact</code></td><td><span class="tag ok">read</span></td><td>—</td>
+              <td>Tool mà UI resource <code class="i">contact-card</code> gọi</td></tr>
+            <tr><td><code>add_tag</code></td><td><span class="tag warn">write</span></td>
+              <td><code class="i">compensatable</code></td>
+              <td>Effect nhỏ, đảo được → chứng minh authorization phụ thuộc arguments</td></tr>
+            <tr><td><code>remove_tag</code></td><td><span class="tag warn">write</span></td>
+              <td><code class="i">compensatable</code></td>
+              <td>Chính là <code class="i">undo_tool</code> mà <code>add_tag</code> khai</td></tr>
+            <tr><td><code>bulk_sync</code></td>
+              <td><span class="tag stop">transfer</span> <span class="tag stop">write</span></td>
+              <td><code class="i">irreversible</code></td>
+              <td>PII rời tổ chức rồi mới ghi ngược → chứng minh dangerous data path</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="box warn">
+        <span class="lab">Hai điều kiện được kiểm bằng conformance check</span>
+        <p><b>Boolean reversibility metadata không đủ để xác định rollback semantics.</b>
+        <code class="i">reversible: true</code> không nói được hoàn tác bằng operation nào,
+        trong bao lâu, và bảo đảm đến mức nào. Nên nó thành
+        <code class="i">reversibility: {mode: compensatable, undo_tool, window, guarantee}</code>
+        — và khi đã trỏ tới <code>remove_tag</code> thì tool đó phải tồn tại. Một tham chiếu <code class="i">undo_tool</code> không resolve được làm manifest không hợp lệ, cùng lớp lỗi với một UI resource tham chiếu tool không tồn tại.</p>
+        <p><b>Một call có thể mang nhiều effect.</b> <code>bulk_sync</code> vừa
+        <code class="i">transfer</code> (PII sang bên thứ ba) vừa <code class="i">write</code>
+        (ghi ngược vào CRM). Biểu diễn cả hai bằng một class <code class="i">write</code> loại bỏ một phân biệt có ý nghĩa đối với quyết định về quyền riêng tư.</p>
+      </div>
+
+      <p>Manifest này được kiểm bằng 19 conformance check ở §09 và pass toàn bộ.
+      Các check được thực thi bằng code, không phải mô tả: lần chạy đầu tiên chúng từ
+      chối chính manifest này vì một origin trong CSP của iframe chưa được khai trong
+      <code class="i">egress</code> — đúng bề mặt egress thứ hai mà §07 xác định.</p>
+
+      <p>Kết quả kiểm tra được công bố kèm digest của manifest, để bên đọc xác minh
+      được thay vì phải tin: <a href="/day20/plugin/publish-report.json">publish-report.json</a>
+      ghi <code class="i">manifest_sha256</code>, danh sách tool, và kết quả từng gate.</p>
+
+      <div class="box">
+        <span class="lab">Cơ sở phương pháp của hai tool write</span>
+        <p><code class="i">bulk_sync</code> có unconditional approval requirement, do effect không đảo ngược và phạm vi tác động lớn.
+        Nên <b>không thể dùng nó để chứng minh authorization phụ thuộc arguments</b> —
+        baseline đã là <code class="i">require_approval</code> rồi thì đổi arguments cũng
+        không nói lên điều gì. Muốn đo riêng tác động của arguments thì cần một effect
+        đảo được. Đó là lý do <code class="i">add_tag</code> tồn tại.</p>
+      </div>
+
+      <p><a href="/day20/plugin/acme-crm.plugin.yaml">Xem manifest đầy đủ ↗</a> ·
+      <a href="/day20/plugin/README.md">ghi chú thiết kế ↗</a></p>
+    </section>
+
+    <hr>
+
+    <!-- ============================================= 03 -->
+    <section id="s3">
+      <span class="snum">03</span>
+      <h2>Tool Contract và ranh giới giữa hint và enforcement</h2>
+      <p class="sdek">MCP có <code class="i">annotations</code> như
+      <code class="i">readOnlyHint</code>, <code class="i">destructiveHint</code>. Đây là <b>hint</b> và server có thể khai sai; enforcement MUST được thực hiện tại một boundary do PAL kiểm soát.</p>
+
+      <pre><span class="c"># PAL cấp những field này, không phải model</span>
+<span class="k">runtime_envelope</span>:
+  <span class="k">system_supplied</span>: [idempotency_key, workflow_run_id, policy_revision]
+
+<span class="k">tool</span>:
+  <span class="k">id</span>: acme.crm.bulk_sync
+  <span class="k">input_schema</span>: ...              <span class="c"># additionalProperties: false</span>
+  <span class="k">output_schema</span>: ...             <span class="c"># bắt buộc — không có kết quả untyped</span>
+
+  <span class="k">effect</span>:
+    <span class="k">classes</span>: [transfer, write]  <span class="c"># read | write | delete | transfer | unknown</span>
+    <span class="k">reversibility</span>:
+      <span class="k">mode</span>: <span class="r">irreversible</span>       <span class="c"># kéo theo prepare/commit + một con người</span>
+    <span class="k">destinations</span>: [enrich.acme-partner.example]
+    <span class="k">data_classes</span>: [customer_pii]
+    <span class="k">externally_visible</span>: <span class="r">true</span>
+    <span class="k">scale_source</span>: pal_resolved_segment  <span class="c"># quy mô do PAL đo, không do plugin khai</span>
+
+  <span class="k">execution</span>:
+    <span class="k">retry_policy</span>: {max_attempts: <span class="n">1</span>}  <span class="c"># không bao giờ retry irreversible write</span>
+    <span class="k">idempotency</span>: system_supplied
+    <span class="k">task_support</span>: <span class="r">true</span>
+
+  <span class="k">availability</span>:
+    <span class="k">on_unavailable</span>: fail
+    <span class="k">approval_deadline</span>: PT4H     <span class="c"># phải ≤ ttlMs của task</span>
+
+  <span class="k">annotations</span>:                  <span class="c"># advisory hint, không bao giờ là enforcement</span>
+    <span class="k">sensitivity</span>: restricted
+    <span class="k">integrity</span>: validated       <span class="c"># không phải trusted — xem bên dưới</span></pre>
+
+      <div class="box">
+        <span class="lab">Vì sao output của plugin là <code>validated</code> chứ không phải <code>trusted</code></span>
+        <p>Schema validation chứng minh dữ liệu <b>đúng hình dạng</b>. Nó không chứng
+        minh dữ liệu <b>đúng sự thật</b>. Mà chính bài này đã nói annotation của plugin
+        chỉ là advisory và remote server có thể khai sai — nên gắn
+        <code class="i">trusted</code> cho output của nó là tự mâu thuẫn. Chỉ workspace
+        policy hoặc một validator do PAL kiểm soát mới nâng được mức đó.</p>
+      </div>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Thành phần</th><th>Nó là gì</th></tr></thead>
+          <tbody>
+            <tr><td>MCP <code>annotations</code></td><td>Risk hint. Server tự khai, có thể khai sai</td></tr>
+            <tr><td>PAL <code>_meta</code> / Tool Contract</td><td>Thông tin PAL <b>review</b> khi publish</td></tr>
+            <tr><td>Gateway policy</td><td><b>Enforcement thật</b>, chạy trên arguments của từng call</td></tr>
+            <tr><td>External provider</td><td>Enforcement cuối cùng trên chính tài nguyên đó</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Phân loại conservative khi thiếu metadata</h3>
+      <p>Một tool không khai effect có thể là write, delete hoặc transfer. Và approval
+      từng call là vô nghĩa nếu người duyệt không nhìn thấy mình đang duyệt cái gì. Nên
+      hai tầng vận hành thế này:</p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Trường hợp</th><th>Hành vi</th></tr></thead>
+          <tbody>
+            <tr><td>Read-only xác minh được</td><td>Chạy ở chế độ conservative</td></tr>
+            <tr><td>Unknown effect</td><td>Hiện rõ <em>effect unknown</em> cho người dùng</td></tr>
+            <tr><td>Workspace cấm unknown effect</td><td><span class="tag stop">deny</span></td></tr>
+            <tr><td>Developer mode cho phép</td><td>Approval mỗi call, không standing grant</td></tr>
+            <tr><td>Curated registry</td><td>Bắt buộc đủ schema, effect, auth, lifecycle</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="box good">
+        <span class="lab">Tính tương thích với MCP</span>
+        <p>Thiếu PAL metadata <b>không phá vỡ tương thích với MCP</b>. Nó kích hoạt
+        conservative classification. Không thứ gì bị từ chối <em>thực thi</em> vì thiếu
+        annotation của PAL — nhưng thứ không xác định được effect thì có thể bị từ chối,
+        và thứ muốn vào <em>curated registry</em> thì phải khai đủ. PAL vẫn chạy được cả
+        hệ sinh thái MCP; registry của PAL giữ chuẩn cao hơn.</p>
+      </div>
+    </section>
+
+    <hr>
+
+    <!-- ============================================= 05 — THE FIREWALL -->
+    <section id="s4">
+      <span class="snum">04</span>
+      <h2>Reference policy evaluation: authorization theo tham số</h2>
+      <p class="sdek">Một reference implementation của policy engine, chạy trong trình duyệt. Verdict được tính từ tham số thực tế của lời gọi, không từ định danh tool: authorization chỉ dựa trên tool identity không đánh giá được các ràng buộc phụ thuộc arguments.</p>
+
+      <h3>Vị trí của nhãn trong mô hình dữ liệu</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Vị trí</th><th>Mang gì</th></tr></thead>
+          <tbody>
+            <tr><td>Data edge</td><td><code>sensitivity</code> · <code>integrity</code> · <code>influence</code></td></tr>
+            <tr><td>Execution context</td><td>principal, grants, scopes, workflow run</td></tr>
+            <tr><td>Tool call</td><td>payload · effect · destination</td></tr>
+            <tr><td>Authorization verdict</td><td><code>allow</code> · <code>require_approval</code> · <code>deny</code> · <code>waiting_for_authority</code> · <code>waiting_for_effect_resolution</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="box key">
+        <span class="lab">Invariant</span>
+        <p>Data edge lan truyền <code class="i">sensitivity</code>,
+        <code class="i">integrity</code> và <code class="i">influence</code>.
+        <b><code class="i">authority</code> không bao giờ đi theo dữ liệu</b> — nó được
+        giải quyết độc lập, từ principal hiện tại, các grant đang có, và đúng arguments
+        của lần gọi này.</p>
+        <p>Và: <b>nội dung web luôn untrusted, bất kể có phát hiện injection hay không.</b>
+        Detector chỉ thêm cờ <code class="i">prompt_injection_suspected</code>. Nó không
+        nâng integrity và không xoá provenance.</p>
+      </div>
+
+      <div class="fw">
+        <div class="fw-head">
+          <b>PAL Tool Gateway</b>
+          <span>in-browser reference implementation · parameter-aware policy engine</span>
+        </div>
+        <div class="fw-body">
+
+          <div class="ctrls">
+            <div class="ctrl"><span>Web content</span>
+              <div class="seg" data-group="web">
+                <button data-act="set" data-k="web" data-v="0">không dùng</button>
+                <button data-act="set" data-k="web" data-v="1">có dùng</button>
+              </div>
+            </div>
+            <div class="ctrl"><span>Injection suspected</span>
+              <div class="seg" data-group="inj">
+                <button data-act="set" data-k="inj" data-v="0">no</button>
+                <button data-act="set" data-k="inj" data-v="1">yes</button>
+              </div>
+            </div>
+            <div class="ctrl"><span>Workspace policy</span>
+              <div class="seg" data-group="pol">
+                <button data-act="set" data-k="pol" data-v="permissive">permissive</button>
+                <button data-act="set" data-k="pol" data-v="standard">standard</button>
+                <button data-act="set" data-k="pol" data-v="strict">strict</button>
+              </div>
+            </div>
+            <div class="ctrl"><span>Standing grant</span>
+              <div class="seg" data-group="grant">
+                <button data-act="set" data-k="grant" data-v="none">none</button>
+                <button data-act="set" data-k="grant" data-v="matching">matching</button>
+                <button data-act="set" data-k="grant" data-v="mismatch">scope&nbsp;mismatch</button>
+                <button data-act="set" data-k="grant" data-v="expired">expired</button>
+              </div>
+            </div>
+            <div class="ctrl"><span>Run mode</span>
+              <div class="seg" data-group="run">
+                <button data-act="set" data-k="run" data-v="interactive">interactive</button>
+                <button data-act="set" data-k="run" data-v="scheduled">scheduled</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="graph" id="graph" role="list" aria-label="Workflow graph, năm node"></div>
+
+          <div class="payload" id="payload"></div>
+
+          <div class="actions">
+            <button class="btn primary" data-act="eval">Evaluate call</button>
+            <button class="btn ghost" data-act="reset">Reset</button>
+          </div>
+
+          <div class="diag" id="verdict" role="status" aria-live="polite"></div>
+
+          <div id="surfaces" hidden></div>
+
+        </div>
+      </div>
+
+      <div class="badge">
+        <b>FIXTURE PASSED</b>
+        <span>Reference implementation chạy trên fixture tự soạn. Đây không phải năng
+        lực đã quan sát được của PAL.</span>
+      </div>
+
+      <h3>Fixture: verdict và reason code xác định</h3>
+      <p>Một ma trận duy nhất không tách được các biến: <code class="i">bulk_sync</code>
+      tự nó đã cần approval, nên nó che mất tín hiệu của taint. Chữ "may" không xuất
+      hiện trong bất kỳ kỳ vọng nào — một fixture không có kết quả xác định thì không
+      phải fixture.</p>
+
+      <div class="actions">
+        <button class="btn ghost" data-act="runfix">Chạy cả hai fixture</button>
+      </div>
+      <div class="fixres" id="fixres"></div>
+    </section>
+
+    <hr>
+
+    <!-- ============================================= 05 -->
+    <section id="s5">
+      <span class="snum">05</span>
+      <h2>Runtime, MCP Tasks và ngữ nghĩa huỷ</h2>
+      <p class="sdek">MCP Tasks tách vòng đời của một tác vụ khỏi vòng đời của request bằng một handle bền. Cơ chế này không thiết lập trust hay authorization guarantee.</p>
+
+      <h3>Kết quả đa hình của tool call</h3>
+      <p>Trong MCP, <b>server quyết định theo từng request</b> có tạo task hay không.
+      Nên trong PAL không tồn tại loại node "luôn synchronous". Một plugin có thể trả
+      thẳng 99 lần rồi trả task ở lần thứ 100.</p>
+
+      <pre><span class="k">type</span> PALToolResult =
+  | CompleteResult
+  | TaskResult              <span class="c">// resultType: "task" → phải poll</span>
+  | InputRequiredResult      <span class="c">// task cần input giữa chừng</span>
+  | ErrorResult;</pre>
+
+      <figure>
+        <div class="fb">
+          <svg viewBox="0 0 760 336" role="img" aria-label="State machine của một plugin node. Running đi thẳng tới Completed nếu server trả kết quả ngay, hoặc sang TaskPolling nếu server tạo task. TaskPolling có thể sang InputRequired rồi WaitingForAuthority. WaitingForAuthority quá hạn thì sang Expired, và Expired rẽ hai nhánh: chạy lại prepare nếu PAL cưỡng chế được tính side-effect-free, còn không thì ReconciliationRequired. CancelRequested cũng rẽ hai nhánh: Cancelled khi server xác nhận và đã đối chiếu, ReconciliationRequired khi không chắc side effect đã dừng.">
+            <defs>
+              <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0 0 L10 5 L0 10 z" fill="#8b95b5"/>
+              </marker>
+            </defs>
+            <g font-family="IBM Plex Mono, monospace" font-size="10.5" text-anchor="middle">
+              <g stroke="#8b95b5" fill="none" marker-end="url(#ar2)">
+                <path d="M138 53 L 242 53"/>
+                <path d="M364 53 L 592 53"/>
+                <path d="M134 42 C 300 6, 500 6, 648 40"/>
+                <path d="M305 74 L 305 114"/>
+                <path d="M305 168 L 305 210"/>
+                <path d="M374 238 L 412 238"/>
+                <path d="M534 228 L 582 219"/>
+                <path d="M534 250 L 582 274"/>
+                <path d="M82 70 L 82 124"/>
+                <path d="M148 143 C 320 138, 460 138, 592 145"/>
+                <path d="M140 170 C 300 208, 420 262, 582 282"/>
+              </g>
+              <g>
+                <rect x="30" y="36" width="104" height="34" rx="8" fill="#e2ecfd" stroke="#2f6fed"/>
+                <text x="82" y="57" fill="#2f6fed">Running</text>
+
+                <rect x="244" y="36" width="120" height="34" rx="8" fill="#f7edda" stroke="#b0771a"/>
+                <text x="304" y="57" fill="#b0771a">TaskPolling</text>
+
+                <rect x="592" y="36" width="116" height="34" rx="8" fill="#e4f3ea" stroke="#1e9257"/>
+                <text x="650" y="57" fill="#1e9257">Completed</text>
+
+                <rect x="20" y="124" width="128" height="46" rx="8" fill="#f8e6e3" stroke="#c64b3e"/>
+                <text x="84" y="143" fill="#c64b3e">Cancel</text>
+                <text x="84" y="157" fill="#c64b3e">Requested</text>
+
+                <rect x="244" y="114" width="120" height="54" rx="8" fill="#eeeafe" stroke="#6e55d9"/>
+                <text x="304" y="136" fill="#6e55d9">Input</text>
+                <text x="304" y="151" fill="#6e55d9">Required</text>
+
+                <rect x="592" y="128" width="116" height="34" rx="8" fill="#e4f3ea" stroke="#1e9257"/>
+                <text x="650" y="149" fill="#1e9257">Cancelled</text>
+
+                <rect x="240" y="210" width="134" height="56" rx="8" fill="#ffe7d6" stroke="#f9660e"/>
+                <text x="307" y="233" fill="#a94208">Waiting</text>
+                <text x="307" y="248" fill="#a94208">ForAuthority</text>
+
+                <rect x="412" y="216" width="122" height="44" rx="8" fill="#f7edda" stroke="#b0771a"/>
+                <text x="473" y="243" fill="#b0771a">Expired</text>
+
+                <rect x="586" y="196" width="150" height="42" rx="8" fill="#e2ecfd" stroke="#2f6fed"/>
+                <text x="661" y="213" fill="#2f6fed" font-size="9.5">re-prepare</text>
+                <text x="661" y="227" fill="#2f6fed" font-size="8.5">manifest mới, duyệt lại</text>
+
+                <rect x="586" y="262" width="150" height="46" rx="8" fill="#f8e6e3" stroke="#c64b3e"/>
+                <text x="661" y="281" fill="#c64b3e" font-size="9.5">Reconciliation</text>
+                <text x="661" y="295" fill="#c64b3e" font-size="9.5">Required</text>
+              </g>
+              <g font-size="8.5" fill="#8b95b5">
+                <text x="390" y="24">server trả kết quả ngay — không phải call nào cũng thành task</text>
+                <text x="366" y="145" text-anchor="start">server xác nhận đã dừng</text>
+                <text x="366" y="156" text-anchor="start">và trạng thái đã đối chiếu</text>
+                <text x="300" y="290" text-anchor="start">không chắc side effect đã dừng</text>
+                <text x="556" y="196" text-anchor="end">PAL cưỡng chế được</text>
+                <text x="556" y="206" text-anchor="end">prepare side-effect-free</text>
+                <text x="556" y="268" text-anchor="end">không bảo đảm được</text>
+              </g>
+            </g>
+          </svg>
+        </div>
+        <figcaption>Hình 2 — State machine của một plugin node. Đường từ
+        <code>CancelRequested</code> không kết thúc ở <code>Cancelled</code>.</figcaption>
+      </figure>
+
+      <div class="box stop">
+        <span class="lab">Ngữ nghĩa huỷ</span>
+        <p>Trong MCP, cancellation là <b>hợp tác</b>: server ghi nhận ý định nhưng không
+        có nghĩa vụ dừng công việc. Nên PAL chỉ được phép hiện ba trạng thái phân biệt:
+        <code class="i">Cancellation requested</code> · <code class="i">Cancelled</code> ·
+        <code class="i">Reconciliation required</code>. PAL không thể bảo đảm việc huỷ đối với side effect nằm ngoài enforcement boundary của nền tảng.</p>
+      </div>
+
+      <h3>Ngữ nghĩa <code class="i">prepare</code> / <code class="i">commit</code></h3>
+      <p><code class="i">input_required</code> và <code class="i">tasks/update</code> cho
+      một kênh để chờ. Chúng <b>không</b> chứng minh plugin chưa tạo side effect trước
+      khi chuyển sang trạng thái đó. Một plugin lỗi hoặc cố ý vẫn có thể ghi xong rồi mới
+      trả <code class="i">input_required</code>, và hiện giao diện như thể đang chờ duyệt.</p>
+
+      <p>Nên quy định "prepare không được tạo effect" là chưa đủ — nó phải được
+      <b>cưỡng chế bằng capability</b>, không phải bằng lời:</p>
+
+      <figure>
+        <div class="fb">
+          <svg viewBox="0 0 700 200" role="img" aria-label="Sơ đồ capability separation: lời gọi prepare không nhận write credential, trả về EffectManifest; PAL approval; Credential Broker đúc một commit capability dùng một lần, bind với tool, payload hash và destination, hết hạn ngắn; rồi mới tới lời gọi commit.">
+            <defs>
+              <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0 0 L10 5 L0 10 z" fill="#8b95b5"/>
+              </marker>
+            </defs>
+            <g font-family="IBM Plex Mono, monospace" font-size="10.5" text-anchor="middle">
+              <rect x="10" y="52" width="120" height="52" rx="10" fill="#e2ecfd" stroke="#2f6fed"/>
+              <text x="70" y="74" fill="#2f6fed" font-weight="700">prepare</text>
+              <text x="70" y="90" fill="#2f6fed" font-size="9">no write credential</text>
+
+              <path d="M134 78 L 172 78" stroke="#8b95b5" fill="none" marker-end="url(#ar3)"/>
+              <rect x="176" y="52" width="118" height="52" rx="10" fill="#fff" stroke="#e7e9f2"/>
+              <text x="235" y="74" fill="#111a3e">EffectManifest</text>
+              <text x="235" y="90" fill="#8b95b5" font-size="9">PAL dựng, PAL render</text>
+
+              <path d="M298 78 L 336 78" stroke="#8b95b5" fill="none" marker-end="url(#ar3)"/>
+              <rect x="340" y="52" width="112" height="52" rx="10" fill="#ffe7d6" stroke="#f9660e"/>
+              <text x="396" y="74" fill="#a94208" font-weight="700">approval</text>
+              <text x="396" y="90" fill="#a94208" font-size="9">người hoặc grant</text>
+
+              <path d="M456 78 L 494 78" stroke="#8b95b5" fill="none" marker-end="url(#ar3)"/>
+              <rect x="498" y="40" width="192" height="76" rx="10" fill="#eeeafe" stroke="#6e55d9"/>
+              <text x="594" y="60" fill="#6e55d9" font-weight="700">commit capability</text>
+              <text x="594" y="76" fill="#6e55d9" font-size="9">single-use</text>
+              <text x="594" y="90" fill="#6e55d9" font-size="9">bind: tool · payload_hash · destination</text>
+              <text x="594" y="104" fill="#6e55d9" font-size="9">expiry ngắn</text>
+
+              <path d="M594 120 L 594 148" stroke="#8b95b5" fill="none" marker-end="url(#ar3)"/>
+              <rect x="524" y="150" width="140" height="34" rx="9" fill="#e4f3ea" stroke="#1e9257"/>
+              <text x="594" y="171" fill="#1e9257" font-weight="700">commit</text>
+
+              <text x="235" y="150" fill="#c64b3e" font-size="9.5">Nếu plugin dùng credential riêng mà PAL không môi giới,</text>
+              <text x="235" y="164" fill="#c64b3e" font-size="9.5">PAL không bảo đảm được prepare-only. Đó là residual risk,</text>
+              <text x="235" y="178" fill="#c64b3e" font-size="9.5">và bị từ chối vào curated registry.</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption>Hình 3 — Capability separation. PAL chỉ bảo đảm được
+        <code>prepare</code> không tạo effect khi plugin <em>không có quyền</em> ghi
+        trong lúc đó.</figcaption>
+      </figure>
+
+      <p>Nếu task hết hạn trước khi có người duyệt, PAL chỉ tự chạy lại
+      <code class="i">prepare</code> ở nơi nó cưỡng chế được tính side-effect-free. Còn
+      lại, node chuyển sang <code class="i">ReconciliationRequired</code> — không bao giờ
+      âm thầm thử lại một việc có thể đã xảy ra một lần rồi.</p>
+
+      <h3>Chi phí polling và suspended run</h3>
+      <div class="box warn">
+        <span class="lab">Câu hỏi mở, chưa có số đo</span>
+        <p>PAL chạy node <b>tuần tự</b>, nên một task dài làm workflow run bị
+        <b>treo về mặt logic</b> — downstream không đi tiếp được. Điều đó khẳng định được.</p>
+        <p>Điều <b>không</b> khẳng định được: rằng một worker hay compute slot bị giữ suốt
+        thời gian đó. MCP Tasks cho phép lưu trạng thái rồi suspend mà không giữ kết nối.
+        Ba câu hỏi cần đo trước khi thiết kế giá: mỗi <code class="i">tasks/get</code> có
+        tính một node call không, một run đang suspend có ăn quota không, và deferred tool
+        loading có tạo thêm lượt gọi nào không.</p>
+      </div>
+    </section>
+
+    <hr>
+
+    <!-- ============================================= 06 -->
+    <section id="s6">
+      <span class="snum">06</span>
+      <h2>Authentication, authorization và Decision Surface</h2>
+      <p class="sdek">Ba danh tính khác nhau thường bị gộp làm một. Gộp là chỗ sinh lỗ hổng.</p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Danh tính</th><th>Là ai</th><th>Quyết định gì</th></tr></thead>
+          <tbody>
+            <tr><td><b>Publisher</b></td><td>Bên ký và phát hành plugin</td><td>Nội dung manifest, chữ ký, vòng đời</td></tr>
+            <tr><td><b>Installing user / admin</b></td><td>Bên cấp OAuth scope trong workspace</td><td>Plugin được cài không, với scope nào</td></tr>
+            <tr><td><b>Runtime principal</b></td><td>Workflow run đang hành động thay mặt ai</td><td>Từng call được phép hay không</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Secret MUST NOT đi vào model context, Variables, plugin iframe hoặc log. <code class="i">workflow_run_id</code> do PAL tạo. Plugin có thể nhận giá trị này để correlation, nhưng không được phép cung cấp hoặc ghi đè nó — nếu không, plugin tự gộp hoặc tách session để lách các policy theo
+      thời gian.</p>
+
+      <h3>Chuỗi authentication</h3>
+      <p>Ba danh tính trên xác định thẩm quyền. Chuỗi dưới đây xác định đường đi của credential:</p>
+
+      <div class="diag">Publisher đăng ký signing identity        <span class="g">→ verified_domain + signing_key_id</span>
+    <span class="g">↓</span>
+Admin cài plugin vào workspace           <span class="g">→ review manifest, chốt egress allowlist</span>
+    <span class="g">↓</span>
+Admin hoặc user cấp OAuth scope          <span class="g">→ chỉ những scope tool đã khai</span>
+    <span class="g">↓</span>
+Credential Broker giữ refresh credential <span class="g">→ trong vault của PAL, không bao giờ ra khỏi đó</span>
+    <span class="g">↓</span>
+Mỗi call đổi lấy một short-lived token   <span class="g">→ audience-bound cho đúng resource đó</span>
+    <span class="g">↓</span>
+Provider kiểm token                      <span class="g">→ enforcement cuối cùng nằm ở đây</span></div>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Thuộc tính</th><th>Quy định</th></tr></thead>
+          <tbody>
+            <tr><td><b>Credential persistence</b></td>
+              <td>Refresh credential MUST nằm trong vault của PAL, gắn với <code>(workspace, plugin, principal)</code>, và MUST NOT xuất hiện trong Variables, model context, plugin iframe hay log.</td></tr>
+            <tr><td><b>Audience restriction</b></td>
+              <td>Access token MUST bị giới hạn theo audience là resource server của chính lời gọi đó. Token dùng được ở nhiều endpoint làm tăng tương ứng thiệt hại khi bị lộ.</td></tr>
+            <tr><td><b>Scheduled-run principal</b></td>
+              <td>Scheduled run MUST dùng <code class="i">workspace_service_account</code> và MUST NOT dùng credential cá nhân: credential cá nhân làm workflow phụ thuộc vào trạng thái nhân sự, và quy trách nhiệm hành động cho một principal không có mặt tại thời điểm thực thi.</td></tr>
+            <tr><td><b>Scope expansion</b></td>
+              <td>Version mở rộng quyền MUST NOT tự động áp dụng. <code class="i">pal plugin permissions</code> sinh permission diff, và admin MUST consent lại trước khi rollout.</td></tr>
+            <tr><td><b>Enterprise authorization delegation</b></td>
+              <td>Thay hai bước đầu của chuỗi trên. IdP của tổ chức phát ID-JAG, client đổi lấy access token ở MCP Authorization Server. Nhân viên không tự duyệt từng plugin nữa, và thu hồi ở IdP có hiệu lực ngay trên mọi client.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Authorization ở quy mô workflow</h3>
+      <p>Nếu authorization chỉ tồn tại ở mức per-call, mô hình human-in-the-loop không mở rộng được. Ba tầng dưới đây tách quyết định của con người khỏi số lượng lời gọi:</p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Tầng</th><th>Dùng khi</th><th>Người duyệt cái gì</th></tr></thead>
+          <tbody>
+            <tr><td><b>Standing grant</b></td><td>Workflow lặp lại trong phạm vi ổn định</td>
+              <td>Duyệt <em>phạm vi</em> một lần: tool, destination, data class, trần số lượng, cửa sổ thời gian, hạn dùng</td></tr>
+            <tr><td><b>Batch approval</b></td><td>Biết trước toàn bộ payload</td>
+              <td>Duyệt <em>một EffectManifest tổng hợp</em> cho cả lô, kèm phần bất thường tách riêng</td></tr>
+            <tr><td><b>Per-call approval</b></td><td>Call bất thường hoặc ngoài policy</td>
+              <td>Duyệt <em>từng effect</em>, như phần trên</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Principal xem xét một bản tổng hợp thay vì từng lời gọi:</p>
+
+      <div class="diag"><b>10.000 planned calls</b>  ·  acme.crm.add_tag  ·  segment_eu_q3
+
+  <span class="ok">9.850</span>  nằm trong standing grant       <span class="g">chạy tự động</span>
+    <span class="w">100</span>  destination ngoài grant        <span class="g">chờ duyệt — xem danh sách</span>
+     <span class="e">50</span>  vi phạm hard policy            <span class="g">deny, không duyệt được</span>
+
+  <span class="g">Duyệt phần 100 call ngoài grant?  [ xem chi tiết ]  [ duyệt cả lô ]</span></div>
+
+      <p><b>Batch approval không làm giảm mức kiểm tra.</b>
+      PAL vẫn evaluate từng call với arguments thật của nó, và vẫn đúc một
+      <b>single-use commit capability riêng cho từng effect</b>. Thứ được gộp lại là
+      <em>hành vi bấm nút của con người</em>, không phải bước authorization.</p>
+
+      <h3>Catalog visibility và authorization</h3>
+      <div class="box key">
+        <span class="lab">Tool visible ≠ current call authorized</span>
+        <p>Một tool được phép xuất hiện trong catalog nếu <b>tồn tại ít nhất một hoàn
+        cảnh</b> mà principal đó được phép gọi nó. Đó là mệnh đề tồn tại, không phải giấy
+        phép. Quyết định thật chạy lại ở thời điểm call, với đầy đủ arguments.</p>
+        <p><b>Cache tool set. Không bao giờ cache authorization.</b></p>
+      </div>
+
+      <h3>Decision Surface do host kiểm soát</h3>
+      <p>MCP Apps chạy trong sandboxed iframe. Sandbox đó bảo vệ <b>host khỏi app</b> —
+      app không đọc được DOM cha, không lấy được cookie, không thoát ra ngoài. Sandbox isolation không bảo đảm tính toàn vẹn ngữ nghĩa của nội dung do plugin hiển thị.</p>
+
+      <p>Nên approval không được bind vào thứ plugin render. Nó bind vào một
+      <code class="i">EffectManifest</code> mà <b>PAL tự dựng</b> từ manifest đã ký +
+      arguments thật của lần gọi + diff PAL quan sát được. Host rendering chỉ bảo đảm
+      plugin không sửa được giao diện; nó không tự làm cho nội dung manifest thành đúng.</p>
+
+      <div class="box key">
+        <span class="lab">Invariant</span>
+        <p><b>Nội dung do plugin hiển thị không có giá trị cấp quyền. Quyết định authorization chỉ được tạo trên bề mặt do PAL kiểm soát.</b></p>
+      </div>
+
+      <p>Token cấp quyền bind với: <code class="i">plugin_id</code>,
+      <code class="i">plugin_version</code>, <code class="i">tool_id</code>,
+      <code class="i">effect_manifest_hash</code>, <code class="i">payload_hash</code>,
+      <code class="i">destination</code>, <code class="i">workspace_id</code>,
+      <code class="i">principal_id</code>, <code class="i">workflow_run_id</code>,
+      <code class="i">policy_revision</code>, <code class="i">single_use_nonce</code>,
+      <code class="i">idempotency_key</code>, <code class="i">expiry</code> — cộng thêm
+      phần cho biết <b>quyền đến từ đâu</b>:</p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Nguồn quyền</th><th>Field bind thêm</th></tr></thead>
+          <tbody>
+            <tr><td>Người duyệt một lần</td><td><code>approver_id</code></td></tr>
+            <tr><td>Standing grant</td><td><code>grant_id</code> · <code>grant_revision</code> · <code>grant_constraints_hash</code> · <code>grant_issuer_id</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Standing grant không có ai đứng duyệt tại thời điểm chạy. Giả định luôn tồn tại
+      <code class="i">approver_id</code> sẽ quy một run cron lúc 3 giờ sáng cho một người
+      đang ngủ.</p>
+
+      <h3>Workflow không có người giám sát tại thời điểm chạy</h3>
+      <p>Khi không có declassifier tự động và cũng không có người duyệt, nhánh thứ ba là
+      <b>dừng lại và xếp hàng chờ</b> — có deadline, không phải vô hạn:</p>
+
+      <pre><span class="k">approval</span>:
+  <span class="k">deadline</span>: 4h
+  <span class="k">on_timeout</span>: fail          <span class="c"># không có lựa chọn "continue_anyway"</span>
+  <span class="k">notify</span>: [workflow_owner, workspace_admin]
+  <span class="k">resumable</span>: <span class="r">true</span></pre>
+
+      <p>Deadline của PAL phải tương thích với <code class="i">ttlMs</code> của task. Nếu
+      task hết hạn trước khi người ta duyệt, PAL đánh dấu <code class="i">expired</code> và
+      chạy lại <code class="i">prepare</code> — không bao giờ commit trên một
+      EffectManifest cũ.</p>
+    </section>
+
+    <hr>
+
+    <!-- ============================================= 07 -->
+    <section id="s7">
+      <span class="snum">07</span>
+      <h2>Ranh giới cưỡng chế: sandboxing và data egress</h2>
+      <p class="sdek">Phần này xác định chính xác những gì nền tảng cưỡng chế được và những gì không.</p>
+
+      <figure>
+        <div class="fb">
+          <svg viewBox="0 0 700 240" role="img" aria-label="Sơ đồ bốn lớp cưỡng chế: PAL cưỡng chế được CSP của iframe, cưỡng chế được payload và endpoint từ PAL tới remote plugin tại gateway, cưỡng chế được compute của plugin hosted; nhưng không cưỡng chế được đường từ remote plugin đi tiếp tới hệ thống downstream.">
+            <defs>
+              <marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0 0 L10 5 L0 10 z" fill="#8b95b5"/>
+              </marker>
+              <marker id="ar4r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0 0 L10 5 L0 10 z" fill="#c64b3e"/>
+              </marker>
+            </defs>
+            <g font-family="IBM Plex Mono, monospace" font-size="10.5" text-anchor="middle">
+              <rect x="12" y="26" width="238" height="188" rx="13" fill="#fbfcff" stroke="#1e9257" stroke-width="1.5"/>
+              <text x="131" y="46" fill="#1e9257" font-weight="700" font-size="10">PAL cưỡng chế được</text>
+
+              <rect x="28" y="58" width="206" height="38" rx="8" fill="#e4f3ea" stroke="#1e9257"/>
+              <text x="131" y="74" fill="#1e9257" font-size="9.5">App iframe · CSP origins</text>
+              <text x="131" y="87" fill="#1e9257" font-size="8.5">plugin xin ∩ registry duyệt ∩ workspace</text>
+
+              <rect x="28" y="104" width="206" height="38" rx="8" fill="#e4f3ea" stroke="#1e9257"/>
+              <text x="131" y="120" fill="#1e9257" font-size="9.5">Gateway → endpoint &amp; payload</text>
+              <text x="131" y="133" fill="#1e9257" font-size="8.5">gửi gì, gửi tới đâu, ghi lại gì</text>
+
+              <rect x="28" y="150" width="206" height="46" rx="8" fill="#e4f3ea" stroke="#1e9257"/>
+              <text x="131" y="167" fill="#1e9257" font-size="9.5">Hosted plugin compute</text>
+              <text x="131" y="180" fill="#1e9257" font-size="8.5">sandbox, network deny-by-default,</text>
+              <text x="131" y="191" fill="#1e9257" font-size="8.5">ephemeral FS, quota</text>
+
+              <path d="M254 120 L 306 120" stroke="#8b95b5" fill="none" marker-end="url(#ar4)"/>
+
+              <rect x="310" y="96" width="140" height="48" rx="10" fill="#fff" stroke="#e7e9f2"/>
+              <text x="380" y="117" fill="#111a3e">Remote plugin</text>
+              <text x="380" y="131" fill="#8b95b5" font-size="9">bên thứ ba tự host</text>
+
+              <path d="M454 120 L 526 120" stroke="#c64b3e" stroke-dasharray="5 4" fill="none" marker-end="url(#ar4r)"/>
+              <text x="490" y="110" fill="#c64b3e" font-size="9" font-weight="700">?</text>
+
+              <rect x="530" y="88" width="158" height="64" rx="10" fill="#f8e6e3" stroke="#c64b3e" stroke-dasharray="5 4"/>
+              <text x="609" y="110" fill="#c64b3e" font-weight="700" font-size="10">Downstream</text>
+              <text x="609" y="125" fill="#c64b3e" font-size="9">PAL không cưỡng chế</text>
+              <text x="609" y="139" fill="#c64b3e" font-size="9">được gì ở đây</text>
+
+              <text x="609" y="176" fill="#8b95b5" font-size="9">Còn lại: khai báo subprocessor,</text>
+              <text x="609" y="189" fill="#8b95b5" font-size="9">registry review, admin allowlist,</text>
+              <text x="609" y="202" fill="#8b95b5" font-size="9">run ledger, thu hồi</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption>Hình 4 — Ranh giới cưỡng chế. Đường đứt nét đỏ là chỗ mọi thiết kế
+        plugin platform đều dễ hứa quá tay.</figcaption>
+      </figure>
+
+      <div class="box stop">
+        <span class="lab">Giới hạn cưỡng chế</span>
+        <p>Với <b>remote plugin</b>, PAL không sandbox compute của bên thứ ba. Một khi dữ
+        liệu đã tới server của họ, PAL không ngăn được họ gửi tiếp đi đâu. Các biện pháp PAL còn có thể cưỡng chế gồm: công bố data egress, yêu cầu khai báo subprocessor, review khi publish, admin allowlist, ghi run ledger, và thu hồi khi phát hiện vi phạm.</p>
+      </div>
+
+      <h3>Hai bề mặt egress</h3>
+      <pre><span class="k">egress</span>:
+  <span class="k">server</span>:
+    <span class="k">connect</span>: [api.acme.example, enrich.acme-partner.example]
+  <span class="k">ui</span>:                              <span class="c"># ← thường bị bỏ sót</span>
+    <span class="k">script_src</span>: [static.acme.example]
+    <span class="k">connect_src</span>: [telemetry.acme.example]</pre>
+
+      <p>MCP Apps cho phép app tải script và tài nguyên từ origin mà <b>chính app khai</b>
+      trong <code class="i">_meta.ui.csp</code>. Chặn remote plugin ở gateway mà bỏ qua
+      chỗ này thì dữ liệu vẫn ra được qua iframe. Effective CSP là giao của ba tập:</p>
+
+      <div class="diag">plugin requested <span class="g">∩</span> registry reviewed <span class="g">∩</span> workspace policy</div>
+
+      <h3>Hosted tier: execution envelope</h3>
+      <ul>
+        <li>Ephemeral filesystem, huỷ cùng sandbox</li>
+        <li>Plugin package mount read-only, verify chữ ký trước khi chạy</li>
+        <li>Giới hạn CPU, memory và wall-clock</li>
+        <li>Network <b>deny-by-default</b>, allowlist suy ra từ manifest</li>
+        <li>Không mount workspace secret</li>
+        <li>Credential Broker cấp capability handle, không bao giờ cấp secret, và không
+        bao giờ đưa vào model context</li>
+        <li><code class="i">stdout</code>/<code class="i">stderr</code> ghi lại để audit, có redact secret</li>
+        <li>Sandbox huỷ sau khi call hoặc task kết thúc</li>
+      </ul>
+
+      <h3>Disclosure Receipt</h3>
+      <p>Mỗi lần dữ liệu rời PAL, ledger ghi: ai khởi tạo · workflow/run/node nào ·
+      plugin và version nào · đích đến · data class và tên field · payload hash · số byte
+      xấp xỉ · quyết định policy · approval ID · kết quả. <b>Không ghi raw PII vào audit
+      log mặc định</b> — nếu cần payload để điều tra thì lưu mã hoá, giới hạn retention,
+      tách quyền truy cập.</p>
+    </section>
+
+    <hr>
+
+    <!-- ============================================= 08 -->
+    <section id="s8">
+      <span class="snum">08</span>
+      <h2>Versioning, drift và ngữ nghĩa lỗi</h2>
+      <p class="sdek">Bốn dòng version độc lập với nhau. Một workflow phải pin cả bốn; nếu thiếu bất kỳ dòng nào, kết quả của lần chạy trước không suy ra được điều gì về lần chạy sau.</p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Dòng</th><th>Ví dụ</th><th>Đổi thì sao</th></tr></thead>
+          <tbody>
+            <tr><td>MCP protocol</td><td><code>2026-07-28</code></td><td>Cần adapter cho bản cũ</td></tr>
+            <tr><td>Plugin manifest</td><td><code>manifest_digest: sha256:…</code></td><td>Lệch snapshot → quarantine</td></tr>
+            <tr><td>Plugin package</td><td><code>acme.crm@2.3.1</code></td><td>Quyền rộng ra → cần consent lại</td></tr>
+            <tr><td>Tool schema</td><td><code>bulk_sync</code> v3</td><td>Breaking change → workflow không tự nâng</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <pre><span class="c"># workflow ghim đủ bốn dòng</span>
+<span class="k">mcp_protocol_version</span>: <span class="s">"2026-07-28"</span>
+<span class="k">plugin_id</span>: acme.crm
+<span class="k">plugin_version</span>: 2.3.1
+<span class="k">manifest_digest</span>: sha256:3f1c9a0e...
+<span class="k">tool_id</span>: bulk_sync
+<span class="k">tool_schema_version</span>: <span class="n">3</span></pre>
+
+      <div class="box warn">
+        <span class="lab">Phạm vi phát hiện drift</span>
+        <p>PAL phát hiện được <b>declared contract drift</b> qua hash. <b>Undeclared
+        behaviour drift</b> thì không — một server đổi code mà giữ nguyên schema từng byte
+        sẽ qua mọi lần kiểm hash. PAL chỉ có thể quan sát bất thường, quarantine plugin và
+        bắt review lại.</p>
+        <p><b>A last-known-good manifest is not last-known-good remote behaviour.</b></p>
+      </div>
+
+      <h3>Ngữ nghĩa lỗi và tính liên tục</h3>
+      <p>Bốn tình huống có ngữ nghĩa khác nhau và không được xử lý như một:</p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Tình huống</th><th>Hành vi</th><th>Grace period</th></tr></thead>
+          <tbody>
+            <tr><td><b>Deprecated</b></td><td>Thông báo, mở migration window, giữ chạy</td><td>90 ngày</td></tr>
+            <tr><td><b>Unavailable</b> (tạm)</td><td>Theo <code>on_unavailable</code> của từng tool</td><td>Theo <code>max_staleness</code></td></tr>
+            <tr><td><b>Publisher abandoned</b></td><td>Đánh dấu unmaintained, gợi ý replacement cùng contract</td><td>Có</td></tr>
+            <tr><td><b>Security revoked</b></td><td><span class="tag stop">Block ngay</span></td><td><b>Không</b></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ul>
+        <li><b>Read</b> có thể dùng cached result — kèm hiển thị độ cũ.</li>
+        <li><b>Write</b> không bao giờ âm thầm fallback sang provider khác.</li>
+        <li><b>Destructive / payment</b> phải dừng hẳn.</li>
+        <li>Fallback nào đổi destination hoặc đổi effect thì <b>phải duyệt lại</b> — nó
+        là một effect khác, không phải cùng một effect qua đường khác.</li>
+      </ul>
+
+      <div class="box">
+        <span class="lab">Giới hạn của contract snapshot</span>
+        <p>Last-known-good snapshot giữ được schema và cấu hình. Nó không giữ được một
+        server đã biến mất. Gọi nó là "backup" là sai — nó là <b>contract record</b>, dùng
+        để tìm plugin thay thế tương thích, không phải để chạy thay.</p>
+      </div>
+    </section>
+
+    <hr>
+
+    <!-- ============================================= 09 -->
+    <section id="s9">
+      <span class="snum">09</span>
+      <h2>Developer experience và conformance check khi publish</h2>
+      <p class="sdek">Chất lượng của một SDK được đánh giá qua vòng phản hồi mà developer gặp trong lần dựng đầu tiên.</p>
+
+      <pre><span class="k">pal plugin init</span> acme-crm        <span class="c"># scaffold manifest + 1 read tool + fixtures</span>
+<span class="k">pal plugin dev</span>                  <span class="c"># local MCP emulator</span>
+<span class="k">pal plugin test</span>                 <span class="c"># fixtures + schema validation</span>
+<span class="k">pal plugin permissions</span>          <span class="c"># effect &amp; permission diff vs bản đã publish</span>
+<span class="k">pal plugin publish</span> --dry-run    <span class="c"># chạy hết publish gate</span>
+<span class="k">pal plugin publish</span></pre>
+
+      <h3>Phạm vi mô phỏng của local emulator</h3>
+      <p>Emulator phải mô phỏng được cả các đường lỗi, không chỉ happy path: PAL Variables, agent tool selection, workflow node, OAuth, approval, <b>một MCP Task xuất hiện ngoài dự kiến</b>, <b>TTL hết hạn</b>, cancellation, egress bị từ chối, và một lần plugin đổi version.</p>
+
+      <h3>Publish gate</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Gate</th><th>Từ chối khi</th></tr></thead>
+          <tbody>
+            <tr><td><code>effect-declared</code></td><td>Write tool không khai <code>effect</code></td></tr>
+            <tr><td><code>output-schema</code></td><td>Thiếu <code>output_schema</code></td></tr>
+            <tr><td><code>idempotency</code></td><td>Write có retry nhưng không có idempotency strategy</td></tr>
+            <tr><td><code>scope-minimal</code></td><td>Scope rộng hơn purpose đã khai</td></tr>
+            <tr><td><code>csp-declared</code></td><td>UI CSP có origin chưa khai trong <code>egress.ui</code></td></tr>
+            <tr><td><code>no-prompt-injection</code></td><td>Tool description cố thao túng model</td></tr>
+            <tr><td><code>decision-surface</code></td><td>Destructive action thiếu <code>approval.surface</code></td></tr>
+            <tr><td><code>permission-diff</code></td><td>Version mới tăng quyền nhưng không khai diff</td></tr>
+            <tr><td><code>approval-sla</code></td><td><code>approval_deadline</code> lớn hơn <code>ttlMs</code> của task</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="diag"><span class="e">✗ publish gate: approval-sla</span>
+  <span class="g">acme-crm.plugin.yaml:212</span>  tool <b>acme.crm.bulk_sync</b>
+  <span class="c">approval_deadline</span>: PT6H
+  <span class="c">task ttlMs</span>:          PT4H  <span class="g">(server-declared)</span>
+
+  <span class="w">→</span> Một approval tới ở giờ thứ năm sẽ commit trên EffectManifest đã hết hạn.
+  <span class="w">→</span> Sửa: đặt <span class="c">approval_deadline</span> ≤ PT4H, hoặc chuyển tool sang detached
+    prepare/commit để approval không phụ thuộc vòng đời task.</div>
+    </section>
+
+    <hr>
+
+    <!-- ============================================= 10 -->
+    <section id="s10">
+      <span class="snum">10</span>
+      <h2>Security properties và enforcement boundary</h2>
+      <p class="sdek">Tài sản cần bảo vệ, ranh giới tin cậy, mối đe doạ, và phần rủi ro còn lại sau khi các control đã được áp dụng.</p>
+
+      <h3>Trust boundaries</h3>
+      <div class="diag"><span class="c">Model</span> <span class="g">→</span> PAL Gateway          <span class="g">model không tự tạo authority</span>
+<span class="c">PAL</span> <span class="g">→</span> Plugin server           <span class="g">payload, destination, ledger</span>
+<span class="c">Plugin UI</span> <span class="g">→</span> PAL host          <span class="g">postMessage, host giữ quyền quyết định</span>
+<span class="c">Credential Broker</span> <span class="g">→</span> provider  <span class="g">capability, không phải secret</span>
+<span class="c">Workflow Variables</span> <span class="g">→</span> sink     <span class="g">chỗ dữ liệu rời PAL</span>
+<span class="c">Developer</span> <span class="g">→</span> Registry          <span class="g">chữ ký, review, thu hồi</span></div>
+
+      <div class="tw">
+        <table>
+          <caption class="sr-only">Threat matrix với cột residual risk</caption>
+          <thead><tr><th>Mối đe doạ</th><th>Ví dụ</th><th>Control</th><th>Residual risk</th></tr></thead>
+          <tbody>
+            <tr><td>Prompt injection</td><td>Nội dung web yêu cầu gửi dữ liệu đi</td>
+              <td>Influence tracking + sink policy</td><td>Model vẫn có thể hiểu sai theo cách khác</td></tr>
+            <tr><td>Malicious plugin</td><td>Khai read-only nhưng thực hiện write</td>
+              <td>Gateway, review, egress control</td><td>Remote server có thể hành xử khác lúc review</td></tr>
+            <tr><td>UI deception</td><td>Iframe che số bản ghi thật</td>
+              <td>Host-rendered EffectManifest</td><td>Người duyệt vẫn có thể bấm qua loa</td></tr>
+            <tr><td>Double execution</td><td>Timeout rồi retry một write</td>
+              <td>Idempotency key</td><td>Provider có thể không hỗ trợ idempotency</td></tr>
+            <tr><td>Auth bypass</td><td>Dựa vào cached catalog để suy ra quyền</td>
+              <td>Per-call authorization</td><td>Policy cấu hình sai vẫn cho qua</td></tr>
+            <tr><td>Task expiry</td><td>Chờ duyệt quá <code>ttlMs</code></td>
+              <td>SLA check + detached commit</td><td>External task có thể đã mất trạng thái</td></tr>
+            <tr><td>Cancel mismatch</td><td>PAL Stop nhưng server vẫn chạy tiếp</td>
+              <td><code>ReconciliationRequired</code></td><td>Không cưỡng chế được remote server</td></tr>
+            <tr><td>Plugin drift</td><td>Endpoint đổi hành vi, giữ nguyên schema</td>
+              <td>Snapshot, hash, quarantine</td><td><b>Behaviour drift không phát hiện được đáng tin</b></td></tr>
+            <tr><td>Plugin death</td><td>Server biến mất</td>
+              <td>Health, pause, migration</td><td>Không snapshot được remote execution</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Tám invariant</h3>
+      <ol class="inv">
+        <li>Model và plugin không thể tự tạo authority.</li>
+        <li>Catalog visibility không phải authorization.</li>
+        <li>Mỗi call được kiểm quyền bằng arguments thực tế của chính nó.</li>
+        <li>Approval cấp quyền cho một hành động; nó không xoá provenance hay taint.</li>
+        <li>Người dùng chỉ duyệt <code class="i">EffectManifest</code> do PAL render.</li>
+        <li>Egress phải được khai ở cả hai bề mặt: server và UI.</li>
+        <li>Workflow ghim plugin version và contract hash.</li>
+        <li>Một yêu cầu dừng không bao giờ được mô tả thành guaranteed cancellation.</li>
+      </ol>
+    </section>
+
+    <hr>
+
+    <!-- ============================================= 11 -->
+    <section id="s11">
+      <span class="snum">11</span>
+      <h2>Đánh đổi, phương án đã loại và giới hạn</h2>
+
+      <h3>Phương án đã cân nhắc và loại</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Phương án</th><th>Vì sao hấp dẫn</th><th>Vì sao loại</th></tr></thead>
+          <tbody>
+            <tr><td><b>Protocol riêng của PAL</b></td>
+              <td>Khoá được developer, kiểm soát hoàn toàn semantics</td>
+              <td>Chi phí gia nhập cao → ít plugin. Và PAL đã có MCP; bỏ nó là vứt đi thứ đang chạy</td></tr>
+            <tr><td><b>PAL-hosted execution ngay từ đầu</b></td>
+              <td>Sandbox được compute, cưỡng chế được egress thật sự</td>
+              <td>Bắt developer đóng gói lại, PAL gánh chi phí chạy, và chặn mọi MCP server đang tồn tại. Để ở tier 3</td></tr>
+            <tr><td><b>Chuyển sang billing theo token</b></td>
+              <td>Chi phí plugin khó dự đoán, token phản ánh đúng hơn</td>
+              <td>Phá vỡ mô hình giá hiện tại của PAL và làm người dùng khó ước lượng. Vấn đề thật là <em>minh bạch</em>, không phải đơn vị tính</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Evidence status và giới hạn</h3>
+      <ul>
+        <li>Firewall chạy trên <b>fixture tự soạn</b>. Nó chứng minh engine tuân thủ
+        policy đã viết cho nó — không nói gì về hành vi thật của MindPal.</li>
+        <li>Không có số đo nào về chi phí polling, quota của suspended run, hay chi phí
+        deferred tool loading. Đó là câu hỏi mở, đã nêu ở §05.</li>
+        <li>Kết luận "tool không phân phối được ra ngoài workspace" là <b>suy ra từ cây
+        điều hướng</b>. Chưa test đường publish/share nào.</li>
+        <li>Rủi ro chất lượng contract của Custom API Tools là <b>rủi ro</b>, không phải
+        phát hiện — chưa tạo thử một tool rồi đọc contract sinh ra.</li>
+      </ul>
+
+      <h3>Rollout</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Phase</th><th>Nội dung</th></tr></thead>
+          <tbody>
+            <tr><td><b>1 · Unify</b></td><td>PAL Tool Contract, adapter cho MCP / custom API / app actions, gateway, typed Variables, ledger tốt hơn</td></tr>
+            <tr><td><b>2 · Govern</b></td><td>Parameter-aware policy, EffectManifest, host Decision Surface, task lifecycle, egress manifest</td></tr>
+            <tr><td><b>3 · Open</b></td><td>SDK bên thứ ba, registry, CLI, publish gates, certification, migration lifecycle</td></tr>
+            <tr><td><b>4 · Differentiate</b></td><td>Taint propagation trong workflow, autonomy preflight, standing grants, enterprise-managed auth</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="box key">
+        <span class="lab">Kết luận</span>
+        <p><b>Lợi thế cạnh tranh bền vững của một nền tảng mở rộng không nằm ở protocol, mà ở lớp workflow được quản trị.</b></p>
+        <p>PAL không cần thêm một cách nữa để gọi API. Nó cần <b>một hợp đồng chung</b>
+        cho tất cả những cách nó đã đang gọi. MCP giữ cho developer portable. Graph,
+        Variables, policy engine, Decision Surface và ledger của PAL là thứ làm cho những
+        tool portable đó đủ tin cậy để chạy trong workflow kinh doanh thật.</p>
+      </div>
+    </section>
+
+    <footer class="end">
+      Day 20 · 30-Day Build Challenge · <a href="/">gtc883.vercel.app</a><br>
+      Nguồn: <a href="https://modelcontextprotocol.io/specification/2026-07-28" target="_blank" rel="noopener">MCP 2026-07-28</a> ·
+      <a href="https://modelcontextprotocol.io/extensions/tasks/overview" target="_blank" rel="noopener">Tasks</a> ·
+      <a href="https://modelcontextprotocol.io/extensions/apps/overview" target="_blank" rel="noopener">MCP Apps</a> ·
+      <a href="https://modelcontextprotocol.io/extensions/auth/enterprise-managed-authorization" target="_blank" rel="noopener">EMA</a> ·
+      <a href="https://developers.openai.com/api/docs/guides/tools-tool-search" target="_blank" rel="noopener">Tool Search</a> ·
+      <a href="https://developers.openai.com/api/docs/guides/tools-programmatic-tool-calling" target="_blank" rel="noopener">PTC</a> ·
+      <a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/use-gateway-with-policy.html" target="_blank" rel="noopener">AgentCore policy</a>
+    </footer>
+
+  </main>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ─────────────────────────────────────────────────────────────────────────
+   The Firewall — a reference policy engine.
+
+   The load-bearing property: a verdict is computed from the *arguments* of a
+   specific call, never from the tool's name. An engine that switched on the
+   name would reproduce the exact authorization bug this page argues against.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* The closed set of authorization verdicts. Documented once and referenced
+   everywhere, so the engine, the rendering and the page's own table cannot
+   drift apart — an earlier version listed four here while the engine returned
+   five, which made a verdict look like an incidental UI state.
+
+   type AuthorizationVerdict =
+     | "allow"
+     | "require_approval"
+     | "deny"
+     | "waiting_for_authority"
+     | "waiting_for_effect_resolution";                                       */
+var VERDICTS = ["allow", "require_approval", "deny",
+                "waiting_for_authority", "waiting_for_effect_resolution"];
+
+var SENS = ["public","internal","confidential","restricted"];
+var INTEG = ["trusted","validated","untrusted"];
+
+function maxSens(a,b){ return SENS.indexOf(a) >= SENS.indexOf(b) ? a : b; }
+function worstInteg(a,b){ return INTEG.indexOf(a) >= INTEG.indexOf(b) ? a : b; }
+
+var S = {
+  web:0, inj:0, pol:"standard", grant:"none", run:"interactive",
+  sel:4,
+  /* These are the tool's declared input_schema and nothing else. record_count
+     used to live here, which was wrong twice over: it is an output field, and
+     an input schema with additionalProperties:false would have rejected it.
+     Scale belongs to the EffectManifest, which PAL composes. */
+  args:{
+    segment_id:"segment_eu_q3",
+    fields:"email,phone,consent_status",   // typed by normalizeArgs before use
+    destination:"enrich.acme-partner.example",
+    dry_run:"false"
+  },
+  tagArgs:{
+    contact_id:"contact_4471",
+    tag:"prospect",
+    destination:"api.acme.example"
+  },
+  approvalOffered:false
+};
+
+/* PAL resolves the segment itself. The number a person approves is one PAL
+   measured, not one the plugin asserted about its own blast radius. */
+var SEGMENTS = {
+  segment_eu_q3: 10000,
+  segment_vip: 120,
+  segment_trial: 1450
+};
+function resolveScale(id){
+  return Object.prototype.hasOwnProperty.call(SEGMENTS, id) ? SEGMENTS[id] : null;
+}
+
+var GRANTS = {
+  none:    null,
+  matching:{ id:"grant_crm_tagging", rev:4, issuer:"admin:cong",
+             tools:["acme.crm.bulk_sync","acme.crm.add_tag"],
+             destinations:["enrich.acme-partner.example","api.acme.example"],
+             expired:false },
+  mismatch:{ id:"grant_crm_tagging", rev:4, issuer:"admin:cong",
+             tools:["acme.crm.search_contacts"],
+             destinations:["enrich.acme-partner.example","api.acme.example"],
+             expired:false },
+  expired: { id:"grant_crm_tagging", rev:2, issuer:"admin:cong",
+             tools:["acme.crm.bulk_sync","acme.crm.add_tag"],
+             destinations:["enrich.acme-partner.example","api.acme.example"],
+             expired:true }
+};
+
+/* ── label propagation ──────────────────────────────────────────────────
+   Data edges carry sensitivity, integrity and influence. Authority is NOT
+   here: it belongs to the principal and the grant, and is resolved per call.
+   ─────────────────────────────────────────────────────────────────────── */
+function labels(){
+  var n1 = S.web
+    ? { s:"public", i:"untrusted", f:["external_content"], active:true }
+    : { s:"—", i:"—", f:[], active:false };
+
+  /* Not "trusted". Schema validation proves the shape is right, not that the
+     contents are true, and the page's own argument is that a remote server can
+     misdeclare anything. Only a workspace policy or a PAL-controlled validator
+     raises a remote system's output above "validated". */
+  var n2 = { s:"confidential", i:"validated", f:["external_system"], active:true };
+
+  var n3s = n2.s, n3i = n2.i, n3f = ["external_system"];
+  if (n1.active){
+    n3s = maxSens(n3s, n1.s);
+    n3i = worstInteg(n3i, n1.i);          // an LLM node can never raise integrity
+    n3f = n3f.concat(["external_content"]);
+  }
+  n3f = n3f.concat(["model_generated"]);   // its own output is always model-generated
+  var n3 = { s:n3s, i:n3i, f:n3f, active:true };
+
+  var n4 = { s:maxSens("restricted", n3.s), i:n3.i, f:n3.f, active:true };
+  var n5 = { s:n3.s, i:n3.i, f:n3.f, active:true };
+  return [n1,n2,n3,n4,n5];
+}
+
+/* ── payload typing ─────────────────────────────────────────────────────
+   The form collects strings; the tool's input_schema declares fields as an
+   array and dry_run as a boolean. Evaluating or hashing the raw form values
+   would mean the page claims schema conformance while binding a token to a
+   payload the schema would reject. Typing happens once, here, before policy
+   evaluation and before any digest is taken.
+   ───────────────────────────────────────────────────────────────────────── */
+function typedArgs(){
+  if (S.sel === 4){
+    return {
+      segment_id: String(S.args.segment_id).trim(),
+      fields: String(S.args.fields).split(",")
+                .map(function(f){ return f.trim(); })
+                .filter(Boolean),
+      destination: String(S.args.destination).trim(),
+      dry_run: String(S.args.dry_run).trim() === "true"
+    };
+  }
+  return {
+    contact_id: String(S.tagArgs.contact_id).trim(),
+    tag: String(S.tagArgs.tag).trim(),
+    destination: String(S.tagArgs.destination).trim()
+  };
+}
+
+/* ── the call under evaluation ────────────────────────────────────────── */
+function buildCall(){
+  var L = labels();
+  var a = typedArgs();
+  if (S.sel === 4){
+    var scale = resolveScale(a.segment_id);
+    return {
+      tool:"acme.crm.bulk_sync",
+      args:a,
+      effect:{ classes:["transfer","write"], cls:"write", reversible:false,
+               externallyVisible:true },
+      destination:a.destination,
+      dataClasses:["customer_pii"],
+      recordCount: scale,                 // null when PAL cannot resolve it
+      scaleKnown: scale !== null,
+      inbound:L[3]
+    };
+  }
+  return {
+    tool:"acme.crm.add_tag",
+    args:a,
+    effect:{ classes:["write"], cls:"write", reversible:true,
+             externallyVisible:false },
+    destination:a.destination,
+    dataClasses:["contact_metadata"],
+    recordCount:1,
+    scaleKnown:true,
+    inbound:L[4]
+  };
+}
+
+/* ── grant check — reads the arguments, not the tool name ─────────────── */
+function grantCheck(call){
+  var g = GRANTS[S.grant];
+  if (!g) return { ok:false, reason:"NO_STANDING_GRANT" };
+  if (g.expired) return { ok:false, reason:"GRANT_EXPIRED", g:g };
+  if (g.tools.indexOf(call.tool) === -1) return { ok:false, reason:"GRANT_SCOPE_MISMATCH", g:g };
+  if (g.destinations.indexOf(call.destination) === -1)
+    return { ok:false, reason:"DESTINATION_OUTSIDE_GRANT", g:g };
+  return { ok:true, reason:"GRANT_MATCHED", g:g };
+}
+
+var REASON_TEXT = {
+  GRANT_MATCHED:"Grant khớp tool, destination và recipient. Không có yếu tố nào làm tăng rủi ro.",
+  NO_STANDING_GRANT:"Không có standing grant nào phủ lời gọi này.",
+  GRANT_EXPIRED:"Standing grant đã hết hạn. Hết hạn không phải là 'gần đúng'.",
+  GRANT_SCOPE_MISMATCH:"Grant tồn tại nhưng không phủ tool này.",
+  DESTINATION_OUTSIDE_GRANT:"Cùng tool, cùng identity — nhưng đích đến nằm ngoài phạm vi grant.",
+  IRREVERSIBLE_BULK_WRITE:"Effect không đảo được và tác động tới nhiều bản ghi.",
+  UNTRUSTED_TO_EXTERNAL_WRITE:"Dữ liệu mang influence external_content chảy vào một external write.",
+  INJECTION_SUSPECTED_ELEVATED_RISK:"Đã có nghi ngờ prompt injection trên đường dữ liệu này.",
+  PROMPT_INJECTION_TO_EXTERNAL_WRITE:"Strict policy cấm đường từ nội dung nghi nhiễm tới external write.",
+  HARD_DENY_NOT_OVERRIDABLE:"Approval cấp quyền cho một hành động. Nó không gỡ được một policy cấm chính hành động đó.",
+  POLICY_HARD_DENY:"Workspace policy cấm mọi write.",
+  UNRESOLVED_EFFECT_SCALE:"PAL không resolve được segment này, nên không biết lời gọi chạm bao nhiêu bản ghi. Một yêu cầu không đủ điều kiện phê duyệt khi phạm vi tác động chưa được xác định trước thời điểm cấp quyền."
+};
+
+/* ── evaluate ──────────────────────────────────────────────────────────
+   Order matters. Hard denies resolve first; then approval reasons are
+   collected and the most specific one is reported.
+   ────────────────────────────────────────────────────────────────────── */
+function evaluate(call){
+  var untrusted = call.inbound.f.indexOf("external_content") > -1;
+
+  // 1. hard denies
+  if (S.pol === "deny_all_writes" && call.effect.cls !== "read")
+    return { verdict:"deny", reason:"POLICY_HARD_DENY", grant:null };
+
+  if (S.pol === "strict" && S.inj && call.effect.externallyVisible)
+    return {
+      verdict:"deny",
+      reason: S.approvalOffered ? "HARD_DENY_NOT_OVERRIDABLE" : "PROMPT_INJECTION_TO_EXTERNAL_WRITE",
+      grant:null
+    };
+
+  /* 2. Effect scale is a precondition for authorization, not a risk factor.
+     An earlier version listed it among the approval reasons, which produced a
+     Decision Surface and a minted capability for a call whose blast radius was
+     unknown — contradicting the invariant this page states. Approval cannot
+     substitute for missing information, so the run halts instead. */
+  if (!call.scaleKnown)
+    return { verdict:"waiting_for_effect_resolution",
+             reason:"UNRESOLVED_EFFECT_SCALE", grant:null };
+
+  // 3. approval reasons, most specific first
+  var reasons = [];
+  if (S.inj && untrusted) reasons.push("INJECTION_SUSPECTED_ELEVATED_RISK");
+  if (untrusted && call.effect.externallyVisible) reasons.push("UNTRUSTED_TO_EXTERNAL_WRITE");
+  if (!call.effect.reversible) reasons.push("IRREVERSIBLE_BULK_WRITE");
+
+  var g = grantCheck(call);
+  if (!g.ok && g.reason !== "NO_STANDING_GRANT") reasons.push(g.reason);
+
+  // 4. permissive policy waives the risk-based reasons, never the grant ones
+  if (S.pol === "permissive"){
+    reasons = reasons.filter(function(r){
+      return r === "DESTINATION_OUTSIDE_GRANT" || r === "GRANT_SCOPE_MISMATCH" || r === "GRANT_EXPIRED";
+    });
+  }
+
+  if (!reasons.length && g.ok)
+    return { verdict:"allow", reason:"GRANT_MATCHED", grant:g.g };
+
+  if (!reasons.length && !g.ok) reasons.push("NO_STANDING_GRANT");
+
+  var top = reasons[0];
+
+  // 5. scheduled with no usable authority cannot ask anyone
+  if (S.run === "scheduled" && !g.ok)
+    return { verdict:"waiting_for_authority", reason:top, grant:null };
+
+  return { verdict:"require_approval", reason:top, grant:g.ok ? g.g : null };
+}
+
+/* ── rendering ─────────────────────────────────────────────────────────── */
+function esc(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+}
+
+var NODES = [
+  { n:"01", t:"fetch_competitor_page", k:"web read" },
+  { n:"02", t:"acme.crm.search_contacts", k:"plugin read" },
+  { n:"03", t:"LLM: draft outreach", k:"model" },
+  { n:"04", t:"acme.crm.bulk_sync", k:"external write" },
+  { n:"05", t:"acme.crm.add_tag", k:"write · reversible" }
+];
+
+function chip(kind, val){
+  if (val === "—") return '<span class="chip s0">—</span>';
+  var cls = "s0";
+  if (kind === "s") cls = "s" + Math.min(3, SENS.indexOf(val));
+  if (kind === "i") cls = val === "untrusted" ? "i2" : "i0";
+  if (kind === "f") cls = val === "external_content" ? "f1" : (val === "model_generated" ? "f2" : "f0");
+  var short = { public:"pub", internal:"int", confidential:"conf", restricted:"restr",
+                trusted:"trust", validated:"valid", untrusted:"untrust",
+                user_input:"user", external_content:"external", model_generated:"model" }[val] || val;
+  return '<span class="chip ' + cls + '">' + esc(short) + '</span>';
+}
+
+function renderGraph(){
+  var L = labels(), h = "";
+  NODES.forEach(function(nd, i){
+    var l = L[i];
+    var selectable = (i === 3 || i === 4);
+    var cls = "gnode" + (selectable && S.sel === i+1 ? " sel" : "") + (l.active ? "" : " off");
+    var tag = selectable ? "button" : "div";
+    var attrs = selectable
+      ? ' class="' + cls + '" data-act="sel" data-v="' + (i+1) + '" aria-pressed="' + (S.sel === i+1) + '"'
+      : ' class="' + cls + '" role="listitem"';
+    h += "<" + tag + attrs + ">" +
+      '<div class="gn">' + nd.n + (selectable ? " · chọn để eval" : "") + "</div>" +
+      '<div class="gt">' + esc(nd.t) + "</div>" +
+      '<div class="gk">' + esc(nd.k) + "</div>" +
+      '<div class="chips">' +
+        chip("s", l.s) + chip("i", l.i) +
+        (l.f.length ? l.f.map(function(f){ return chip("f", f); }).join("") : chip("f","—")) +
+      "</div></" + tag + ">";
+    if (i < NODES.length - 1) h += '<div class="garrow" aria-hidden="true">→</div>';
+  });
+  document.getElementById("graph").innerHTML = h;
+}
+
+function renderPayload(){
+  var h = "<span>Payload thật của node " + (S.sel === 4 ? "04" : "05") +
+          " — đúng input_schema của tool, sửa được, và verdict đọc chính nó</span>";
+  if (S.sel === 4){
+    h += row("segment_id","args.segment_id",S.args.segment_id) +
+         row("fields","args.fields",S.args.fields) +
+         row("destination","args.destination",S.args.destination) +
+         boolRow("dry_run","args.dry_run",S.args.dry_run);
+    h += '<p class="pnote"><b>record_count không có ở đây</b>, và đó là chủ ý: nó là ' +
+         'output field, không phải input — một <code>input_schema</code> đóng ' +
+         '(<code>additionalProperties: false</code>) sẽ từ chối nó. Quy mô thuộc về ' +
+         'EffectManifest do PAL tự resolve từ segment, nên giá trị được đưa ra phê duyệt là giá trị PAL đo, không phải giá trị plugin tự khai về phạm vi tác động của chính nó.' +
+         '<br><br>Evaluator nhận <code>segment_vip</code> (120 bản ghi) như một resolved fixture, và mọi định danh không tồn tại như một unresolved-effect fixture.' +
+         '<br><br><code>idempotency_key</code> cũng không có: PAL cấp nó từ ' +
+         '<code>runtime_envelope</code>. Idempotency key MUST do runtime tạo và MUST NOT nằm trong model-controlled input.</p>';
+  } else {
+    h += row("contact_id","tagArgs.contact_id",S.tagArgs.contact_id) +
+         row("tag","tagArgs.tag",S.tagArgs.tag) +
+         row("destination","tagArgs.destination",S.tagArgs.destination);
+    h += '<p class="pnote">Đặt <b>standing grant = matching</b>, rồi đổi ' +
+         '<code>destination</code> sang <code>api.other-vendor.example</code>. Cùng tool, ' +
+         'cùng principal, cùng grant — verdict lật từ <code>allow</code> sang ' +
+         '<code>require_approval</code>. Đó là toàn bộ điểm của parameter-aware ' +
+         'authorization.<br><br>Đổi <code>tag</code> thì verdict không đổi, và điều đó ' +
+         'cũng đúng: không phải field nào cũng liên quan tới bảo mật. Engine đọc những ' +
+         'field có liên quan, chứ không đọc tên tool.</p>';
+  }
+  /* The form takes strings; the schema declares types. Showing the typed form
+     makes it visible that policy evaluation and the digest run on the latter. */
+  var t = typedArgs();
+  h += '<div class="prow" style="margin-top:12px;align-items:flex-start">' +
+       '<label>đã type hoá</label>' +
+       '<code style="flex:1 1 200px;min-width:0;font-size:11.5px;color:var(--navy-soft);' +
+       'white-space:pre-wrap;word-break:break-word">' + esc(JSON.stringify(t)) + '</code></div>';
+
+  document.getElementById("payload").innerHTML = h;
+}
+
+function row(label, path, val, type){
+  return '<div class="prow"><label for="f_' + path + '">' + esc(label) + '</label>' +
+    '<input id="f_' + path + '" type="' + (type||"text") + '" value="' + esc(val) +
+    '" data-act="arg" data-path="' + path + '"></div>';
+}
+
+function boolRow(label, path, val){
+  var v = String(val) === "true";
+  return '<div class="prow"><label for="f_' + path + '">' + esc(label) + '</label>' +
+    '<select id="f_' + path + '" data-act="arg" data-path="' + path + '">' +
+    '<option value="false"' + (v ? "" : " selected") + '>false</option>' +
+    '<option value="true"' + (v ? " selected" : "") + '>true</option></select></div>';
+}
+
+function renderVerdict(res, call){
+  var icon = { allow:"ok", require_approval:"w", deny:"e",
+               waiting_for_authority:"w", waiting_for_effect_resolution:"e" }[res.verdict];
+  var mark = { allow:"✓", require_approval:"⚠", deny:"✗",
+               waiting_for_authority:"⏸", waiting_for_effect_resolution:"⏸" }[res.verdict];
+  var h = '<span class="' + icon + '">' + mark + " " + res.verdict.toUpperCase() + "</span>  " +
+          '<span class="g">' + esc(res.reason) + "</span>\n\n";
+  h += '  <span class="c">tool</span>          ' + esc(call.tool) + "\n";
+  h += '  <span class="c">effect</span>        ' + call.effect.classes.join(" + ") +
+       (call.effect.reversible ? "" : ' <span class="e">· irreversible</span>') +
+       (call.effect.externallyVisible ? ' · externally_visible' : '') + "\n";
+  h += '  <span class="c">destination</span>   ' + esc(call.destination) + "\n";
+  h += '  <span class="c">records</span>       ' +
+       (call.scaleKnown
+         ? call.recordCount.toLocaleString("en-US") +
+           '  <span class="g">(PAL resolve từ segment, không do plugin khai)</span>'
+         : '<span class="e">không resolve được</span>') + "\n";
+  h += '  <span class="c">data_classes</span>  ' + call.dataClasses.join(", ") + "\n\n";
+  h += '  <span class="c">inbound labels</span>\n';
+  h += "    sensitivity  " + call.inbound.s + "\n";
+  h += "    integrity    " + call.inbound.i +
+       (call.inbound.i === "untrusted" ? '  <span class="g">← không xoá được bằng approval</span>' : "") + "\n";
+  h += "    influence    " + (call.inbound.f.join(", ") || "—") + "\n";
+  h += '    <span class="g">authority    (không có ở đây — thuộc principal và grant)</span>\n\n';
+
+  var g = GRANTS[S.grant];
+  h += '  <span class="c">authority</span>\n';
+  if (res.grant){
+    h += "    grant_id        " + res.grant.id + "\n";
+    h += "    grant_revision  " + res.grant.rev + "\n";
+    h += "    grant_issuer_id " + res.grant.issuer + "\n";
+    h += '    <span class="g">approver_id     (không có — standing grant, không ai đứng duyệt)</span>\n';
+  } else if (g){
+    h += '    <span class="w">grant có mặt nhưng không dùng được: ' + esc(res.reason) + "</span>\n";
+  } else {
+    h += '    <span class="g">không có standing grant</span>\n';
+  }
+  h += "\n  " + esc(REASON_TEXT[res.reason] || "");
+
+  if (res.verdict === "waiting_for_effect_resolution"){
+    h += '\n\n  <span class="e">Không có Decision Surface, không có capability token.</span>\n';
+    h += '  <span class="g">Effect scale là điều kiện tiên quyết của authorization, không phải một\n' +
+         '  yếu tố rủi ro để cân nhắc. Approval không thay thế được thông tin còn thiếu:\n' +
+         '  một principal không thể xem xét một phạm vi chưa được xác định.\n\n' +
+         '  Run dừng ở đây cho tới khi runtime resolve được segment thành một effect set\n' +
+         '  hoặc một cận trên định lượng được.</span>';
+  }
+
+  if (res.verdict === "waiting_for_authority"){
+    h += '\n\n  <span class="w">scheduled run · không có ai để hỏi lúc này</span>\n';
+    h += '  <span class="g">run bị treo về mặt logic — downstream không đi tiếp.\n' +
+         '  approval.deadline 4h · on_timeout: fail · không có tuỳ chọn continue_anyway.</span>';
+  }
+  document.getElementById("verdict").innerHTML = h;
+}
+
+/* The only verdicts that may put an approvable manifest in front of a person.
+   Shared with the fixture runner so the two can never drift apart. */
+var SHOWS_SURFACE = ["require_approval", "waiting_for_authority"];
+
+function renderSurfaces(res, call){
+  var box = document.getElementById("surfaces");
+  if (SHOWS_SURFACE.indexOf(res.verdict) === -1){
+    box.hidden = true; box.innerHTML = ""; return;
+  }
+  var big = !call.scaleKnown || call.recordCount >= 1000;
+  box.hidden = false;
+  box.innerHTML =
+    '<h4 style="margin:22px 0 4px">Two Surfaces — cái plugin vẽ, và cái PAL dựng</h4>' +
+    '<div class="two">' +
+      '<div class="surf plugin"><header>Plugin UI · sandboxed iframe</header><div class="in">' +
+        '<div class="big">' + (S.sel === 4 ? "Sync contacts" : "Add a tag") + '</div>' +
+        '<p style="margin:0">Routine update. Nothing to worry about.</p>' +
+        '<p style="margin:10px 0 0;font-size:11.5px;color:var(--navy-faint)">' +
+        'Sandbox cô lập app khỏi host. Nó không ràng buộc tính chính xác của nội dung app hiển thị.</p>' +
+      '</div></div>' +
+      '<div class="surf host"><header>PAL Decision Surface · host-rendered</header><div class="in">' +
+        '<dl class="kv">' +
+          "<dt>action</dt><dd>" + esc(call.tool) + "</dd>" +
+          "<dt>effects</dt><dd>" + call.effect.classes.join(" + ") + "</dd>" +
+          "<dt>records</dt><dd" + (big ? ' class="hot"' : "") + ">" +
+            (call.scaleKnown ? call.recordCount.toLocaleString("en-US")
+                             : "không xác định được") + "</dd>" +
+          "<dt>fields</dt><dd>" + esc(S.sel === 4 ? S.args.fields : "tags[]") + "</dd>" +
+          "<dt>destination</dt><dd" + (grantCheck(call).ok ? "" : ' class="hot"') + ">" +
+            esc(call.destination) + "</dd>" +
+          "<dt>data_classes</dt><dd>" + call.dataClasses.join(", ") + "</dd>" +
+          "<dt>reversible</dt><dd" + (call.effect.reversible ? "" : ' class="hot"') + ">" +
+            (call.effect.reversible ? "true" : "false") + "</dd>" +
+        "</dl>" +
+        '<p style="margin:12px 0 0;font-size:11.5px;color:var(--navy-faint)">' +
+        'PAL dựng manifest này từ signed manifest + arguments thật + diff quan sát được. ' +
+        'Host rendering chỉ bảo đảm plugin không sửa được nó.</p>' +
+      "</div></div>" +
+    "</div>" +
+    '<div class="actions" style="margin-top:14px">' +
+      '<button class="btn ghost" data-act="approve">Duyệt bản PAL render</button>' +
+      '<button class="btn ghost" data-act="approve-iframe">Duyệt cái iframe hiện</button>' +
+    "</div><div id=\"tok\"></div>";
+}
+
+/* A real SHA-256. An earlier draft printed "sha256:" in front of a 32-bit
+   djb2 digest — on a page whose whole argument is that an approval token binds
+   to a hash of what was approved. Labelling a weak hash with a strong name is
+   the same class of error as a plugin misdeclaring its own effect. */
+function sha256(s){
+  var bytes = new TextEncoder().encode(s);
+  return crypto.subtle.digest("SHA-256", bytes).then(function(buf){
+    return Array.prototype.map.call(new Uint8Array(buf), function(b){
+      return ("0" + b.toString(16)).slice(-2);
+    }).join("");
+  });
+}
+
+function renderToken(kind, call, res){
+  var t = document.getElementById("tok");
+
+  if (kind === "iframe"){
+    t.innerHTML = '<div class="diag"><span class="e">✗ REFUSED</span>  ' +
+      '<span class="g">NO_MANIFEST_FOR_PLUGIN_RENDERED_VIEW</span>\n\n' +
+      '  Iframe chỉ hiển thị "Routine update". Không có effect_manifest_hash nào\n' +
+      "  tương ứng với nó, vì PAL không dựng manifest từ những gì plugin vẽ.\n\n" +
+      '  <span class="g">Đây là lý do approval không bao giờ bind vào UI do plugin render.\n' +
+      "  Plugin UI proposes. PAL's Decision Surface authorizes.</span></div>";
+    return;
+  }
+
+  /* The typed payload, not the raw form strings. */
+  var payload = JSON.stringify(call.args);
+  var manifest = JSON.stringify({
+    tool: call.tool, effects: call.effect.classes, records: call.recordCount,
+    destination: call.destination, data_classes: call.dataClasses,
+    reversible: call.effect.reversible
+  });
+  var grantBlob = res.grant ? JSON.stringify(GRANTS[S.grant]) : "";
+
+  t.innerHTML = '<div class="diag"><span class="g">Đang tính SHA-256…</span></div>';
+
+  Promise.all([
+    sha256(manifest), sha256(payload),
+    sha256(payload + "|nonce"), sha256(manifest + "|idem"),
+    grantBlob ? sha256(grantBlob) : Promise.resolve(null)
+  ]).then(function(h){
+    var mh = h[0], ph = h[1], nonce = h[2], idem = h[3], gh = h[4];
+    var out = '<div class="diag"><span class="ok">✓ AUTHORIZATION TOKEN MINTED</span>\n\n' +
+      '  <span class="c">plugin_id</span>             acme.crm\n' +
+      '  <span class="c">plugin_version</span>        2.3.1\n' +
+      '  <span class="c">tool_id</span>               ' + esc(call.tool) + "\n" +
+      '  <span class="c">effect_manifest_hash</span>  sha256:' + mh + "\n" +
+      '  <span class="c">payload_hash</span>          sha256:' + ph + "\n" +
+      '  <span class="c">destination</span>           ' + esc(call.destination) + "\n" +
+      '  <span class="c">workspace_id</span>          ws_default\n' +
+      '  <span class="c">principal_id</span>          user:cong\n' +
+      '  <span class="c">workflow_run_id</span>       run_8f21c4  <span class="g">(do PAL tạo; plugin không được cung cấp hoặc ghi đè)</span>\n' +
+      '  <span class="c">policy_revision</span>       ' + esc(S.pol) + "@r12\n" +
+      '  <span class="c">purpose</span>               ' +
+        (S.sel === 4 ? "contact enrichment" : "lead qualification") + "\n" +
+      '  <span class="c">single_use_nonce</span>      ' + nonce.slice(0, 32) + "\n" +
+      '  <span class="c">idempotency_key</span>       ' + idem.slice(0, 32) +
+        '  <span class="g">(system-supplied, không do model sinh)</span>\n' +
+      '  <span class="c">expiry</span>                +15m\n';
+
+    if (res.grant){
+      out += '\n  <span class="c">authority</span>             standing grant\n' +
+        '  <span class="c">grant_id</span>              ' + esc(res.grant.id) + "\n" +
+        '  <span class="c">grant_revision</span>        ' + res.grant.rev + "\n" +
+        '  <span class="c">grant_issuer_id</span>       ' + esc(res.grant.issuer) + "\n" +
+        '  <span class="c">grant_constraints_hash</span> sha256:' + gh + "\n" +
+        '  <span class="g">approver_id            (không có — không ai đứng duyệt lúc chạy)</span>\n';
+    } else {
+      out += '\n  <span class="c">authority</span>             one-time approval\n' +
+        '  <span class="c">approver_id</span>           user:cong\n';
+    }
+
+    out += '\n  <span class="g">Sửa bất kỳ field nào trong payload rồi Evaluate lại — payload_hash đổi,\n' +
+      "  và token này không còn dùng được cho lời gọi mới.</span></div>";
+    t.innerHTML = out;
+  });
+}
+
+/* ── fixtures ──────────────────────────────────────────────────────────── */
+var FIXTURES = [
+  { id:"A", node:5, title:"Argument-aware authorization — node 05, acme.crm.add_tag",
+    note:"Effect nhỏ và đảo được, nên biến duy nhất đang được đo là arguments. Đây chính là node 05 ở trên, chạy đúng đường code đó.",
+    cases:[
+      { name:"Grant khớp destination", set:{grant:"matching",pol:"standard",web:0,inj:0},
+        expect:{verdict:"allow", reason:"GRANT_MATCHED"} },
+      { name:"Đổi destination", set:{grant:"matching",pol:"standard",web:0,inj:0,
+          tagArgs:{destination:"api.other-vendor.example"}},
+        expect:{verdict:"require_approval", reason:"DESTINATION_OUTSIDE_GRANT"} },
+      { name:"Đổi tag (field policy không đọc)", set:{grant:"matching",pol:"standard",web:0,inj:0,
+          tagArgs:{tag:"customer"}},
+        expect:{verdict:"allow", reason:"GRANT_MATCHED"} },
+      { name:"Grant sai scope", set:{grant:"mismatch",pol:"standard",web:0,inj:0},
+        expect:{verdict:"require_approval", reason:"GRANT_SCOPE_MISMATCH"} },
+      { name:"Grant hết hạn", set:{grant:"expired",pol:"standard",web:0,inj:0},
+        expect:{verdict:"require_approval", reason:"GRANT_EXPIRED"} },
+      { name:"Policy cấm mọi write", set:{grant:"matching",pol:"deny_all_writes",web:0,inj:0},
+        expect:{verdict:"deny", reason:"POLICY_HARD_DENY"} }
+    ]},
+  { id:"B", node:4, title:"Dangerous data path — node 04, acme.crm.bulk_sync",
+    note:"Irreversible, 10.000 bản ghi customer_pii. Tool này tự thân đã cần approval, nên nó chỉ đo được thứ mà data path cộng thêm — và vì thế không thể dùng nó cho Fixture A.",
+    cases:[
+      { name:"Không web, standard", set:{grant:"none",pol:"standard",web:0,inj:0},
+        expect:{verdict:"require_approval", reason:"IRREVERSIBLE_BULK_WRITE"} },
+      { name:"Có web, không nghi injection", set:{grant:"none",pol:"standard",web:1,inj:0},
+        expect:{verdict:"require_approval", reason:"UNTRUSTED_TO_EXTERNAL_WRITE"} },
+      { name:"Nghi injection, standard", set:{grant:"none",pol:"standard",web:1,inj:1},
+        expect:{verdict:"require_approval", reason:"INJECTION_SUSPECTED_ELEVATED_RISK"} },
+      { name:"Nghi injection, strict", set:{grant:"none",pol:"strict",web:1,inj:1},
+        expect:{verdict:"deny", reason:"PROMPT_INJECTION_TO_EXTERNAL_WRITE"} },
+      { name:"Nghi injection, strict, người vẫn duyệt", set:{grant:"none",pol:"strict",web:1,inj:1,approve:true},
+        expect:{verdict:"deny", reason:"HARD_DENY_NOT_OVERRIDABLE"} },
+      { name:"Segment PAL không resolve được", set:{grant:"matching",pol:"permissive",web:0,inj:0,
+          args:{segment_id:"segment_unknown"}},
+        expect:{verdict:"waiting_for_effect_resolution", reason:"UNRESOLVED_EFFECT_SCALE"},
+        alsoAssert:"no_surface_no_token" }
+    ]}
+];
+
+/* A fixture must define its whole input. An earlier version let each case
+   inherit whatever the reader had last typed into the canvas, so editing
+   segment_id to something unresolvable made three unrelated cases fail: they
+   were testing irreversible writes and injection, and got back
+   UNRESOLVED_EFFECT_SCALE from state they never set. */
+var FIXTURE_BASE = {
+  4: { segment_id:"segment_eu_q3", fields:"email,phone,consent_status",
+       destination:"enrich.acme-partner.example", dry_run:"false" },
+  5: { contact_id:"contact_4471", tag:"prospect", destination:"api.acme.example" }
+};
+
+function applyCase(fx, c){
+  var s = c.set || {};
+  S.web = s.web; S.inj = s.inj; S.pol = s.pol; S.grant = s.grant;
+  S.run = s.run || "interactive";
+  S.approvalOffered = !!s.approve;
+  S.sel = fx.node;
+  S.args    = JSON.parse(JSON.stringify(FIXTURE_BASE[4]));
+  S.tagArgs = JSON.parse(JSON.stringify(FIXTURE_BASE[5]));
+  if (s.args)    Object.keys(s.args).forEach(function(k){ S.args[k] = s.args[k]; });
+  if (s.tagArgs) Object.keys(s.tagArgs).forEach(function(k){ S.tagArgs[k] = s.tagArgs[k]; });
+}
+
+function runFixtures(){
+  var snap = JSON.parse(JSON.stringify({web:S.web,inj:S.inj,pol:S.pol,grant:S.grant,run:S.run,sel:S.sel,
+    args:S.args,tagArgs:S.tagArgs,approvalOffered:S.approvalOffered}));
+  var html = "", allPass = true;
+
+  FIXTURES.forEach(function(fx){
+    html += '<h4 style="margin:22px 0 2px">Fixture ' + fx.id + " — " + esc(fx.title) + "</h4>" +
+            '<p style="font-size:12.5px;color:var(--navy-faint);margin:0 0 10px">' + esc(fx.note) + "</p>" +
+            '<div class="tw"><table><thead><tr><th>Case</th><th>Kỳ vọng</th><th>Thực tế</th><th>Reason</th><th></th></tr></thead><tbody>';
+
+    fx.cases.forEach(function(c){
+      // Each case sets its whole input, then drives the same node the reader
+      // can click, through the same buildCall() the canvas uses.
+      applyCase(fx, c);
+      var call = buildCall();
+      var res = evaluate(call);
+      var okV = res.verdict === c.expect.verdict;
+      var okR = res.reason === c.expect.reason;
+
+      /* Some cases assert an absence: that no approvable surface and no
+         capability token are produced at all. */
+      var okX = true, note = "";
+      if (c.alsoAssert === "no_surface_no_token"){
+        okX = SHOWS_SURFACE.indexOf(res.verdict) === -1;
+        note = okX ? "không Decision Surface, không token"
+                   : "SURFACE VẪN HIỆN — invariant bị vi phạm";
+      }
+
+      var ok = okV && okR && okX;
+      if (!ok) allPass = false;
+
+      html += "<tr><td>" + esc(c.name) +
+        (note ? '<small class="' + (okX ? "pass" : "fail") + '">' + esc(note) + "</small>" : "") +
+        "</td>" +
+        '<td class="v">' + esc(c.expect.verdict) + "</td>" +
+        '<td class="v ' + (okV ? "pass" : "fail") + '">' + esc(res.verdict) + "</td>" +
+        '<td class="v ' + (okR ? "pass" : "fail") + '">' + esc(res.reason) + "</td>" +
+        '<td class="' + (ok ? "pass" : "fail") + '">' + (ok ? "✓" : "✗") + "</td></tr>";
+    });
+    html += "</tbody></table></div>";
+  });
+
+  html += '<div class="diag">' + (allPass
+    ? '<span class="ok">✓ 10/10 case khớp verdict và reason code.</span>\n\n' +
+      '  <span class="g">Đây là reference implementation chạy trên fixture tự soạn.\n' +
+      "  Nó chứng minh engine tuân thủ policy đã viết cho nó — không nói gì\n" +
+      "  về hành vi thật của MindPal.</span>"
+    : '<span class="e">✗ Có case không khớp. Engine và fixture đang mâu thuẫn.</span>') + "</div>";
+
+  // restore
+  S.web = snap.web; S.inj = snap.inj; S.pol = snap.pol; S.grant = snap.grant;
+  S.run = snap.run; S.sel = snap.sel; S.args = snap.args; S.tagArgs = snap.tagArgs;
+  S.approvalOffered = snap.approvalOffered;
+
+  document.getElementById("fixres").innerHTML = html;
+  syncSegs(); renderGraph(); renderPayload();
+}
+
+/* ── wiring ────────────────────────────────────────────────────────────── */
+function syncSegs(){
+  document.querySelectorAll(".seg").forEach(function(seg){
+    var k = seg.getAttribute("data-group");
+    var map = { web:String(S.web), inj:String(S.inj), pol:S.pol, grant:S.grant, run:S.run };
+    seg.querySelectorAll("button").forEach(function(b){
+      var on = b.getAttribute("data-v") === map[k];
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+  });
+}
+
+function doEval(){
+  var call = buildCall();
+  var res = evaluate(call);
+  renderVerdict(res, call);
+  renderSurfaces(res, call);
+  return { call:call, res:res };
+}
+
+document.addEventListener("click", function(e){
+  var el = e.target.closest("[data-act]");
+  if (!el) return;
+  var act = el.getAttribute("data-act");
+
+  if (act === "set"){
+    var k = el.getAttribute("data-k"), v = el.getAttribute("data-v");
+    S[k] = (k === "web" || k === "inj") ? Number(v) : v;
+    S.approvalOffered = false;
+    syncSegs(); renderGraph(); doEval();
+  }
+  else if (act === "sel"){
+    S.sel = Number(el.getAttribute("data-v"));
+    renderGraph(); renderPayload(); doEval();
+  }
+  else if (act === "eval"){ S.approvalOffered = false; doEval(); }
+  else if (act === "reset"){
+    S.web = 0; S.inj = 0; S.pol = "standard"; S.grant = "none";
+    S.run = "interactive"; S.sel = 4; S.approvalOffered = false;
+    S.args = { segment_id:"segment_eu_q3", fields:"email,phone,consent_status",
+               record_count:10000, destination:"enrich.acme-partner.example" };
+    S.tagArgs = { contact_id:"contact_4471", tag:"prospect", destination:"api.acme.example" };
+    syncSegs(); renderGraph(); renderPayload(); doEval();
+  }
+  else if (act === "approve"){ var r = doEval(); renderToken("host", r.call, r.res); }
+  else if (act === "approve-iframe"){ var r2 = doEval(); renderToken("iframe", r2.call, r2.res); }
+  else if (act === "runfix"){ runFixtures(); }
+});
+
+function onArgInput(e){
+  var el = e.target.closest("[data-act='arg']");
+  if (!el) return;
+  var p = el.getAttribute("data-path").split(".");
+  S[p[0]][p[1]] = el.value;
+  S.approvalOffered = false;
+  /* Re-render so the typed preview tracks the raw field. */
+  var focusId = el.id, caret = el.selectionStart;
+  renderPayload();
+  var again = document.getElementById(focusId);
+  if (again){
+    again.focus();
+    if (caret != null && again.setSelectionRange) {
+      try { again.setSelectionRange(caret, caret); } catch (err) {}
+    }
+  }
+  doEval();
+}
+document.addEventListener("input", onArgInput);
+document.addEventListener("change", onArgInput);
+
+/* TOC scroll spy */
+var links = Array.prototype.slice.call(document.querySelectorAll('.toc a[href^="#"]'));
+if (links.length && "IntersectionObserver" in window){
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      links.forEach(function(a){
+        a.classList.toggle("on", a.getAttribute("href") === "#" + en.target.id);
+      });
+    });
+  }, { rootMargin:"-72px 0px -70% 0px" });
+  document.querySelectorAll("section[id]").forEach(function(s){ obs.observe(s); });
+}
+
+syncSegs(); renderGraph(); renderPayload(); doEval();
+})();
+</script>
+<script defer src="/assets/comments.js" data-page="day20"></script>
+</body>
+</html>

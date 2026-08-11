@@ -1,0 +1,23 @@
+/* responsive.css
+   Breakpoints. Kept last so these rules always win. */
+
+/* ════ responsive ════ */
+@media(max-width:760px){
+  .xn,.xtot{grid-template-columns:1fr auto;gap:10px}
+  .xn .bar{grid-column:1/-1;order:3}
+}
+@media(max-width:880px){
+  .app{grid-template-columns:1fr}
+  .side{position:static;height:auto;flex-direction:row;align-items:center;gap:8px;
+    border-right:0;border-bottom:1px solid var(--line);overflow-x:auto;padding:10px var(--gut)}
+  .side .runshead,.side .runlist,.side .meters,.side .planrow,.side .me{display:none}
+  .brandrow{margin-bottom:0;flex:none}
+  .wssel{display:none}
+  .nav{flex-direction:row;gap:2px}
+  .nav .ct{display:none}
+}
+@media(max-width:560px){
+  .nav button span.t{display:none}
+  .nav button{padding:9px}
+  .wf .acts{flex-direction:column}
+}

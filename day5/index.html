@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Console — AI workforce</title>
+<meta name="description" content="A redesign of the MindPal workspace — same structure and palette, rebuilt so every run shows what each node cost and what it would cost on another model.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2224%22 fill=%22%235B50E8%22/><text x=%2250%22 y=%2271%22 font-size=%2254%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22sans-serif%22 font-weight=%22700%22>C</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Loaded in cascade order: tokens define the variables everything else reads,
+     responsive is last so its breakpoints always win. -->
+<link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/charts.css">
+  <link rel="stylesheet" href="css/views-home.css">
+  <link rel="stylesheet" href="css/run-detail.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <script>
+    // Runs before first paint so a dark-mode user never sees a white flash.
+    (function () {
+      var saved = localStorage.getItem('theme');
+      // Light unless the visitor has chosen otherwise. The OS setting is
+      // deliberately not consulted — this dashboard has one intended look.
+      var mode = saved || 'light';
+      document.documentElement.setAttribute('data-theme', mode);
+    })();
+  </script>
+</head>
+<body>
+<div class="app">
+
+  <!-- ════════ SIDEBAR ════════ -->
+  <aside class="side">
+    <div class="brandrow">
+      <div class="logo" aria-hidden="true">cs</div>
+      <button class="wssel" aria-haspopup="listbox">
+        <span>Công Giang Thành <small>Advanced</small></span>
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 6.5 8 3.5l3 3M5 9.5l3 3 3-3"/></svg>
+      </button>
+    </div>
+
+    <nav class="nav" aria-label="Main">
+      <button data-view="home" aria-current="page">
+        <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 6.5 8 2l5.5 4.5v7a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1z"/></svg>
+        <span class="t">Home</span></button>
+      <button data-view="dash">
+        <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 13.5v-4m3.7 4V6m3.6 7.5V3.2m3.7 10.3V8"/></svg>
+        <span class="t">Usage</span></button>
+      <button>
+        <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="4.5" width="11" height="9" rx="2"/><path d="M5.5 4.5v-2m5 2v-2M6 9h.01M10 9h.01"/></svg>
+        <span class="t">Agents</span><span class="ct">3</span></button>
+      <button>
+        <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="3.5" cy="8" r="1.7"/><circle cx="12.5" cy="3.5" r="1.7"/><circle cx="12.5" cy="12.5" r="1.7"/><path d="M5 7.2l5.7-3m-5.7 4.6 5.7 3"/></svg>
+        <span class="t">Workflows</span><span class="ct">2</span></button>
+      <button>
+        <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 5.5 8 2.5l5.5 3L8 8.5z"/><path d="M2.5 5.5v5L8 13.5l5.5-3v-5M8 8.5v5"/></svg>
+        <span class="t">Assets</span>
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" style="margin-left:auto;color:var(--faint)"><path d="M6 4l4 4-4 4"/></svg></button>
+    </nav>
+
+    <div class="runshead">
+      <span class="t">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6l4 4 4-4"/></svg>
+        Your runs</span>
+      <span class="acts">
+        <button aria-label="Search runs"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="4.2"/><path d="M10.2 10.2 13.5 13.5"/></svg></button>
+        <button aria-label="New run"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 3.5v9M3.5 8h9"/></svg></button>
+        <button aria-label="Change view"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="3" width="4" height="4" rx="1"/><rect x="2.5" y="9" width="4" height="4" rx="1"/><path d="M9 5h4.5M9 11h4.5"/></svg></button>
+      </span>
+    </div>
+
+    <div class="runlist">
+      <a href="#"><span class="nm">Lead Qual Solo Freelance St…</span><i class="sp"></i></a>
+      <a href="#"><span class="nm">Lead Qual Nordwind Logisti…</span><i class="bd"></i></a>
+      <a href="#"><span class="nm">Lead Qual Meridian Systems</span><i class="ok"></i></a>
+      <a href="#"><span class="nm">Competitor Research Notion</span><i class="ok"></i></a>
+      <a href="#"><span class="nm">EVAL-A Runner System Pro…</span><i class="ok"></i></a>
+      <a href="#"><span class="nm">EVAL-A Team Plan Refund R…</span><i class="ok"></i></a>
+      <a href="#"><span class="nm">EVAL-A Student Discount P…</span><i class="ok"></i></a>
+      <a href="#"><span class="nm">EVAL-A Injection Probe Run</span><i class="ok"></i></a>
+      <a href="#"><span class="nm">EVAL-A Team Plan Seats Qu…</span><i class="ok"></i></a>
+      <a href="#"><span class="nm">Lead Qual 50 USD 20 Mem…</span><i class="ok"></i></a>
+    </div>
+
+    <div class="meters">
+      <div class="meter">
+        <div class="r"><span class="l">Credits</span><span class="v">15,780<small> / 30,000</small></span></div>
+        <div class="tr"><div class="fi" style="width:52.6%" role="meter" aria-valuenow="15780"
+          aria-valuemin="0" aria-valuemax="30000" aria-label="Credits remaining"></div></div>
+      </div>
+      <div class="meter">
+        <div class="r"><span class="l">Storage</span><span class="v">6.4<small> / 25 GB</small></span></div>
+        <div class="tr"><div class="fi" style="width:25.6%" role="meter" aria-valuenow="6.4"
+          aria-valuemin="0" aria-valuemax="25" aria-label="Storage used" data-direction="up"></div></div>
+      </div>
+    </div>
+
+    <div class="planrow">
+      <span class="pl-name">Advanced</span>
+      <span class="pl-meta">$149/mo · renews 1 Aug</span>
+    </div>
+
+    <div class="me">
+      <span class="av">C</span><span class="n">Công Giang Thành</span>
+      <button class="moon" aria-label="Toggle dark mode">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.5 9.5A5.6 5.6 0 0 1 6.5 2.5a5.6 5.6 0 1 0 7 7z"/></svg></button>
+    </div>
+  </aside>
+
+  <!-- ════════ MAIN ════════ -->
+  <main class="main">
+
+  <!-- ═══ VIEW: HOME ═══ -->
+  <section id="view-home">
+    <div class="greet">
+      <div>
+        <h1>Công Giang Thành's AI workforce</h1>
+        <div class="when">Tuesday, 21 July · 3 agents, 3 workflows · 5 of 5 editor seats in use</div>
+      </div>
+      <div class="pulse">
+        <div><span class="n">15,780</span><span class="l">credits left</span></div>
+        <div><span class="n">3,285</span><span class="l">spent this week</span></div>
+        <div><span class="n">4,120</span><span class="l">runs</span></div>
+        <div><span class="n warnv">37</span><span class="l">failed</span></div>
+      </div>
+    </div>
+
+    <div class="hero">
+      <div class="selwrap">
+        <div class="sel">
+          <button class="caret" id="selCaret" aria-label="Choose what to run">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6l4 4 4-4"/></svg>
+          </button>
+          <button class="lbl" id="selBtn" aria-haspopup="listbox" aria-expanded="false">
+            <span id="selTxt">Select an agent or workflow to run</span><span class="dot"></span></button>
+          <div class="selmenu" id="selMenu" role="listbox" aria-label="Agents and workflows" hidden></div>
+        </div>
+      </div>
+
+      <div class="composer">
+        <textarea class="ta" placeholder="Ask Mindie anything, type @ to mention and use any assets" aria-label="Prompt"></textarea>
+        <div class="bar">
+          <button aria-label="Voice input"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="2" width="4" height="7" rx="2"/><path d="M3.5 7.5a4.5 4.5 0 0 0 9 0M8 12v2"/></svg></button>
+          <button aria-label="Attach file"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.5 5 5.8 9.7a1.7 1.7 0 0 0 2.4 2.4l4.8-4.8a3.2 3.2 0 0 0-4.5-4.5L3.6 7.7a4.7 4.7 0 0 0 6.6 6.6"/></svg></button>
+          <button aria-label="Attach knowledge source"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="8" cy="4" rx="4.8" ry="2"/><path d="M3.2 4v8c0 1.1 2.15 2 4.8 2s4.8-.9 4.8-2V4M3.2 8c0 1.1 2.15 2 4.8 2s4.8-.9 4.8-2"/></svg></button>
+          <span class="est" id="est" hidden></span>
+          <button class="send" aria-label="Send" disabled>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 14 14.5 8 2 2l2.4 6z"/></svg></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="attn">
+      <div class="ah"><h2>Needs attention</h2><span class="cnt">3</span></div>
+      <div class="ai"><span class="dot b"></span>
+        <span class="tx"><b>3 runs failed on unresolved variable references</b>
+          <span>Lead Qual · Nordwind — the workflow saved and ran without warning, and each attempt was still billed 2.00</span></span>
+        <a class="fix" href="#">Inspect →</a></div>
+      <div class="ai"><span class="dot w"></span>
+        <span class="tx"><b>One agent is left on Auto</b>
+          <span>GPT-5 mini at 5.00 a run against 2.00 on a pinned Gemini 3.0 Flash — 2.5x more for the same six answers</span></span>
+        <a class="fix" href="#">Pin a model →</a></div>
+      <div class="ai"><span class="dot i"></span>
+        <span class="tx"><b>Bulk Run is unavailable on this plan</b>
+          <span>Every one of the 45 runs this week was started by hand</span></span>
+        <a class="fix" href="#">See plans →</a></div>
+    </div>
+
+    <h2 class="sech">Most used multi-agent workflows</h2>
+    <div class="wfgrid">
+      <article class="wf">
+        <span class="ic"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="3.5" cy="8" r="1.7"/><circle cx="12.5" cy="3.5" r="1.7"/><circle cx="12.5" cy="12.5" r="1.7"/><path d="M5 7.2l5.7-3m-5.7 4.6 5.7 3"/></svg></span>
+        <span class="nm">EVAL-A-runner</span>
+        <span class="meta"><span class="runs">3,100 runs</span><span class="cost">2.00 / run</span></span>
+        <span class="acts"><button class="btn pri">Run →</button><button class="btn sec">View</button></span>
+      </article>
+      <article class="wf">
+        <span class="ic"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="3.5" cy="8" r="1.7"/><circle cx="12.5" cy="3.5" r="1.7"/><circle cx="12.5" cy="12.5" r="1.7"/><path d="M5 7.2l5.7-3m-5.7 4.6 5.7 3"/></svg></span>
+        <span class="nm">EVAL-B-lead-qual</span>
+        <span class="meta"><span class="runs">900 runs</span><span class="cost">2.00 – 5.00 / run</span></span>
+        <span class="acts"><button class="btn pri">Run →</button><button class="btn sec">View</button></span>
+      </article>
+      <article class="wf">
+        <span class="ic"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="3.5" cy="8" r="1.7"/><circle cx="12.5" cy="3.5" r="1.7"/><circle cx="12.5" cy="12.5" r="1.7"/><path d="M5 7.2l5.7-3m-5.7 4.6 5.7 3"/></svg></span>
+        <span class="nm">Competitor Research &amp; Email Delivery</span>
+        <span class="meta"><span class="runs">120 runs</span><span class="cost">26.00 / run</span></span>
+        <span class="acts"><button class="btn pri">Run →</button><button class="btn sec">View</button></span>
+      </article>
+    </div>
+    <p class="fnote">Cost per run is shown before you click Run — the number is read from this
+      workflow's own ledger history, not estimated.</p>
+
+    <div class="panel mini">
+      <div class="pt"><h2>Latest runs</h2>
+        <span class="hint">Cost and model on every row<a href="#/usage" data-goto="dash">Usage &amp; spend →</a></span></div>
+      <a class="mrow" href="#/usage" data-goto="dash">
+        <span class="st ok"><i></i></span>
+        <span class="nm">Lead Qual <small>· Meridian Systems</small></span>
+        <span class="md">Gemini 3.0 Flash</span><span class="cst">5.00</span></a>
+      <a class="mrow" href="#/runs/competitor-research" data-goto="run">
+        <span class="st ok"><i></i></span>
+        <span class="nm">Competitor Research <small>· Notion</small></span>
+        <span class="md">Mixed · 8 nodes</span><span class="cst">26.00</span></a>
+      <a class="mrow" href="#/usage" data-goto="dash">
+        <span class="st ok"><i></i></span>
+        <span class="nm">EVAL-A <small>· refund request</small></span>
+        <span class="md">GPT-5 mini</span><span class="cst">5.00</span></a>
+      <a class="mrow" href="#/usage" data-goto="dash">
+        <span class="st bd"><i></i></span>
+        <span class="nm">Lead Qual <small>· Nordwind — unresolved refs</small></span>
+        <span class="md">Gemini 3.0 Flash</span><span class="cst">2.00</span></a>
+    </div>
+
+    <div class="setup">
+      <button class="head" aria-expanded="false">
+        <span class="step">2</span>
+        <span class="tt"><b>Finish workspace setup</b><span>4 of 6 completed · connect an integration, publish a chatbot</span></span>
+        <span class="pr"><i></i></span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--faint)" stroke-width="1.6"><path d="M4 6l4 4 4-4"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- ═══ VIEW: USAGE ═══ -->
+  <section id="view-dash" hidden>
+    <div class="ph">
+      <div><h2 class="pt-t">Usage &amp; spend</h2><div class="sub" id="subline">Last 30 days · Jun 22 – Jul 21, 2026</div></div>
+      <div class="tools">
+        <div class="daterange">
+          <input type="date" id="from" aria-label="From date">
+          <span class="dash">–</span>
+          <input type="date" id="to" aria-label="To date">
+        </div>
+        <div class="seg" role="group" aria-label="Preset range">
+          <button data-range="7"  aria-pressed="false">7D</button>
+          <button data-range="14" aria-pressed="false">14D</button>
+          <button data-range="30" aria-pressed="true">30D</button>
+        </div>
+        <div class="seg" role="group" aria-label="Granularity">
+          <button data-grain="day"  aria-pressed="true">By day</button>
+          <button data-grain="hour" aria-pressed="false">By hour</button>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="tiles">
+      <div class="tile"><div class="k">Spent</div><div class="v" id="t-spent">14,220</div>
+        <div class="s">over <b id="t-days">30 days</b></div></div>
+      <div class="tile"><div class="k">Remaining</div><div class="v">15,780</div>
+        <div class="s">of <b>30,000</b> · renews 1 Aug</div></div>
+      <div class="tile"><div class="k">Daily average</div><div class="v" id="t-avg">474</div>
+        <div class="s">peak <b id="t-peak">1,690</b> on <span id="t-peakwhen">Jul 21</span></div></div>
+      <div class="tile"><div class="k">Runs</div><div class="v" id="t-runs">4,120</div>
+        <div class="s"><b>37</b> failed · <b>3.45</b> avg cost</div></div>
+    </div>
+
+    <div class="note"><span aria-hidden="true">◆</span>
+      <span><b>Advanced plan, 30,000 credits a month.</b> Spend is charged per LLM node call and
+      never per token — a 20-word answer and a 2,000-word answer cost the same. The only lever on
+      the bill is which model each node runs.</span></div>
+
+    <div class="zone">
+      <div class="panel">
+        <div class="pt"><h2>Total spend</h2><span class="hint">Hover a column for its total</span></div>
+        <div class="cpad">
+          <div class="plot">
+            <div class="yax" id="yax"></div>
+            <div class="grid" id="grid"></div>
+            <div class="cols" id="cols"></div>
+          </div>
+          <div class="xax" id="xax"></div>
+          <div class="forecast"><span aria-hidden="true">◷</span>
+            <span>At the last seven days' rate this month closes on <b>19,900 of 30,000</b> —
+            comfortable. The Competitor Research batch alone accounts for <b>3,120</b>; pinning its
+            three Auto stages to Gemini 3.0 Flash would return <b>1,080</b> a month.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="zone">
+      <div class="panel">
+        <div class="pt"><h2>Recent runs</h2>
+          <span class="hint">Hover a row for its cost breakdown<a href="#">All runs →</a></span></div>
+        <div class="scroll"><table>
+          <thead><tr><th style="width:134px">Status</th><th>Run</th><th style="width:170px">Model</th>
+            <th class="num" style="width:68px">Nodes</th><th class="num" style="width:84px">Cost</th>
+            <th class="num" style="width:114px">Time</th></tr></thead>
+          <tbody>
+            <tr tabindex="0"><td><span class="st ok"><i></i>Completed</span></td>
+              <td><span class="rn">Lead Qual <small>· Meridian Systems</small></span></td>
+              <td class="mono">Gemini 3.0 Flash</td><td class="num mono">3</td>
+              <td class="num mono cc">5.00<span class="bd-tip">Gate 2.00 · Router 1.00 · Agent 2.00</span></td>
+              <td class="num mono">41s <span class="dim">18:01</span></td></tr>
+            <tr tabindex="0" data-goto="run" style="cursor:pointer"><td><span class="st ok"><i></i>Completed</span></td>
+              <td><span class="rn">Competitor Research <small>· Notion</small></span></td>
+              <td class="mono">Mixed</td><td class="num mono">8</td>
+              <td class="num mono cc">26.00<span class="bd-tip">8 nodes · open the run for the full split</span></td>
+              <td class="num mono">3m 04s <span class="dim">18:00</span></td></tr>
+            <tr tabindex="0"><td><span class="st ok"><i></i>Completed</span></td>
+              <td><span class="rn">EVAL-A <small>· student discount</small></span></td>
+              <td class="mono">Gemini 3.0 Flash</td><td class="num mono">1</td>
+              <td class="num mono cc">2.00<span class="bd-tip">Agent 2.00</span></td>
+              <td class="num mono">24s <span class="dim">17:45</span></td></tr>
+            <tr tabindex="0"><td><span class="st sp"><i></i>Stopped</span></td>
+              <td><span class="rn">Lead Qual <small>· Solo Freelance — gate: below threshold</small></span></td>
+              <td class="mono">Gemini 3.0 Flash</td><td class="num mono">1</td>
+              <td class="num mono cc">2.00<span class="bd-tip">Gate 2.00 · stopped by design</span></td>
+              <td class="num mono">12s <span class="dim">17:38</span></td></tr>
+            <tr tabindex="0"><td><span class="st bd"><i></i>Failed<a class="verr" href="#">View error</a></span></td>
+              <td><span class="rn">Lead Qual <small>· Nordwind — unresolved variable refs</small></span></td>
+              <td class="mono">Gemini 3.0 Flash</td><td class="num mono">1</td>
+              <td class="num mono cc">2.00<span class="bd-tip">Gate 2.00 · failed run still billed</span></td>
+              <td class="num mono">9s <span class="dim">17:13</span></td></tr>
+            <tr tabindex="0"><td><span class="st ok"><i></i>Completed</span></td>
+              <td><span class="rn">EVAL-A <small>· refund request</small></span></td>
+              <td class="mono">GPT-5 mini</td>
+              <td class="num mono">1</td>
+              <td class="num mono cc">5.00<span class="bd-tip">Agent 5.00 · GPT-5 mini</span></td>
+              <td class="num mono">28s <span class="dim">16:50</span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="zone">
+      <div class="panel">
+        <div class="pt"><h2>Did it work?</h2>
+          <span class="hint">A failed run is still billed</span></div>
+        <div class="relhead">
+          <div><span class="k">Success rate</span><b id="rel-rate">—</b></div>
+          <div><span class="k">Cost per successful run</span><b id="rel-persuccess">—</b></div>
+          <div><span class="k">Spent on failures</span><b id="rel-wasted">—</b>
+            <span class="sub" id="rel-share">—</span></div>
+        </div>
+        <div class="scroll"><table>
+          <thead><tr>
+            <th>Workflow</th>
+            <th class="num" style="width:88px">Runs</th>
+            <th class="num" style="width:104px">Success</th>
+            <th class="num" style="width:88px">Per run</th>
+            <th class="num" style="width:110px">Per success</th>
+            <th class="num" style="width:92px">Wasted</th>
+          </tr></thead>
+          <tbody id="rel-body"></tbody>
+        </table></div>
+        <p class="fnote relnote" id="rel-insight"></p>
+      </div>
+    </div>
+
+
+    <div class="zone">
+      <div class="panel">
+        <div class="pt">
+          <h2>One model over time</h2>
+          <span class="hint">
+            <span class="qq">When was it used?</span>
+            <select id="model-pick" class="pick" aria-label="Choose a model"></select>
+          </span>
+        </div>
+        <div class="cpad">
+          <div class="mstats">
+            <span><b id="m-total">—</b> credits</span>
+            <span id="m-share">—</span>
+            <span id="m-calls">—</span>
+          </div>
+          <div class="plot">
+            <div class="yax" id="m-yax"></div>
+            <div class="grid" id="m-grid"></div>
+            <div class="cols" id="m-cols"></div>
+          </div>
+          <div class="xax" id="m-xax"></div>
+        </div>
+      </div>
+      <p class="fnote">Same axis and window as the total chart above, so the two read together.
+        A model keeps its colour wherever it appears.</p>
+    </div>
+
+      <div class="zone">
+        <div class="panel">
+        <div class="pt"><h2>Top workflows by spend</h2><span class="hint">4 of 4</span></div>
+        <div class="cpad"><div class="hbars">
+          <div class="hb"><div class="top"><span class="nm">EVAL-A-runner</span><span class="vl">6,200</span></div>
+            <div class="tr"><div class="fi" style="width:100.0%"></div></div>
+            <div class="sub">3,100 runs · 2.00 each</div></div>
+          <div class="hb"><div class="top"><span class="nm">EVAL-B-lead-qual</span><span class="vl">3,600</span></div>
+            <div class="tr"><div class="fi" style="width:58.1%"></div></div>
+            <div class="sub">900 runs · 600 complete, 300 stopped at the gate</div></div>
+          <div class="hb"><div class="top"><span class="nm">Competitor Research</span><span class="vl">3,120</span></div>
+            <div class="tr"><div class="fi" style="width:50.3%"></div></div>
+            <div class="sub">120 runs · 8 nodes · 26.00 each</div></div>
+          <div class="hb"><div class="top"><span class="nm">Mindie generation</span><span class="vl">1,300</span></div>
+            <div class="tr"><div class="fi" style="width:21.0%"></div></div>
+            <div class="sub">130 generations · 10.00 each</div></div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="zone chartgrid">
+      <div class="panel">
+        <div class="pt"><h2>Chatbots by spend</h2></div>
+        <div class="empty">
+          <span class="ic" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 3.5h11v8h-6l-3 2.5v-2.5h-2z"/></svg></span>
+          <h3>No chatbots published yet</h3>
+          <p>Publish an agent as a chatbot and its credit usage will appear here.</p>
+          <a href="#">How publishing works →</a>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="pt"><h2>Spend by member</h2><span class="hint">5 of 5 editor seats</span></div>
+        <div class="cpad"><div class="hbars">
+          <div class="hb"><div class="top"><span class="nm">Công Giang Thành <span class="dim">(you)</span> <span class="dim">Owner</span></span><span class="vl">6,840</span></div>
+            <div class="tr"><div class="fi" style="width:100.0%"></div></div>
+            <div class="sub">48.1% of spend</div></div>
+          <div class="hb"><div class="top"><span class="nm">Trần Minh Anh <span class="dim">Editor</span></span><span class="vl">3,270</span></div>
+            <div class="tr"><div class="fi" style="width:47.8%"></div></div>
+            <div class="sub">23.0% of spend</div></div>
+          <div class="hb"><div class="top"><span class="nm">Lê Quốc Bảo <span class="dim">Editor</span></span><span class="vl">2,130</span></div>
+            <div class="tr"><div class="fi" style="width:31.1%"></div></div>
+            <div class="sub">15.0% of spend</div></div>
+          <div class="hb"><div class="top"><span class="nm">Phạm Thu Hà <span class="dim">Editor</span></span><span class="vl">1,280</span></div>
+            <div class="tr"><div class="fi" style="width:18.7%"></div></div>
+            <div class="sub">9.0% of spend</div></div>
+          <div class="hb"><div class="top"><span class="nm">Đỗ Nam Khánh <span class="dim">Editor</span></span><span class="vl">700</span></div>
+            <div class="tr"><div class="fi" style="width:10.2%"></div></div>
+            <div class="sub">4.9% of spend</div></div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="zone">
+      <div class="panel">
+        <div class="pt"><h2>Recent transactions</h2>
+          <span class="hint">Every LLM node call is billed separately<a href="#">Export →</a></span></div>
+        <div class="scroll"><table>
+          <thead><tr><th style="width:152px">Time</th><th style="width:130px">Source</th><th>Model</th>
+            <th class="num" style="width:98px">Credits</th><th class="num" style="width:118px">Balance</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">Jul 21 · 18:01:51</td><td><span class="src">Workflow</span></td>
+              <td class="mono">Gemini 3.0 Flash</td><td class="num mono">5.00</td><td class="num mono dim">124.00</td></tr>
+            <tr><td class="mono">Jul 21 · 18:00:57</td><td><span class="src">Workflow</span></td>
+              <td class="mono">Mixed <span class="dim">· 8 nodes</span></td><td class="num mono">26.00</td><td class="num mono dim">129.00</td></tr>
+            <tr><td class="mono">Jul 21 · 17:45:57</td><td><span class="src mindie">Mindie</span></td>
+              <td class="mono">Gemini 3.5 Flash</td><td class="num mono">10.00</td><td class="num mono dim">155.00</td></tr>
+            <tr><td class="mono">Jul 21 · 17:44:28</td><td><span class="src mindie">Mindie</span></td>
+              <td class="mono">Gemini 3.5 Flash</td><td class="num mono">10.00</td><td class="num mono dim">165.00</td></tr>
+            <tr><td class="mono">Jul 21 · 17:21:43</td><td><span class="src">Workflow</span></td>
+              <td class="mono">Gemini 3.0 Flash <span class="dim">· agent</span></td><td class="num mono">2.00</td><td class="num mono dim">175.00</td></tr>
+            <tr><td class="mono">Jul 21 · 17:21:29</td><td><span class="src">Workflow</span></td>
+              <td><span class="mono">Gemini 2.5 Flash <span class="dim">· router</span></span></td>
+              <td class="num mono">1.00</td><td class="num mono dim">177.00</td></tr>
+            <tr><td class="mono">Jul 21 · 17:21:06</td><td><span class="src">Workflow</span></td>
+              <td class="mono">Gemini 3.0 Flash <span class="dim">· gate</span></td><td class="num mono">2.00</td><td class="num mono dim">178.00</td></tr>
+          </tbody>
+        </table></div>
+        <div class="pager"><button aria-label="Previous page">‹</button>
+          <button aria-current="page">1</button><button>2</button><button>3</button>
+          <button aria-label="Next page">›</button></div>
+      </div>
+      <p class="fnote">The Balance column is added so a single row explains itself — the source product
+        makes you subtract two totals to learn what one run cost.</p>
+    </div>
+  </section>
+
+  <!-- ═══ VIEW: RUN DETAIL — cost x-ray ═══ -->
+  <section id="view-run" hidden>
+    <a class="backlink" href="#/usage" data-goto="dash">← Back to usage</a>
+
+    <div class="ph">
+      <div>
+        <h2 class="pt-t">Competitor Research · Notion</h2>
+        <div class="sub"><span class="st ok"><i></i>Completed</span> · 21 Jul, 18:00:57 · 3m 04s · 8 nodes</div>
+      </div>
+      <div class="tools"><a class="ghost" href="#">Re-run</a><a class="ghost" href="#">↓ Export</a></div>
+    </div>
+
+    <div class="tiles">
+      <div class="tile"><div class="k">This run cost</div><div class="v">26.00</div>
+        <div class="s">the workspace's <b>most expensive run</b></div></div>
+      <div class="tile"><div class="k">Biggest single stage</div><div class="v">38.5%</div>
+        <div class="s">the loop · <b>10.00 of 26.00</b></div></div>
+      <div class="tile"><div class="k">Ledger entries</div><div class="v">1</div>
+        <div class="s">billed as <b>one line</b>, not per node</div></div>
+      <div class="tile"><div class="k">Cheapest equivalent</div><div class="v">9.00</div>
+        <div class="s">same graph, <b>−65%</b> on DeepSeek V3</div></div>
+    </div>
+
+    <div class="zone">
+      <div class="panel">
+        <div class="pt"><h2>Cost X-ray</h2>
+          <span class="hint">Bar length is spend, not duration</span></div>
+        <div class="xray">
+          <div class="xn">
+            <span class="lead"><span class="nm">Company &amp; industry input</span>
+              <span class="sub"><span class="tag">Human input</span>no model call</span></span>
+            <span class="bar zero" style="width:0"></span>
+            <span class="amt">0.00<span class="pc">0%</span></span>
+          </div>
+          <div class="xn">
+            <span class="lead"><span class="nm">Identify top competitors</span>
+              <span class="sub"><span class="tag">Agent</span>GPT-5 mini</span></span>
+            <span class="bar" style="width:19.2%"></span>
+            <span class="amt">5.00<span class="pc">19.2%</span></span>
+          </div>
+          <div class="xn">
+            <span class="lead"><span class="nm">Research each competitor</span>
+              <span class="sub"><span class="tag">Loop</span><span class="loopx">×5</span>Gemini 3.0 Flash</span></span>
+            <span class="bar" style="width:38.5%"></span>
+            <span class="amt">10.00<span class="pc">38.5%</span></span>
+          </div>
+          <div class="xn">
+            <span class="lead"><span class="nm">Route by depth</span>
+              <span class="sub"><span class="tag">Router</span>Gemini 2.5 Flash</span></span>
+            <span class="bar" style="width:3.8%"></span>
+            <span class="amt">1.00<span class="pc">3.8%</span></span>
+          </div>
+          <div class="xn">
+            <span class="lead"><span class="nm">Compile HTML report</span>
+              <span class="sub"><span class="tag">Agent</span>GPT-5 mini</span></span>
+            <span class="bar" style="width:19.2%"></span>
+            <span class="amt">5.00<span class="pc">19.2%</span></span>
+          </div>
+          <div class="xn">
+            <span class="lead"><span class="nm">Format email delivery</span>
+              <span class="sub"><span class="tag">Agent</span>GPT-5 mini</span></span>
+            <span class="bar" style="width:19.2%"></span>
+            <span class="amt">5.00<span class="pc">19.2%</span></span>
+          </div>
+          <div class="xtot">
+            <span class="lb">Total</span><span></span>
+            <span class="amt">26.00</span>
+          </div>
+        </div>
+        <div class="xlegend">
+          <span><i class="solid"></i>Share of this run’s 26.00 credits</span>
+        </div>
+      </div>
+      <p class="fnote">The ledger records this run as a single 26.00 entry. The split above attributes it back to the nodes that actually spent it.</p>
+    </div>
+
+    <div class="zone">
+      <div class="panel">
+        <div class="pt"><h2>What would this cost on a different model?</h2>
+          <span class="hint">Same graph, same 8 nodes — only the model changes</span></div>
+        <div class="scroll"><table class="sim">
+          <thead><tr><th>Configuration</th><th class="num">Per run</th>
+            <th class="num">vs now</th><th class="num">100 runs / month</th></tr></thead>
+          <tbody>
+            <tr class="now"><td>As configured now <span class="dim">· mixed Auto and pinned</span></td>
+              <td class="num">26.00</td><td class="num delta">—</td><td class="num">2,600</td></tr>
+            <tr><td>Pin every node to Gemini 3.0 Flash</td>
+              <td class="num">17.00</td><td class="num delta down">−35%</td><td class="num">1,700</td></tr>
+            <tr><td>Pin every node to DeepSeek V3</td>
+              <td class="num">9.00</td><td class="num delta down">−65%</td><td class="num">900</td></tr>
+            <tr><td>Leave every node on Auto</td>
+              <td class="num">41.00</td><td class="num delta up">+58%</td><td class="num">4,100</td></tr>
+          </tbody>
+        </table></div>
+        <p class="fnote" style="padding:0 18px 16px;margin-top:10px">The Router node is fixed at
+          1.00 in every row — it has no model selector, so it cannot be tuned. Switching the four
+          agent stages off Auto is worth <b>900 credits a month</b> at this volume.</p>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══ VIEW: WORKFLOW DRILL-DOWN ═══ -->
+  <section id="view-workflow" hidden>
+    <a class="backlink" href="#/usage" data-goto="dash">← Back to usage</a>
+
+    <div class="ph">
+      <div><h2 class="pt-t" id="wf-name">—</h2><div class="sub" id="wf-sub">—</div></div>
+      <div class="tools"><a class="ghost" href="#">Open builder</a><a class="ghost" href="#">↓ Export runs</a></div>
+    </div>
+
+    <div class="tiles">
+      <div class="tile"><div class="k">Spent</div><div class="v" id="wf-spend">—</div>
+        <div class="s">last 30 days</div></div>
+      <div class="tile"><div class="k">Per run</div><div class="v" id="wf-perrun">—</div>
+        <div class="s">flat, per LLM node call</div></div>
+      <div class="tile"><div class="k">Per successful run</div><div class="v" id="wf-persuccess">—</div>
+        <div class="s">the figure to compare on</div></div>
+      <div class="tile"><div class="k">Success rate</div><div class="v" id="wf-success">—</div>
+        <div class="s" id="wf-failed">—</div></div>
+    </div>
+
+    <div class="note" id="wf-where" hidden></div>
+
+    <div class="zone">
+      <div class="panel">
+        <div class="pt"><h2>Daily spend</h2><span class="hint">This workflow only</span></div>
+        <div class="cpad">
+          <div class="plot">
+            <div class="yax" id="wf-yax"></div>
+            <div class="grid" id="wf-grid"></div>
+            <div class="cols" id="wf-cols"></div>
+          </div>
+          <div class="xax" id="wf-xax"></div>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="zone">
+      <div class="panel">
+        <div class="pt"><h2>Runs</h2>
+          <span class="hint">
+            <span class="seg" role="group" aria-label="Filter runs">
+              <button data-runs="failed" aria-pressed="true">Failed only</button>
+              <button data-runs="all" aria-pressed="false">Recent</button>
+            </span>
+          </span></div>
+        <div class="scroll"><table>
+          <thead><tr>
+            <th style="width:118px">Status</th>
+            <th>Run</th>
+            <th style="width:230px">Stopped at</th>
+            <th class="num" style="width:84px">Billed</th>
+            <th class="num" style="width:132px">When</th>
+          </tr></thead>
+          <tbody id="wf-runs"></tbody>
+        </table></div>
+        <p class="fnote" id="wf-runsnote"></p>
+      </div>
+    </div>
+
+    <div class="zone">
+      <div class="panel">
+        <div class="pt"><h2>Which models it spends on</h2>
+          <span class="hint">Derived from the nodes this workflow runs</span></div>
+        <div class="cpad"><div class="hbars" id="wf-mix"></div></div>
+      </div>
+      <p class="fnote">This split is where the daily figures come from — the workflow's own
+        model mix applied to the workspace matrix, so it always sums back to the total above.</p>
+    </div>
+  </section>
+
+  </main>
+</div>
+
+<script type="module" src="js/main.js"></script>
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/assets/comments.js" data-page="day5"></script>
+</body>
+</html>
