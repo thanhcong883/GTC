@@ -1,0 +1,1038 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PAL Team Workspace — Cộng tác và Phát hành An toàn</title>
+<meta name="description" content="Thiết kế product, permissions model và key flows cho PAL Team Workspace: sharing, review/approval và multiplayer editing." />
+<link rel="icon" href="favicon.svg" />
+<style>
+@font-face{font-family:"Geist";src:url("fonts/geist-latin.woff2") format("woff2");font-style:normal;font-weight:100 900;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Geist";src:url("fonts/geist-latin-ext.woff2") format("woff2");font-style:normal;font-weight:100 900;font-display:swap;unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Geist";src:url("fonts/geist-vietnamese.woff2") format("woff2");font-style:normal;font-weight:100 900;font-display:swap;unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:"Geist Mono";src:url("fonts/geist-mono-latin.woff2") format("woff2");font-style:normal;font-weight:100 900;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Geist Mono";src:url("fonts/geist-mono-latin-ext.woff2") format("woff2");font-style:normal;font-weight:100 900;font-display:swap;unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Geist Mono";src:url("fonts/geist-mono-vietnamese.woff2") format("woff2");font-style:normal;font-weight:100 900;font-display:swap;unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+
+/* Reset — matches the preflight the authored design was built against. */
+*,::before,::after{box-sizing:border-box;border-width:0;border-style:solid}
+h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit;margin:0}
+p,figure,figcaption,blockquote,ul,ol,dl,pre,hr{margin:0}
+ul,ol{list-style:none;padding:0}
+img,svg,video{display:block;max-width:100%}
+table{border-collapse:collapse}
+button,input,textarea,select{font:inherit;color:inherit;margin:0;padding:0;background:transparent}
+progress{vertical-align:baseline}
+
+:root{--font-geist-sans:"Geist";--font-geist-mono:"Geist Mono"}
+:root{--ink:#15151a;--muted:#6f7180;--line:#e6e6ee;--soft:#f6f6fa;--purple:#625df4;--purple-2:#8b87ff;--purple-soft:#eeedff;--navy:#191a3a;--green:#1fa66a;--green-soft:#e8f8f0;--amber:#e99a19;--red:#e75862;--white:#fff}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#fff;color:var(--ink);font-family:var(--font-geist-sans),Arial,sans-serif}button,a{font:inherit}button{cursor:pointer}a{color:inherit;text-decoration:none}main{overflow:hidden}.eyebrow{margin:0 0 18px;font-size:12px;font-weight:750;letter-spacing:.18em;color:var(--purple)}.eyebrow.light{color:#aaa8ff}.live-dot{display:inline-block;width:7px;height:7px;margin-right:8px;border-radius:50%;background:#28bf77}.topbar{height:74px;padding:0 max(28px,4vw);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50;background:rgba(255,255,255,.94);backdrop-filter:blur(16px)}.brand{display:flex;align-items:center;gap:11px;font-size:15px;font-weight:720}.brand-mark,.mini-logo{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;color:white;background:linear-gradient(145deg,#504bea,#7b76ff);font-size:14px;font-weight:800;text-decoration:underline}.topbar nav{display:flex;gap:30px;color:#60616d;font-size:13px}.topbar nav a:hover{color:var(--purple)}.ghost-button,.share-btn{border:1px solid var(--line);background:white;border-radius:10px;padding:10px 14px;font-size:13px}.hero{max-width:1440px;margin:auto;min-height:720px;padding:95px 5vw 80px;display:grid;grid-template-columns:1.02fr .98fr;gap:70px;align-items:center}.hero h1{font-size:clamp(46px,5.3vw,78px);line-height:1.02;letter-spacing:-.055em;margin:0 0 30px;max-width:820px}.hero h1 em{font-style:normal;color:var(--purple)}.lede{font-size:18px;line-height:1.72;color:#5d5f6b;max-width:680px}.hero-actions{display:flex;gap:25px;align-items:center;margin:34px 0}.primary-button{display:inline-flex;align-items:center;gap:32px;padding:14px 18px 14px 20px;border-radius:11px;background:var(--purple);color:white;font-weight:650;font-size:14px}.primary-button span{font-size:20px}.text-link{color:var(--purple);font-size:14px;font-weight:650;border-bottom:1px solid #c9c7ff}.thesis{border-left:3px solid var(--purple);padding:3px 0 3px 20px;max-width:650px}.thesis span{font-size:10px;font-weight:780;letter-spacing:.16em;color:#858796}.thesis p{font-size:14px;line-height:1.6;margin:6px 0;color:#494b56}.hero-visual{height:560px;border:1px solid #dfdff0;border-radius:22px;background:#fbfbfe;box-shadow:0 30px 70px rgba(41,38,112,.13);position:relative;overflow:hidden}.visual-top{height:63px;display:flex;align-items:center;gap:14px;padding:0 20px;border-bottom:1px solid var(--line);background:white}.mini-logo{width:29px;height:29px;border-radius:8px;font-size:11px}.visual-title{font-size:13px;font-weight:650;flex:1}.avatar-stack{display:flex;align-items:center}.avatar-stack i{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;border:2px solid white;margin-left:-7px;background:#e4e3ff;color:#4b46cf;font-size:9px;font-style:normal;font-weight:800}.version-rail{position:absolute;right:15px;top:80px;width:200px;z-index:4}.version-card{padding:13px 15px;border:1px solid var(--line);border-radius:12px;background:white;box-shadow:0 9px 25px rgba(32,31,83,.08)}.version-card div{font-size:8px;letter-spacing:.13em;font-weight:780;color:#777989}.version-card b,.version-card small{display:block}.version-card b{font-size:12px;margin:8px 0 3px}.version-card small{font-size:9px;color:#858794}.published-card{border-color:#ade2c7}.split-arrow{text-align:center;height:47px;color:#9b9cac;font-size:20px;line-height:20px}.split-arrow span{display:block;font-size:8px;line-height:17px}.status-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px}.purple{background:var(--purple)}.green{background:var(--green)}.node-canvas{position:absolute;left:0;right:0;bottom:0;height:445px;background-image:radial-gradient(#d9d9e3 .8px,transparent .8px);background-size:18px 18px}.node{position:absolute;width:210px;padding:18px 18px 16px;border:1.5px solid #c9c8db;border-radius:15px;background:white;box-shadow:0 10px 24px rgba(39,37,88,.08)}.node span{font-family:var(--font-geist-mono);font-size:9px;color:var(--purple)}.node b,.node small{display:block}.node b{font-size:14px;margin:6px 0}.node small{font-size:9px;color:#90919e}.node-one{left:45px;top:86px;border-color:var(--purple)}.node-two{left:172px;top:215px}.node-three{left:68px;top:344px;border-color:#78cfa4}.connector{position:absolute;border-left:2px dashed #aaa7ff;height:38px}.c1{left:196px;top:177px;transform:rotate(-44deg)}.c2{left:186px;top:306px;transform:rotate(38deg)}.cursor{position:absolute;color:var(--purple);font-size:21px}.cursor i{display:block;padding:3px 7px;border-radius:4px;background:var(--purple);color:white;font-size:8px;font-style:normal}.cursor-a{left:245px;top:125px}.cursor-b{left:85px;top:292px;color:#1da26a}.cursor-b i{background:#1da26a}.evidence-band{padding:86px 6vw;background:var(--navy);color:white;display:grid;grid-template-columns:.72fr 1.28fr;gap:70px}.band-intro h2{font-size:38px;line-height:1.16;letter-spacing:-.035em;margin:0 0 20px}.band-intro>p:last-child{color:#b8b8ca;line-height:1.7;font-size:14px}.evidence-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.evidence-grid article{position:relative;border:1px solid #383a63;border-radius:15px;background:#232445;padding:25px;min-height:195px}.evidence-grid article>span{font-family:var(--font-geist-mono);font-size:10px;color:#aaa8ff}.evidence-grid h3{font-size:18px;margin:20px 0 10px}.evidence-grid p{font-size:13px;line-height:1.6;color:#c4c5d3;margin:0}.evidence-grid strong{position:absolute;bottom:18px;right:20px;font-size:8px;letter-spacing:.13em;color:#6ee0a5}.evidence-grid .risk-card{grid-column:1/-1;min-height:150px;background:linear-gradient(105deg,#2a2456,#242644)}.risk-card .equation{display:flex;gap:18px;align-items:center;margin-top:22px}.risk-card .equation b{padding:8px 14px;border:1px solid #55548a;border-radius:8px;font-size:12px}.risk-card .equation i{color:#9290ff}.model-section,.prototype-section,.flows-section,.permissions-section,.roadmap-section{padding:105px 6vw;max-width:1440px;margin:auto}.section-head{max-width:770px;margin-bottom:55px}.section-head h2{font-size:42px;line-height:1.12;letter-spacing:-.04em;margin:0 0 18px}.section-head>p:last-child{font-size:15px;line-height:1.7;color:var(--muted)}.planes{display:grid;grid-template-columns:1fr 44px 1fr 44px 1fr;align-items:stretch}.plane{position:relative;border:1px solid var(--line);border-radius:18px;padding:30px;background:white;min-height:340px}.plane .icon{display:grid;place-items:center;width:45px;height:45px;border-radius:12px;font-size:20px}.access-plane .icon{color:#168a72;background:#e8f7f3}.collaboration-plane .icon{color:var(--purple);background:var(--purple-soft)}.release-plane .icon{color:#bd7510;background:#fff3dd}.plane-number{position:absolute;right:20px;top:18px;font:12px var(--font-geist-mono);color:#b3b4bf}.plane h3{font-size:22px;margin:25px 0 10px}.plane p{color:var(--muted);font-size:13px;line-height:1.65;min-height:65px}.plane ul{list-style:none;padding:0;margin:25px 0 0}.plane li{padding:9px 0;border-top:1px solid var(--line);font-size:12px}.plane-arrow{display:grid;place-items:center;color:#aaa9b6;font-size:24px}.runtime-row{margin-top:25px;border-radius:14px;background:#f5f5f9;padding:17px 21px;display:flex;gap:15px;align-items:center}.runtime-row>span{font-size:9px;letter-spacing:.12em;color:#858693;margin-right:10px}.runtime-row b{background:white;border:1px solid var(--line);padding:8px 12px;border-radius:7px;font-size:11px}.runtime-row small{margin-left:auto;color:#777987;font-size:10px}.prototype-section{max-width:none;background:#f7f7fb}.prototype-section>.section-head,.prototype-section>.role-switcher,.prototype-section>.app-shell{max-width:1320px;margin-left:auto;margin-right:auto}.role-switcher{display:flex;align-items:center;gap:7px;margin-bottom:17px!important}.role-switcher span{font-size:11px;color:#717380;margin-right:8px}.role-switcher button{border:1px solid var(--line);background:white;padding:8px 13px;border-radius:8px;font-size:11px}.role-switcher button.active{color:white;border-color:var(--purple);background:var(--purple)}.app-shell{height:760px;display:grid;grid-template-columns:210px 1fr;border:1px solid #dedee8;border-radius:18px;overflow:hidden;background:white;box-shadow:0 25px 60px rgba(37,35,94,.1)}.app-sidebar{border-right:1px solid var(--line);padding:15px 12px;position:relative}.workspace-picker{height:47px;border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;gap:10px;padding:0 10px;margin-bottom:20px;font-size:12px}.workspace-picker b{flex:1}.brand-mark.small{width:25px;height:25px;border-radius:7px;font-size:9px}.side-item{display:flex;gap:13px;align-items:center;padding:11px;border-radius:8px;color:#666875;font-size:12px}.side-item.active{color:var(--purple);background:var(--purple-soft);font-weight:650}.side-label{font-size:8px;letter-spacing:.12em;color:#a0a1ad;padding:24px 10px 10px}.workflow-item{font-size:11px;padding:9px 10px;color:#666775;border-radius:7px}.workflow-item.active{font-weight:650;color:#353643;background:#f5f5f9}.wf-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--purple);margin-right:7px}.side-person{position:absolute;left:12px;right:12px;bottom:14px;padding:10px;border-top:1px solid var(--line);display:flex;align-items:center;gap:9px}.side-person>span{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#222342;color:white;font-size:9px}.side-person b,.side-person small{display:block}.side-person b{font-size:10px}.side-person small{font-size:8px;color:#8b8c98;margin-top:2px}.app-main{min-width:0}.app-header{height:87px;padding:14px 18px 0 24px;display:flex;justify-content:space-between;border-bottom:1px solid var(--line)}.app-header h3{font-size:16px;margin:3px 0 16px}.app-tabs{display:flex;gap:23px;font-size:10px;color:#777986}.app-tabs b{color:var(--purple);border-bottom:2px solid var(--purple);padding-bottom:10px}.app-controls{display:flex;align-items:flex-start;gap:8px}.share-btn,.role-action{padding:9px 12px;font-size:10px}.role-action{border:0;border-radius:8px;background:var(--purple);color:white}.version-bar{height:54px;display:flex;justify-content:space-between;align-items:center;padding:0 21px;border-bottom:1px solid var(--line)}.version-bar>div{display:flex;align-items:center;gap:10px}.pill{padding:6px 9px;border-radius:6px;font-size:8px;font-weight:780;letter-spacing:.08em}.pill.draft{color:#514ce0;background:var(--purple-soft)}.pill.published{color:#138354;background:var(--green-soft)}.version-bar small{font-size:8px;color:#898a97}.builder-area{display:grid;grid-template-columns:minmax(500px,1fr) 320px;height:619px}.builder-canvas{position:relative;overflow:hidden;background:#fcfcfe}.grid-dots{position:absolute;inset:0;background-image:radial-gradient(#d7d7df .8px,transparent .8px);background-size:18px 18px}.builder-node{position:absolute;width:235px;padding:16px;border:1.5px solid #cbcbd7;border-radius:14px;background:white;box-shadow:0 10px 24px rgba(39,37,88,.08);z-index:2}.builder-node.selected{border-color:var(--purple);box-shadow:0 0 0 3px #eeedff,0 10px 24px rgba(39,37,88,.08)}.node-meta{display:flex;justify-content:space-between;align-items:center}.node-meta>span{font-size:7px;letter-spacing:.11em;color:#888a98}.node-meta i{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--purple);color:white;font-size:7px;font-style:normal}.builder-node b{display:block;font-size:14px;margin:10px 0 7px}.builder-node p{font-size:9px;color:#8b8d99;margin:0}.bn1{left:12%;top:48px}.bn2{left:42%;top:226px}.bn3{left:18%;top:405px;border-color:#53c890}.builder-line{position:absolute;height:100px;border-left:2px dashed #aaa7ff;z-index:1}.bl1{left:42%;top:152px;transform:rotate(-34deg)}.bl2{left:40%;top:330px;transform:rotate(35deg)}.comment-chip{position:absolute;right:-12px;top:12px;padding:5px 7px;border-radius:7px;background:#242545;color:white;font-size:8px}.warning{display:inline-block;margin-top:11px;font-size:8px;padding:4px 7px;border-radius:5px;color:#a46610;background:#fff1d9}.canvas-note{position:absolute;right:22px;top:75px;width:190px;padding:13px;border-radius:10px;background:#fffbe9;border:1px solid #efe1a5;z-index:3}.canvas-note b{font-size:9px}.canvas-note p{font-size:9px;line-height:1.45;margin:5px 0;color:#666552}.canvas-tools{position:absolute;bottom:15px;left:15px;display:flex;flex-direction:column;z-index:5}.canvas-tools button{width:30px;height:30px;background:white;border:1px solid var(--line);font-size:13px}.review-panel{border-left:1px solid var(--line);background:white;overflow:auto}.panel-tabs{height:43px;display:flex;border-bottom:1px solid var(--line);position:sticky;top:0;background:white;z-index:4}.panel-tabs button{flex:1;border:0;background:white;font-size:9px;color:#7a7c88}.panel-tabs button.active{color:var(--purple);font-weight:700;border-bottom:2px solid var(--purple)}.panel-content{padding:18px}.review-state{display:flex;gap:9px;align-items:center}.state-icon{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:var(--purple-soft);color:var(--purple)}.review-state small,.review-state b{display:block}.review-state small{font-size:7px;color:#9899a5;letter-spacing:.1em}.review-state b{font-size:11px;margin-top:3px}.panel-content h4{font-size:14px;margin:20px 0 4px}.muted{font-size:9px;color:#91929e}.diff-summary{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:9px;margin:17px 0}.diff-summary div{padding:11px;text-align:center;border-right:1px solid var(--line)}.diff-summary div:last-child{border:0}.diff-summary b,.diff-summary span{display:block}.diff-summary b{font-size:13px;color:var(--purple)}.diff-summary span{font-size:7px;color:#9697a3;margin-top:3px}.change-item{display:flex;gap:10px;padding:11px 0;border-top:1px solid var(--line)}.change-item>span{align-self:flex-start;font-size:6px;font-weight:800;padding:4px;border-radius:4px}.change-item.high>span{background:#ffe6e7;color:#c43d48}.change-item.medium>span{background:#fff1db;color:#ad6b0b}.change-item b{font-size:9px}.change-item p{font-size:8px;color:#8b8d99;margin:4px 0}.test-box{padding:11px;border-radius:8px;background:#f5f6f9;margin:12px 0}.test-box div{display:flex;justify-content:space-between;font-size:8px}.test-box progress{width:100%;height:5px;accent-color:var(--green)}.approve-btn,.request-btn{width:100%;border-radius:8px;padding:9px;border:0;font-size:9px}.approve-btn{background:var(--purple);color:white;margin-top:8px}.request-btn{background:white;border:1px solid var(--line);margin-top:6px;color:#5c5e6a}.thread{display:flex;gap:9px;padding:13px 0;border-bottom:1px solid var(--line)}.thread>span{display:grid;place-items:center;flex:0 0 26px;height:26px;border-radius:50%;background:var(--purple-soft);color:var(--purple);font-size:7px;font-weight:800}.thread b{font-size:8px}.thread p{font-size:8px;line-height:1.4;color:#666874}.thread small{font-size:7px;color:#9b9ca6}.panel-content textarea{width:100%;height:70px;margin-top:15px;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:9px;resize:none}.binding{display:flex;align-items:center;gap:9px;padding:12px 0;border-bottom:1px solid var(--line)}.binding>span{display:grid;place-items:center;width:27px;height:27px;border-radius:7px;background:var(--soft)}.binding div{flex:1}.binding b,.binding small{display:block}.binding b{font-size:9px}.binding small{font-size:7px;color:#9596a2;margin-top:3px}.binding i{font-size:7px;font-style:normal;color:var(--purple)}.impact{padding:12px;margin-top:16px;border-radius:8px;background:#fff8e9}.impact b{font-size:9px}.impact p{font-size:8px;line-height:1.4}.flows-section{padding-bottom:95px}.flow-tabs{display:flex;gap:8px;margin-bottom:30px}.flow-tabs button{border:1px solid var(--line);background:white;padding:10px 15px;border-radius:8px;font-size:11px}.flow-tabs button.active{background:var(--navy);color:white;border-color:var(--navy)}.flow-diagram{display:flex;align-items:stretch;padding:35px;border:1px solid var(--line);border-radius:18px;background:#fafafe}.flow-wrap{display:flex;align-items:center;flex:1}.flow-step{position:relative;flex:1;min-height:170px;border:1px solid var(--line);border-radius:14px;background:white;padding:22px}.flow-step>span{font:10px var(--font-geist-mono);color:var(--purple)}.flow-step h3{font-size:15px;margin:28px 0 7px}.flow-step p{font-size:10px;line-height:1.45;color:#80818e}.flow-step small{position:absolute;right:12px;top:12px;font-size:7px;padding:4px 6px;border-radius:4px;background:var(--green-soft);color:var(--green)}.step-4{border-color:#a9dec4}.flow-arrow{width:48px;text-align:center;color:#777895}.flow-arrow i{display:block;font-size:20px;font-style:normal}.flow-arrow small{font-size:7px}.flow-rule{margin-top:18px;padding:14px 18px;border-left:3px solid var(--purple);background:var(--purple-soft);font-size:11px}.flow-rule b{margin-right:8px}.permissions-section{padding-top:95px}.permission-formula{display:flex;align-items:center;gap:10px;padding:24px;border-radius:14px;background:var(--navy);color:white;margin-bottom:28px}.permission-formula div{flex:1}.permission-formula span,.permission-formula b{display:block}.permission-formula span{font-size:7px;color:#aaaabd;letter-spacing:.08em}.permission-formula b{font-size:10px;margin-top:6px}.permission-formula i{font-size:15px;color:#9997ff;font-style:normal}.permission-formula strong{font-size:10px;padding:10px;border-radius:7px;background:var(--purple)}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px}table{width:100%;border-collapse:collapse;font-size:11px}th,td{padding:14px 16px;border-bottom:1px solid var(--line);text-align:center}th:first-child,td:first-child{text-align:left}th{background:#f6f6f9;color:#70717f;font-size:9px;letter-spacing:.04em}td:first-child{font-weight:650}.yes{color:var(--purple);font-weight:900}.no{color:#c4c5cd}.table-note{font-size:11px;line-height:1.6;color:#696b77;margin:15px 4px}.governance-section{max-width:none;padding:90px 6vw;background:var(--navy);color:white;display:grid;grid-template-columns:.8fr 1.2fr;gap:80px}.governance-section h2{font-size:40px;line-height:1.12;margin:0 0 20px;letter-spacing:-.04em}.governance-section>div:first-child>p:last-child{color:#b7b8c8;font-size:14px;line-height:1.7}.risk-ladder article{display:flex;align-items:center;gap:17px;padding:18px 0;border-bottom:1px solid #3b3c5d}.risk-level{width:64px;padding:6px;text-align:center;border-radius:5px;font-size:7px;font-weight:800}.risk-level.low{background:#dff7eb;color:#118455}.risk-level.med{background:#fff0d7;color:#ac6805}.risk-level.high{background:#ffe0e2;color:#c33e48}.risk-level.critical{background:#e5e3ff;color:#514be1}.risk-ladder article div{flex:1}.risk-ladder b{font-size:12px}.risk-ladder p{font-size:9px;color:#aeafbf;margin:5px 0}.risk-ladder strong{font-size:9px;color:#b4b3ff}.roadmap{display:grid;grid-template-columns:1fr 40px 1fr 40px 1fr;align-items:center}.roadmap article{min-height:225px;border:1px solid var(--line);border-radius:15px;padding:25px}.roadmap article>span{font:9px var(--font-geist-mono);color:var(--purple)}.roadmap h3{font-size:20px;margin:24px 0 10px}.roadmap p{font-size:12px;line-height:1.65;color:#737481}.roadmap small{display:inline-block;margin-top:18px;padding:6px 8px;border-radius:5px;background:var(--purple-soft);color:var(--purple);font-size:8px}.roadmap>i{text-align:center;font-style:normal;color:#aaaabd;font-size:20px}.metric-card{margin-top:35px;display:grid;grid-template-columns:1.7fr repeat(3,1fr);gap:20px;border:1px solid var(--line);border-radius:17px;padding:28px;background:#fafafe}.metric-card h3{font-size:24px;margin:0 0 8px}.metric-card p{font-size:11px;line-height:1.5;color:#727380}.metric-mini{border-left:1px solid var(--line);padding-left:20px;display:flex;flex-direction:column;justify-content:center}.metric-mini b{font-size:22px;color:var(--purple)}.metric-mini span{font-size:11px;font-weight:700;margin:8px 0}.metric-mini small{font-size:8px;color:#90919d}footer{height:100px;padding:0 6vw;background:#f6f6fa;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:#737581}footer>div{display:flex;align-items:center;gap:10px;color:var(--ink)}footer .brand-mark{width:29px;height:29px;border-radius:8px;font-size:10px}footer a{color:var(--purple);font-weight:650}
+
+@media(max-width:1050px){.topbar nav{display:none}.hero{grid-template-columns:1fr;padding-top:70px}.hero-visual{max-width:720px;width:100%;justify-self:center}.evidence-band,.governance-section{grid-template-columns:1fr}.planes{grid-template-columns:1fr}.plane-arrow{height:45px;transform:rotate(90deg)}.app-shell{grid-template-columns:175px 1fr}.builder-area{grid-template-columns:1fr 280px}.canvas-note{display:none}.flow-diagram{overflow-x:auto}.flow-wrap{min-width:250px}.permission-formula{flex-wrap:wrap}.permission-formula div{min-width:190px}.metric-card{grid-template-columns:1fr 1fr}.metric-mini{border:0}.runtime-row{flex-wrap:wrap}.runtime-row small{width:100%}}
+@media(max-width:760px){.topbar{height:65px}.topbar .ghost-button{display:none}.hero{padding:60px 22px}.hero h1{font-size:46px}.hero-visual{height:500px}.version-rail{right:8px;width:165px}.node{width:175px}.node-one{left:20px}.node-two{left:120px}.evidence-band,.model-section,.prototype-section,.flows-section,.permissions-section,.roadmap-section,.governance-section{padding:70px 22px}.evidence-grid{grid-template-columns:1fr}.evidence-grid .risk-card{grid-column:auto}.section-head h2,.governance-section h2{font-size:34px}.app-shell{height:720px;grid-template-columns:1fr}.app-sidebar{display:none}.builder-area{grid-template-columns:1fr}.review-panel{position:absolute;right:22px;width:290px;height:560px;box-shadow:-12px 0 30px rgba(30,29,70,.12)}.app-main{position:relative}.app-controls .avatar-stack{display:none}.version-bar>div:last-child{display:none}.roadmap{grid-template-columns:1fr}.roadmap>i{height:38px;transform:rotate(90deg)}.metric-card{grid-template-columns:1fr}.flow-diagram{padding:20px}.flow-rule{line-height:1.6}.permission-formula strong{width:100%;text-align:center}footer{padding:25px 22px;height:auto;gap:20px;flex-wrap:wrap}}
+
+/* Research narrative + interactive laboratory */
+.reading-rail{position:fixed;left:15px;top:50%;transform:translateY(-50%);z-index:42;display:flex;flex-direction:column;gap:2px;padding:7px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.94);box-shadow:0 10px 30px rgba(35,34,80,.08);backdrop-filter:blur(12px)}.reading-rail a{display:flex;align-items:center;gap:8px;width:36px;height:31px;overflow:hidden;border-radius:7px;color:#8b8c98;transition:.22s}.reading-rail a:hover{width:105px;background:var(--purple-soft);color:var(--purple)}.reading-rail span{flex:0 0 36px;text-align:center;font:8px var(--font-geist-mono)}.reading-rail b{white-space:nowrap;font-size:9px}
+.premise-section{max-width:1440px;margin:auto;padding:90px 6vw;display:grid;grid-template-columns:.72fr 1.28fr;gap:75px;align-items:center;border-top:1px solid var(--line)}.evidence-label{display:inline-block;padding:7px 9px;border-radius:6px;font:8px var(--font-geist-mono);letter-spacing:.12em}.evidence-label.verified{color:#147d53;background:var(--green-soft)}.scenario-kicker{margin:25px 0 10px;color:var(--purple);font-size:12px;font-weight:700}.premise-copy h2{font-size:40px;line-height:1.12;letter-spacing:-.04em;margin:0 0 20px}.premise-copy>p:last-child{font-size:14px;line-height:1.72;color:var(--muted)}.premise-figure{margin:0;display:grid;grid-template-columns:1fr 70px 1fr 70px 1fr;align-items:center;padding:28px;border-radius:18px;background:#f8f8fc;border:1px solid var(--line)}.premise-actor{padding:20px 15px;border-radius:12px;background:white;border:1px solid var(--line);box-shadow:0 8px 20px rgba(34,33,79,.06)}.premise-actor span,.premise-actor b,.premise-actor small{display:block}.premise-actor span{font:7px var(--font-geist-mono);letter-spacing:.1em;color:#8c8d99}.premise-actor b{font-size:12px;margin:12px 0 5px}.premise-actor small{font-size:8px;color:#999aa5}.premise-actor.synced{border-color:#c8c6ff}.premise-actor.live{border-color:#f1a3a9;background:#fff8f8}.premise-link{text-align:center}.premise-link i{display:block;font-style:normal;color:var(--purple);font-size:20px}.premise-link small{font-size:6px;color:#92939d}.premise-link.danger i,.premise-link.danger small{color:var(--red)}.premise-figure figcaption{grid-column:1/-1;margin-top:22px;padding-top:15px;border-top:1px solid var(--line);font-size:10px;color:#747683;line-height:1.5}
+.figure-block{margin:0}.figure-block>figcaption{display:flex;gap:9px;align-items:baseline;margin-top:18px;padding:14px 17px;border-top:1px solid var(--line);font-size:10px;color:#727481;line-height:1.55}.figure-block>figcaption span{font:7px var(--font-geist-mono);letter-spacing:.11em;color:var(--purple)}.figure-block.centerpiece>figcaption{max-width:1320px;margin-left:auto;margin-right:auto}.reading-guide{max-width:1320px;margin:0 auto 16px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.reading-guide div{display:flex;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:white}.reading-guide span{color:var(--purple);font-weight:800}.reading-guide p{margin:0;font-size:9px;line-height:1.5;color:#727481}.design-decision{display:flex;gap:18px;align-items:center;padding:17px 20px;margin-bottom:16px;border-radius:12px;background:var(--purple-soft)}.design-decision span{flex:0 0 auto;font:8px var(--font-geist-mono);letter-spacing:.1em;color:var(--purple)}.design-decision p{margin:0;font-size:11px;line-height:1.55;color:#585a69}
+.lab-section{max-width:1440px;margin:auto;padding:105px 6vw}.lab-head{display:flex;align-items:flex-end;justify-content:space-between;gap:40px;margin-bottom:30px}.lab-head>div:first-child{max-width:720px}.lab-head h2{font-size:44px;line-height:1.08;letter-spacing:-.045em;margin:0 0 15px}.lab-head p:last-child{font-size:14px;line-height:1.65;color:var(--muted)}.lab-toggle{display:flex;padding:5px;border-radius:11px;background:#f0f0f5}.lab-toggle button{border:0;background:transparent;padding:11px 16px;border-radius:8px;font-size:10px;color:#777986}.lab-toggle button.active{color:white}.lab-toggle button.active.danger{background:var(--red)}.lab-toggle button.active.safe{background:var(--green)}.lab-console{display:grid;grid-template-columns:320px 1fr;min-height:510px;border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:0 25px 60px rgba(35,33,89,.09)}.lab-scenario{padding:30px;background:var(--navy);color:white}.lab-scenario>span{font:8px var(--font-geist-mono);letter-spacing:.12em;color:#aaa8ff}.lab-scenario h3{font-size:22px;line-height:1.25;margin:30px 0 12px}.lab-scenario>p{font-size:11px;line-height:1.6;color:#bcbccc}.risk-picker{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:35px}.risk-picker small{grid-column:1/-1;font:7px var(--font-geist-mono);letter-spacing:.1em;color:#8f90a6;margin-bottom:3px}.risk-picker button{border:1px solid #414263;background:transparent;color:#bfc0cf;border-radius:7px;padding:8px;font-size:8px}.risk-picker button.active{color:#171722;font-weight:750}.risk-picker button.active.low{background:#dff7eb;border-color:#dff7eb}.risk-picker button.active.medium{background:#fff0d7;border-color:#fff0d7}.risk-picker button.active.high{background:#ffe0e2;border-color:#ffe0e2}.risk-picker button.active.critical{background:#e5e3ff;border-color:#e5e3ff}.policy-result{margin-top:17px;padding:14px;border-radius:10px;background:#2b2c4c;border-left:3px solid #777}.policy-result span,.policy-result b,.policy-result small{display:block}.policy-result span{font:6px var(--font-geist-mono);letter-spacing:.1em;color:#9192a8}.policy-result b{font-size:10px;margin:9px 0 4px}.policy-result small{font-size:8px;color:#b8b9c8}.policy-result.low{border-color:#33bc7e}.policy-result.med{border-color:#e7a233}.policy-result.high{border-color:#ec626c}.policy-result.critical{border-color:#8d88ff}.lab-stage{padding:28px;background:#fbfbfe}.stage-legend{display:flex;justify-content:flex-end;gap:17px;font-size:8px;color:#858793}.stage-legend span{display:flex;align-items:center;gap:6px}.stage-legend i{width:8px;height:8px;border-radius:50%}.draft-key{background:var(--purple)}.prod-key{background:var(--green)}.state-lanes{height:350px;display:grid;grid-template-columns:1fr 90px 1fr;gap:15px;align-items:stretch;padding-top:18px}.lane{position:relative;padding:42px 18px 18px;border:1px dashed #d4d4df;border-radius:14px;display:flex;flex-direction:column;justify-content:center;gap:10px}.lane>label{position:absolute;left:15px;top:14px;font:8px var(--font-geist-mono);letter-spacing:.12em;color:#898a98}.event-card{padding:14px;border:1px solid #dedee8;border-radius:10px;background:white;opacity:.3;transform:translateY(4px);transition:.35s}.event-card.reached{opacity:1;transform:none;box-shadow:0 8px 20px rgba(40,38,94,.08);border-color:#aaa7ff}.event-card.production.reached.danger{border-color:#ef777f;background:#fff6f6}.event-card.production.reached.safe{border-color:#69ca9a;background:#f3fcf7}.event-card span{font:7px var(--font-geist-mono);color:var(--purple)}.event-card b,.event-card small{display:block}.event-card b{font-size:10px;margin:8px 0 4px}.event-card small{font-size:8px;color:#92939e}.boundary{display:flex;flex-direction:column;justify-content:center;text-align:center}.boundary span{font:6px var(--font-geist-mono);line-height:1.5;color:#8d8e9b}.boundary i{font-size:23px;font-style:normal;margin-top:9px}.current .boundary i{color:var(--red)}.proposed .boundary i{color:var(--green)}.lab-controls{display:grid;grid-template-columns:100px 1fr 130px;gap:13px;align-items:center;margin-top:15px;padding-top:15px;border-top:1px solid var(--line)}.lab-controls button{border:1px solid var(--line);background:white;border-radius:8px;padding:10px;font-size:8px}.lab-controls button:last-child{color:white;background:var(--purple);border-color:var(--purple)}.lab-controls button:disabled{opacity:.35}.lab-controls div{text-align:center}.lab-controls b,.lab-controls span{display:block}.lab-controls b{font-size:9px}.lab-controls span{font-size:8px;color:#8b8c98;margin-top:3px}.lab-conclusion{margin:15px 0 0;padding:13px 17px;border-left:3px solid var(--purple);background:var(--purple-soft);font-size:10px;line-height:1.6}
+@media(max-width:1050px){.reading-rail{display:none}.premise-section{grid-template-columns:1fr}.lab-console{grid-template-columns:1fr}.lab-scenario{display:grid;grid-template-columns:1fr 1fr;gap:15px}.lab-scenario>span,.lab-scenario h3,.lab-scenario>p{grid-column:1/-1}.risk-picker{margin-top:5px}.policy-result{margin-top:5px}.reading-guide{grid-template-columns:1fr}.premise-figure{overflow-x:auto}}
+@media(max-width:760px){.premise-section,.lab-section{padding:70px 22px}.premise-copy h2,.lab-head h2{font-size:34px}.premise-figure{display:flex;flex-direction:column;align-items:stretch}.premise-link{padding:8px;transform:rotate(90deg)}.premise-figure figcaption{width:100%}.lab-head{align-items:flex-start;flex-direction:column}.lab-scenario{display:block}.state-lanes{height:auto;grid-template-columns:1fr}.boundary{padding:10px}.lane{min-height:200px}.lab-controls{grid-template-columns:75px 1fr 105px}.reading-guide{display:none}}
+
+/* Editorial research shell — continuous report, inspired by the Day 19/20 family */
+:root{--research-orange:#f07a37;--research-navy:#101a2e;--paper:#fbfaf7}.topbar{border-top:4px solid var(--research-orange);height:70px;background:rgba(251,250,247,.96)}.topbar .brand>span:last-child{font-family:var(--font-geist-mono);font-size:10px;letter-spacing:.1em}.topbar nav{font-family:var(--font-geist-mono);font-size:9px;text-transform:uppercase;letter-spacing:.05em}.ghost-button{font-family:var(--font-geist-mono);font-size:8px;letter-spacing:.08em}.hero{max-width:1320px;min-height:auto;padding:85px 6vw 75px;grid-template-columns:.9fr 1.1fr;align-items:start;background:white}.report-meta{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:42px}.report-meta span{padding:6px 8px;border:1px solid #dcdde5;border-radius:4px;font:7px var(--font-geist-mono);letter-spacing:.1em;color:#737581}.hero h1{font-size:clamp(43px,4.5vw,66px);line-height:1.04;letter-spacing:-.05em;margin-bottom:28px}.hero h1 em{color:var(--research-orange)}.hero .lede{font-size:15px;line-height:1.72;max-width:620px}.abstract-box{margin:28px 0 20px;padding:18px 20px;border:1px solid #dfe0e7;background:var(--paper)}.abstract-box>span{font:8px var(--font-geist-mono);letter-spacing:.13em;color:var(--research-orange)}.abstract-box p{font-size:11px;line-height:1.65;color:#5f616d;margin:10px 0 0}.hero .thesis{border-color:var(--research-orange);margin-top:18px}.hero-figure{margin:70px 0 0}.hero-figure .hero-visual{width:100%;height:545px}.hero-figure figcaption{display:flex;gap:9px;align-items:baseline;margin-top:12px;padding:13px 3px;border-top:1px solid var(--line);font-size:9px;line-height:1.5;color:#737581}.hero-figure figcaption span{font:7px var(--font-geist-mono);letter-spacing:.1em;color:var(--research-orange)}.research-map{max-width:1320px;margin:0 auto 75px;padding:24px 6vw;display:grid;grid-template-columns:1fr 35px 1fr 35px 1fr;align-items:center;border-top:1px solid var(--research-navy);border-bottom:1px solid var(--line);background:var(--paper)}.research-map div span,.research-map div b{display:block}.research-map div span{font:7px var(--font-geist-mono);letter-spacing:.12em;color:var(--research-orange);margin-bottom:8px}.research-map div b{font-size:11px;line-height:1.5}.research-map i{text-align:center;font-style:normal;color:#a0a1ab}.premise-section,.model-section,.flows-section,.permissions-section,.roadmap-section,.lab-section{max-width:1320px}.premise-section{border-top:0;padding-top:60px}.premise-copy h2,.section-head h2,.lab-head h2,.governance-section h2{font-weight:560}.evidence-label.verified{border-radius:3px;background:#e8f6ee;font-family:var(--font-geist-mono)}.scenario-kicker,.eyebrow{color:var(--research-orange)}.evidence-band{background:var(--research-navy);padding-left:max(8vw,130px)}.evidence-grid article{border-radius:7px;background:#17243b;border-color:#34415a}.evidence-grid .risk-card{background:#17243b;border-left:3px solid var(--research-orange)}.model-section,.flows-section,.permissions-section,.roadmap-section{padding-left:max(8vw,130px)}.lab-section{padding-left:max(8vw,130px);border-top:1px solid var(--line)}.prototype-section{background:var(--paper);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.prototype-section>.section-head,.prototype-section>.role-switcher,.prototype-section>.reading-guide,.prototype-section>.figure-block{max-width:1180px}.section-head{display:grid;grid-template-columns:190px 1fr;column-gap:35px;max-width:950px}.section-head .eyebrow{grid-row:1/3;margin-top:7px}.section-head h2{grid-column:2;font-size:39px}.section-head>p:last-child{grid-column:2;font-size:13px}.figure-block>figcaption{background:var(--paper);border:1px solid var(--line);border-top:3px solid var(--research-orange);border-radius:0 0 5px 5px}.figure-block>figcaption span{color:var(--research-orange)}.app-shell,.lab-console,.plane,.flow-diagram,.table-wrap,.metric-card{border-radius:7px}.planes{gap:0}.plane{border-radius:4px}.plane-arrow{font-family:var(--font-geist-mono)}.flow-step{border-radius:5px}.design-decision{border-radius:4px;background:#fff1e8;border-left:3px solid var(--research-orange)}.design-decision span{color:#bd561e}.permission-formula{border-radius:5px;background:var(--research-navy)}.governance-section{background:var(--research-navy);padding-left:max(8vw,130px)}.roadmap article{border-radius:5px}.metric-card{border-top:3px solid var(--research-orange)}footer{background:var(--research-navy);color:#b7bdca;border-top:4px solid var(--research-orange)}footer>div{color:white}
+@media(max-width:1050px){.section-head{display:block}.section-head h2,.section-head>p:last-child{grid-column:auto}.reading-rail{display:none}.evidence-band,.model-section,.flows-section,.permissions-section,.roadmap-section,.lab-section,.governance-section{padding-left:6vw}.hero{grid-template-columns:1fr}.hero-figure{margin-top:20px}.research-map{margin-left:5vw;margin-right:5vw}}
+
+/* Raw evidence register — screenshots remain legible and claims stay bounded. */
+.raw-evidence{display:grid;gap:18px;margin:38px 0 30px}
+.evidence-shot{display:grid;grid-template-columns:minmax(230px,.72fr) minmax(0,1.55fr);gap:26px;padding:20px;border:1px solid #3b4962;border-radius:7px;background:#17243b}
+.evidence-shot .shot-copy{padding:8px 4px}
+.evidence-shot .shot-copy>span{font:8px var(--font-geist-mono);letter-spacing:.12em;color:#f39a66}
+.evidence-shot .shot-copy h3{margin:14px 0 11px;color:#fff;font-size:20px;line-height:1.2}
+.evidence-shot .shot-copy p{margin:0;color:#c4cad5;font-size:11px;line-height:1.65}
+.evidence-shot .shot-copy p b{color:#fff}
+.evidence-shot .shot-copy small{display:block;margin-top:20px;padding-top:12px;border-top:1px solid #34415a;color:#8f9aae;font:7px/1.55 var(--font-geist-mono);letter-spacing:.08em}
+.evidence-shot figure{margin:0;min-width:0;padding:7px;background:#fff;border:1px solid #4c5a72}
+.evidence-shot img{display:block;width:100%;height:auto;max-height:460px;object-fit:contain;background:#f7f7f8}
+.evidence-shot figcaption{padding:9px 5px 3px;color:#6d707a;font:8px/1.45 var(--font-geist-mono)}
+.evidence-shot figcaption b{color:#bd561e}
+.sequence-shot{grid-template-columns:1fr}
+.sequence-shot .shot-copy{display:grid;grid-template-columns:185px 1fr;column-gap:25px;align-items:start}
+.sequence-shot .shot-copy>span{grid-row:1/4}
+.sequence-shot .shot-copy h3{margin-top:0}
+.sequence-shot .shot-copy small{grid-column:2}
+.shot-pair{display:grid;grid-template-columns:1fr 70px 1fr;align-items:center;gap:10px}
+.sequence-arrow{text-align:center;color:#f39a66;font-size:20px}
+.sequence-arrow span{display:block;margin-bottom:6px;font:7px var(--font-geist-mono);letter-spacing:.08em}
+
+@media(max-width:800px){
+  .evidence-shot{grid-template-columns:1fr}
+  .sequence-shot .shot-copy{display:block}
+  .shot-pair{grid-template-columns:1fr}
+  .sequence-arrow{transform:rotate(90deg);padding:4px 0}
+}
+@media(max-width:760px){.hero{padding:55px 22px}.report-meta{margin-bottom:28px}.hero h1{font-size:42px}.hero-figure .hero-visual{height:500px}.research-map{display:block;margin:0 22px 50px;padding:20px}.research-map i{display:block;padding:10px}.evidence-band,.model-section,.flows-section,.permissions-section,.roadmap-section,.lab-section,.governance-section{padding-left:22px}.topbar .brand>span:last-child{display:none}}
+
+/* ── Contents rail: collapsed to a marginal tab, revealed on hover or keyboard focus ── */
+.reading-rail{left:0;top:96px;transform:none;width:36px;gap:1px;padding:9px 6px;border-radius:0 7px 7px 0;border-left:0;background:var(--paper);border-color:#dedfdc;box-shadow:0 6px 18px rgba(20,26,46,.05);overflow:hidden;transition:width .26s cubic-bezier(.4,0,.2,1),box-shadow .26s ease}
+.reading-rail:hover,.reading-rail:focus-within{width:172px;box-shadow:0 16px 40px rgba(20,26,46,.16)}
+.reading-rail:before{content:"\2261";display:block;flex:0 0 auto;width:24px;padding-bottom:9px;font:13px/1 var(--font-geist-mono);text-align:center;color:var(--research-orange)}
+.reading-rail a{width:100%;height:29px;gap:6px;padding-right:6px;border-radius:4px;position:relative}
+.reading-rail a:hover{width:100%;background:#fff1e8;color:#b95019}
+.reading-rail span{flex:0 0 24px;text-align:center;font:8px var(--font-geist-mono)}
+.reading-rail b{font-family:var(--font-geist-mono);font-size:8px;white-space:nowrap}
+.reading-rail a.active{color:var(--research-navy);background:#fff}
+.reading-rail a.active span{color:var(--research-orange);font-weight:700}
+.reading-rail a.active:before{content:"";position:absolute;left:0;top:5px;bottom:5px;width:2px;background:var(--research-orange)}
+@media(min-width:1051px){
+  .hero,.research-map{padding-left:max(7vw,94px)}
+  .evidence-band,.model-section,.flows-section,.permissions-section,.roadmap-section,.lab-section,.governance-section{padding-left:max(7vw,94px)}
+}
+
+/* ── Hand-drawn flow figures ── */
+.sub-head{max-width:840px;margin:66px 0 22px}
+.sub-head>span{font:8px var(--font-geist-mono);letter-spacing:.13em;color:var(--research-orange)}
+.sub-head h3{margin:13px 0 10px;font-size:25px;font-weight:560;line-height:1.2;letter-spacing:-.025em}
+.sub-head p{font-size:12.5px;line-height:1.72;color:var(--muted)}
+.diagram{padding:26px 24px;border:1px solid var(--line);border-radius:7px;background:#fafafc;overflow-x:auto}
+.diagram>svg{width:100%;min-width:900px;height:auto}
+.diagram text{font-family:var(--font-geist-sans)}
+.diagram .box{fill:#fff;stroke:#c6c9d4;stroke-width:1.1}
+.diagram .box-accent{stroke:var(--research-orange);stroke-width:1.7}
+.diagram .box-ok{stroke:#4fb98c;stroke-width:1.6}
+.diagram .box-warn{fill:#fff7f5;stroke:#ea9a8b;stroke-width:1.3}
+.diagram .box-navy{fill:var(--research-navy);stroke:var(--research-navy)}
+.diagram .box-soft{fill:var(--paper);stroke:#dcdee6}
+.diagram .t{fill:#18202f;font-size:13px;font-weight:620}
+.diagram .t-sm{fill:#18202f;font-size:11.5px;font-weight:620}
+.diagram .s{fill:#7c8290;font-size:10.5px;font-family:var(--font-geist-mono)}
+.diagram .t-inv{fill:#fff;font-size:13px;font-weight:620}
+.diagram .s-inv{fill:#a9b2c4;font-size:10.5px;font-family:var(--font-geist-mono)}
+.diagram .lbl{fill:#6e7381;font-size:10.5px;font-family:var(--font-geist-mono)}
+.diagram .lbl-accent{fill:#bd561e;font-size:10.5px;font-family:var(--font-geist-mono);letter-spacing:.04em}
+.diagram .lbl-deny{fill:#c2404e;font-size:10.5px;font-family:var(--font-geist-mono)}
+.diagram .lbl-lane{fill:#5d6371;font-size:10.5px;font-family:var(--font-geist-mono);letter-spacing:.09em}
+.diagram .edge{stroke:#9aa0ae;stroke-width:1.4;fill:none}
+.diagram .edge-bus{stroke:#9aa0ae;stroke-width:1.2;fill:none}
+.diagram .edge-accent{stroke:var(--research-orange);stroke-width:1.6;fill:none}
+.diagram .edge-deny{stroke:#dd6c78;stroke-width:1.4;fill:none;stroke-dasharray:5 4}
+.diagram .ah{fill:#9aa0ae}
+.diagram .ah-accent{fill:var(--research-orange)}
+.diagram .ah-deny{fill:#dd6c78}
+.diagram .lane-a{fill:#f4f5f8}
+.diagram .lane-b{fill:#fbfbfd}
+.diagram .rule{stroke:#dcdee6;stroke-width:1}
+.diagram .gate{stroke:var(--research-orange);stroke-width:1.4;stroke-dasharray:6 5;fill:none}
+.figure-block>.diagram+figcaption{border-radius:0 0 5px 5px}
+@media(max-width:760px){.sub-head{margin-top:48px}.sub-head h3{font-size:21px}.diagram{padding:16px 14px}}
+</style>
+</head>
+<body>
+<main>
+  <aside class="reading-rail" aria-label="Mục lục bài thiết kế">
+    <a href="#top"><span>00</span><b>Thesis</b></a>
+    <a href="#evidence"><span>01</span><b>Evidence</b></a>
+    <a href="#lab"><span>02</span><b>Lab</b></a>
+    <a href="#model"><span>03</span><b>Model</b></a>
+    <a href="#prototype"><span>04</span><b>Builder</b></a>
+    <a href="#flows"><span>05</span><b>Flows</b></a>
+    <a href="#permissions"><span>06</span><b>Roles</b></a>
+    <a href="#roadmap"><span>07</span><b>Delivery</b></a>
+  </aside>
+
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="PAL Team Workspace">
+      <span class="brand-mark">mp</span>
+      <span>PAL · ORGANIZATIONAL DESIGN</span>
+    </a>
+    <nav aria-label="Điều hướng chính">
+      <a href="#evidence">Bằng chứng</a>
+      <a href="#lab">Research Lab</a>
+      <a href="#model">Mô hình</a>
+      <a href="#prototype">Prototype</a>
+      <a href="#flows">Luồng chính</a>
+      <a href="#permissions">Phân quyền</a>
+    </nav>
+    <a class="ghost-button" href="#roadmap">Research Index · 2026</a>
+  </header>
+
+  <section class="hero" id="top">
+    <div class="hero-copy">
+      <div class="report-meta"><span>PRODUCT RESEARCH</span><span>PAL TEAM WORKSPACE</span><span>12 AUG 2026</span></div>
+      <p class="eyebrow"><span class="live-dot"></span> GOVERNING THESIS</p>
+      <h1><em>The Governed Workspace.</em><br />Cộng tác nhanh không đồng nghĩa với phát hành tức thời.</h1>
+      <p class="lede"><b>Đề bài.</b> Thiết kế permissions, roles và real-time collaboration cho các nhóm cùng xây dựng AI Agent trên PAL—bao gồm sharing, review/approval và multiplayer editing.</p>
+      <div class="abstract-box">
+        <span>ABSTRACT</span>
+        <p>PAL đã kiểm soát <b>ai được vào workflow</b>, nhưng chưa kiểm soát <b>thay đổi nào được đi vào production</b>. Nghiên cứu đề xuất tách Working Draft khỏi Published Release, sau đó đặt collaboration, approval và accountability quanh release boundary này.</p>
+      </div>
+      <div class="thesis">
+        <span>THESIS · VI / EN</span>
+        <p><b>Autosave the work. Govern the release.</b><br />Tự động lưu phần việc; kiểm soát phần phát hành.</p>
+      </div>
+    </div>
+
+    <figure class="hero-figure" aria-label="Minh họa tách Draft và Published Release">
+      <div class="hero-visual">
+        <div class="visual-top">
+          <span class="mini-logo">mp</span>
+          <div class="visual-title">Customer Research Pipeline</div>
+          <div class="avatar-stack"><i>AN</i><i>LH</i><i>+2</i></div>
+        </div>
+        <div class="version-rail">
+          <div class="version-card draft-card">
+            <div><span class="status-dot purple"></span> WORKING DRAFT</div>
+            <b>v13 · Đang chỉnh sửa</b>
+            <small>Autosaved 8 giây trước</small>
+          </div>
+          <div class="split-arrow"><span>không tự động</span>⇣</div>
+          <div class="version-card published-card">
+            <div><span class="status-dot green"></span> PUBLISHED RELEASE</div>
+            <b>v12 · Đang phục vụ</b>
+            <small>Form · API · Schedule</small>
+          </div>
+        </div>
+        <div class="node-canvas">
+          <div class="node node-one"><span>01</span><b>Research Intake</b><small>AN đang chỉnh sửa</small></div>
+          <div class="connector c1"></div>
+          <div class="node node-two"><span>02</span><b>Evidence Review</b><small>2 comments</small></div>
+          <div class="connector c2"></div>
+          <div class="node node-three"><span>03</span><b>Synthesis</b><small>Claude Sonnet</small></div>
+          <div class="cursor cursor-a">↖<i>An</i></div>
+          <div class="cursor cursor-b">↖<i>Linh</i></div>
+        </div>
+      </div>
+      <figcaption><span>FIGURE 00</span><b>The governing spine.</b> Working Draft là không gian tạo thay đổi; Published Release là đối tượng duy nhất được runtime tiêu thụ.</figcaption>
+    </figure>
+  </section>
+
+  <section class="research-map" aria-label="Bản đồ nghiên cứu">
+    <div><span>QUESTION</span><b>Làm sao nhiều người cùng sửa mà autosave không trở thành production deploy?</b></div>
+    <i>→</i><div><span>FINDING</span><b>PAL hiện gộp authoring authority với production authority.</b></div>
+    <i>→</i><div><span>PROPOSAL</span><b>Draft–Release Split + Risk-based Approval + Safe Multiplayer.</b></div>
+  </section>
+
+  <section class="premise-section" aria-labelledby="premise-title">
+    <div class="premise-copy">
+      <div class="evidence-label verified">VERIFIED PREMISE</div>
+      <p class="scenario-kicker">Một thay đổi. Ba bề mặt chịu tác động.</p>
+      <h2 id="premise-title">Editor chỉ định sửa một node.<br />Nhưng production cũng đổi theo.</h2>
+      <p>Workflow đang Published vẫn là cùng một live canvas. Khi Editor sửa và PAL báo <b>Synced</b>, Public Form lập tức dùng cấu hình mới—không có snapshot, review gate hay thao tác deploy độc lập.</p>
+    </div>
+    <figure class="premise-figure" role="img" aria-label="Luồng hiện tại từ Editor sửa node đến Public Form thay đổi trực tiếp">
+      <div class="premise-actor"><span>EDITOR</span><b>Sửa prompt / node</b><small>Authoring action</small></div>
+      <div class="premise-link"><i>→</i><small>AUTOSAVE</small></div>
+      <div class="premise-actor synced"><span>PAL</span><b>Synced</b><small>Server state updated</small></div>
+      <div class="premise-link danger"><i>→</i><small>NO GATE</small></div>
+      <div class="premise-actor live"><span>PRODUCTION</span><b>Public Form đổi</b><small>User-facing effect</small></div>
+      <figcaption><b>Current-state invariant.</b> Trong mô hình hiện tại, save boundary và release boundary trùng nhau.</figcaption>
+    </figure>
+  </section>
+
+  <section class="evidence-band" id="evidence">
+    <div class="band-intro">
+      <p class="eyebrow light">PART 01 · EVIDENCE REGISTER</p>
+      <h2>Vấn đề không phải giả định.<br />Nó đã được kiểm chứng trực tiếp.</h2>
+      <p>Mỗi claim dưới đây được nối trực tiếp với ảnh chụp giao diện do người nghiên cứu thu thập. Ảnh là bằng chứng gốc; diễn giải chỉ giới hạn trong hành vi nhìn thấy được.</p>
+    </div>
+    <div class="raw-evidence" aria-label="Bằng chứng ảnh chụp giao diện PAL">
+      <article class="evidence-shot baseline-shot">
+        <div class="shot-copy">
+          <span>E0 · OBSERVED BASELINE</span>
+          <h3>PAL đã có Workspace Roles</h3>
+          <p>Trang Members hiển thị các vai trò Owner, Admin, Editor và User, cùng Access Control Tags. Đây là bằng chứng cho thấy PAL đã có <b>access control</b>, nhưng ảnh này chưa chứng minh có <b>release control</b>.</p>
+          <small>GIỚI HẠN SUY LUẬN · Chỉ xác nhận cấu trúc role hiện hữu.</small>
+        </div>
+        <figure>
+          <img src="evidence/e0-members-roles.png" alt="Trang Members của PAL hiển thị Owner, Admin, Editor, User và Access Control Tags" />
+          <figcaption><b>RAW EVIDENCE E0.</b> Workspace Settings → Members.</figcaption>
+        </figure>
+      </article>
+
+      <article class="evidence-shot">
+        <div class="shot-copy">
+          <span>E1 · VERIFIED ACTION</span>
+          <h3>Editor có thể Publish public form</h3>
+          <p>Trong phiên kiểm tra bằng tài khoản Editor, workflow hiển thị trạng thái <b>Published</b>, công tắc public form và share link. Evidence này hỗ trợ claim: quyền Edit hiện bao gồm khả năng tạo user-facing release.</p>
+          <small>GIỚI HẠN SUY LUẬN · Không kết luận về mọi plan hoặc mọi cấu hình tag.</small>
+        </div>
+        <figure>
+          <img src="evidence/e1-editor-publish.png" alt="Tài khoản Editor trên PAL bật Published as AI-powered form và nhận đường dẫn chia sẻ" />
+          <figcaption><b>RAW EVIDENCE E1.</b> Editor session → Published form.</figcaption>
+        </figure>
+      </article>
+
+      <article class="evidence-shot sequence-shot">
+        <div class="shot-copy">
+          <span>E2 · MEASURED SEQUENCE</span>
+          <h3>Autosave đi thẳng vào public experience</h3>
+          <p>Node được đổi thành “Test Requirements Collection2”; Builder báo <b>Synced</b>. Không bấm Publish lại, public form sau đó hiển thị đúng tên mới. Hai ảnh tạo thành một chuỗi before/after có thể kiểm tra.</p>
+          <small>KẾT LUẬN · Serving state đang đọc latest saved workflow, không phải published snapshot bất biến.</small>
+        </div>
+        <div class="shot-pair">
+          <figure>
+            <img src="evidence/e2a-synced-change.png" alt="PAL Builder báo Synced sau khi tên node được đổi thành Test Requirements Collection2" />
+            <figcaption><b>E2-A · AUTHORING.</b> Đổi node → Synced.</figcaption>
+          </figure>
+          <div class="sequence-arrow" aria-hidden="true"><span>NO REPUBLISH</span>→</div>
+          <figure>
+            <img src="evidence/e2b-public-form-change.png" alt="Public form hiển thị tên node Test Requirements Collection2 sau khi Builder tự đồng bộ" />
+            <figcaption><b>E2-B · SERVING.</b> Public Form nhận thay đổi.</figcaption>
+          </figure>
+        </div>
+      </article>
+    </div>
+    <div class="evidence-grid">
+      <article><span>E1 · OBSERVED</span><h3>Editor có thể Publish</h3><p>Tài khoản Editor bật public form và nhận share link mà không qua reviewer độc lập.</p><strong>VERIFIED</strong></article>
+      <article><span>E2 · MEASURED</span><h3>Autosave thay đổi production</h3><p>Đổi tên node trên workflow Published; public form hiển thị tên mới mà không Publish lại.</p><strong>VERIFIED</strong></article>
+      <article class="risk-card"><span>HỆ QUẢ</span><h3>Save = Production change</h3><p>Working state và serving state chưa có release boundary rõ ràng.</p><div class="equation"><b>Edit</b><i>→</i><b>Synced</b><i>→</i><b>Live</b></div></article>
+    </div>
+  </section>
+
+  <section class="lab-section" id="lab">
+    <div class="lab-head">
+      <div>
+        <p class="eyebrow">PART 02 · INTERACTIVE RESEARCH LAB</p>
+        <h2>Thử cùng một thay đổi trong hai mô hình.</h2>
+        <p>Chuyển giữa PAL hiện tại và thiết kế đề xuất. Sau đó chạy từng bước để quan sát thời điểm production bị tác động.</p>
+      </div>
+      <div class="lab-toggle" role="tablist" aria-label="Chọn mô hình mô phỏng">
+        <button data-mode="current" class="active danger" role="tab" aria-selected="true">PAL hiện tại</button>
+        <button data-mode="proposed" role="tab" aria-selected="false">Release-safe PAL</button>
+      </div>
+    </div>
+    <div class="lab-console current" id="labConsole">
+      <div class="lab-scenario">
+        <span>SCENARIO 04</span>
+        <h3>Editor thêm Webhook gửi dữ liệu khách hàng tới CRM.</h3>
+        <p>Đây là thay đổi có external effect và sử dụng production credential.</p>
+        <div class="risk-picker"><small>RISK CLASS</small>
+          <button data-risk="Low">Low</button>
+          <button data-risk="Medium">Medium</button>
+          <button data-risk="High" class="active high">High</button>
+          <button data-risk="Critical">Critical</button>
+        </div>
+        <div class="policy-result high" id="policyResult"><span>POLICY OUTPUT</span><b id="policyReviewers">Domain Reviewer + Admin</b><small id="policyGate">Two-person approval</small></div>
+      </div>
+      <div class="lab-stage">
+        <div class="stage-legend"><span><i class="draft-key"></i>Working state</span><span><i class="prod-key"></i>Production state</span></div>
+        <div class="state-lanes">
+          <div class="lane draft-lane"><label>DRAFT</label>
+            <div class="event-card" id="labCard1"><span>01</span><b>Thêm CRM Webhook</b><small>Editor · 11:42</small></div>
+            <div class="event-card" id="labCard2" hidden><span>02</span><b>Review Snapshot</b><small>v13-rc2 · Immutable</small></div>
+            <div class="event-card" id="labCard3" hidden><span>03</span><b id="labCard3Reviewers">Domain Reviewer + Admin</b><small>Approval policy satisfied</small></div>
+          </div>
+          <div class="boundary"><span id="labBoundaryText">NO RELEASE BOUNDARY</span><i id="labBoundaryIcon">⚠</i></div>
+          <div class="lane prod-lane"><label>PRODUCTION</label>
+            <div class="event-card production" id="labProd"><span id="labProdNum">02</span><b>Public Form · API · Schedule</b><small id="labProdText">Đang chạy logic cũ</small></div>
+          </div>
+        </div>
+        <div class="lab-controls">
+          <button id="labPrev" disabled>← Lùi</button>
+          <div><b id="labStepLabel">Bước 0</b><span id="labStepText">Bắt đầu mô phỏng</span></div>
+          <button id="labNext">Chạy bước tiếp →</button>
+        </div>
+      </div>
+    </div>
+    <p class="lab-conclusion"><b>Kết luận quan sát:</b> <span id="labConclusion">Production authority xuất hiện như hệ quả ngầm của quyền Edit.</span></p>
+  </section>
+
+  <section class="model-section" id="model">
+    <div class="section-head">
+      <p class="eyebrow">PART 03 · PRODUCT MODEL</p>
+      <h2>Ba mặt phẳng kiểm soát — Three Control Planes</h2>
+      <p>Thiết kế không coi collaboration là một cụm tính năng rời rạc. Nó tổ chức toàn bộ vòng đời workflow thành ba lớp trách nhiệm liên kết nhưng độc lập.</p>
+    </div>
+    <figure class="figure-block" role="img" aria-label="Mô hình ba mặt phẳng kiểm soát gồm Access, Collaboration và Release">
+      <div class="planes">
+        <article class="plane access-plane"><div class="plane-number">01</div><span class="icon" aria-hidden="true">◇</span><h3>Access Plane</h3><p>Kiểm soát ai được tiếp cận tài sản nào, trong phạm vi nào và bằng ngân sách nào.</p><ul><li>Members &amp; Teams</li><li>Roles &amp; Capabilities</li><li>Data / Credential Scope</li><li>Credit Budget</li></ul></article>
+        <div class="plane-arrow">→</div>
+        <article class="plane collaboration-plane"><div class="plane-number">02</div><span class="icon" aria-hidden="true">⌘</span><h3>Collaboration Plane</h3><p>Tạo không gian làm việc chung an toàn cho draft, review context và conflict resolution.</p><ul><li>Presence &amp; Multiplayer</li><li>Comments &amp; Mentions</li><li>Working Draft</li><li>Change History</li></ul></article>
+        <div class="plane-arrow">→</div>
+        <article class="plane release-plane"><div class="plane-number">03</div><span class="icon" aria-hidden="true">✓</span><h3>Release Plane</h3><p>Biến thay đổi đã được đánh giá thành immutable release phục vụ người dùng thật.</p><ul><li>Review Snapshot</li><li>Semantic Diff</li><li>Approval Policy</li><li>Deploy &amp; Rollback</li></ul></article>
+      </div>
+      <div class="runtime-row"><span>RUNTIME CHANNELS</span><b>Public Form</b><b>Public API</b><b>Schedule</b><b>Bulk Run</b><small>Mỗi channel được pin vào một Published Release cụ thể</small></div>
+      <figcaption><span>FIGURE 01</span><b>Three Control Planes.</b> Access xác định thẩm quyền; Collaboration tạo thay đổi; Release quyết định thay đổi nào được phép trở thành production.</figcaption>
+    </figure>
+  </section>
+
+  <section class="prototype-section" id="prototype">
+    <div class="section-head">
+      <p class="eyebrow">PART 04 · COLLABORATIVE BUILDER</p>
+      <h2>Một canvas để cùng xây dựng. Hai trạng thái để vận hành an toàn.</h2>
+      <p>Working Draft tiếp tục autosave và đồng bộ theo thời gian thực; Published Release được giữ bất biến cho đến khi phiên bản mới hoàn tất review và được deploy có chủ đích.</p>
+    </div>
+    <div class="role-switcher" role="tablist" aria-label="Xem theo vai trò">
+      <span>Xem giao diện với vai trò:</span>
+      <button data-role="Builder" class="active">Builder</button>
+      <button data-role="Reviewer">Reviewer</button>
+      <button data-role="Publisher">Publisher</button>
+      <button data-role="Operator">Operator</button>
+    </div>
+    <div class="reading-guide">
+      <div><span>①</span><p><b>Nhìn thanh version.</b> Draft v13 và Published v12 tồn tại đồng thời.</p></div>
+      <div><span>②</span><p><b>Đổi vai trò.</b> Primary action thay đổi theo authority của người dùng.</p></div>
+      <div><span>③</span><p><b>Mở panel.</b> Review, Comments và Release là ba công việc khác nhau.</p></div>
+    </div>
+    <figure class="figure-block centerpiece" aria-label="Prototype tương tác của PAL Collaborative Builder">
+      <div class="app-shell">
+        <aside class="app-sidebar">
+          <div class="workspace-picker"><span class="brand-mark small">mp</span><b>Northstar</b><span>⌄</span></div>
+          <div class="side-item">⌂ <span>Home</span></div><div class="side-item">▣ <span>Agents</span></div><div class="side-item active">⌘ <span>Workflows</span></div><div class="side-item">◇ <span>Assets</span></div>
+          <div class="side-label">TEAM WORKFLOWS</div>
+          <div class="workflow-item active"><span class="wf-dot"></span>Research Pipeline</div><div class="workflow-item">Proposal QA</div><div class="workflow-item">Lead Enrichment</div>
+          <div class="side-person"><span>GT</span><div><b>Giang Thành</b><small id="sidePersonRole">Builder</small></div></div>
+        </aside>
+        <div class="app-main">
+          <div class="app-header">
+            <div><h3>Customer Research Pipeline</h3><div class="app-tabs"><b>Builder</b><span>Triggers</span><span>Run History</span><span>Analytics</span></div></div>
+            <div class="app-controls"><div class="avatar-stack"><i>AN</i><i>LH</i><i>GT</i></div><button class="share-btn">Chia sẻ</button><button class="role-action" id="roleAction">Yêu cầu review</button></div>
+          </div>
+          <div class="version-bar"><div><span class="pill draft">WORKING DRAFT v13</span><small id="roleDetail">Đã lưu 4 giây trước · Được sửa và test Working Draft; không thể tự Publish.</small></div><div><span class="pill published">PUBLISHED v12</span><small>Stable · 2.418 runs</small></div></div>
+          <div class="builder-area">
+            <div class="builder-canvas">
+              <div class="grid-dots"></div>
+              <div class="builder-node bn1 selected"><div class="node-meta"><span>HUMAN INPUT</span><i>AN</i></div><b>Research Requirements</b><p>7 input fields · Required</p><div class="comment-chip">● 2</div></div>
+              <div class="builder-line bl1"></div>
+              <div class="builder-node bn2"><div class="node-meta"><span>AGENT</span><i>LH</i></div><b>Source Validation</b><p>Model: Gemini 2.5 Flash</p></div>
+              <div class="builder-line bl2"></div>
+              <div class="builder-node bn3"><div class="node-meta"><span>ORCHESTRATOR</span></div><b>Research Synthesis</b><p>3 workers · Max 6 loops</p><span class="warning">Cost +38%</span></div>
+              <div class="canvas-note"><b>Linh</b><p>Tiêu chí nguồn đã được cập nhật. Nhờ anh An kiểm tra test case #04.</p></div>
+              <div class="canvas-tools"><button>＋</button><button>−</button><button>⌖</button></div>
+            </div>
+            <aside class="review-panel">
+              <div class="panel-tabs">
+                <button data-panel="review" class="active">Review</button>
+                <button data-panel="comments">Comments</button>
+                <button data-panel="release">Release</button>
+              </div>
+              <div class="panel-content" data-panel-body="review">
+                <div class="review-state"><span class="state-icon">↗</span><div><small>TRẠNG THÁI</small><b id="releaseState">In Review</b></div></div>
+                <h4>Review Snapshot · v13-rc2</h4>
+                <p class="muted">Snapshot bất biến · tạo bởi Giang Thành</p>
+                <div class="diff-summary"><div><b>+2</b><span>Nodes</span></div><div><b>4</b><span>Prompts</span></div><div><b>+38%</b><span>Cost</span></div></div>
+                <div class="change-item high"><span>HIGH</span><div><b>External action mới</b><p>Thêm Webhook tới CRM production</p></div></div>
+                <div class="change-item medium"><span>MED</span><div><b>Model &amp; cost</b><p>Ước tính 82 → 113 credits/run</p></div></div>
+                <div class="test-box"><div><b>Test evidence</b><span>12/12 passed</span></div><progress value="100" max="100"></progress></div>
+                <button class="approve-btn" id="approveBtn">Approve Snapshot</button>
+                <button class="request-btn">Yêu cầu chỉnh sửa</button>
+              </div>
+              <div class="panel-content" data-panel-body="comments" hidden>
+                <h4>3 trao đổi đang mở</h4>
+                <div class="thread"><span>AN</span><div><b>An Nguyễn · Node 01</b><p>Trường dữ liệu khách hàng này có cần masking trước khi chuyển bước không?</p><small>12 phút trước · Trả lời</small></div></div>
+                <div class="thread"><span>LH</span><div><b>Linh Hoàng · Node 03</b><p>Đã bổ sung evaluator. Cần xác nhận ngưỡng 0,82.</p><small>5 phút trước · Resolve</small></div></div>
+                <textarea aria-label="Viết bình luận" placeholder="@mention đồng đội…"></textarea>
+                <button class="approve-btn">Gửi bình luận</button>
+              </div>
+              <div class="panel-content" data-panel-body="release" hidden>
+                <h4>Runtime bindings</h4>
+                <p class="muted">Production đang pin vào release ổn định.</p>
+                <div class="binding"><span>◎</span><div><b>Public Form</b><small>v12 · Healthy</small></div><i>→ v13</i></div>
+                <div class="binding"><span>⌁</span><div><b>Public API</b><small>v12 · 14 consumers</small></div><i>→ v13</i></div>
+                <div class="binding"><span>◷</span><div><b>Schedule</b><small>v12 · 09:00 ICT</small></div><i>Giữ v12</i></div>
+                <div class="impact"><b>Impact Preview</b><p>Form và API sẽ chuyển sang v13. Schedule tiếp tục chạy v12.</p></div>
+                <button class="approve-btn">Publish Approved v13</button>
+                <button class="request-btn">Xem Release History</button>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </div>
+      <figcaption><span>INTERACTIVE CENTERPIECE</span><b>Release-safe Builder.</b> Builder vẫn có trải nghiệm autosave nhanh; thay đổi chỉ nằm trong Working Draft cho đến khi một immutable snapshot được duyệt và deploy.</figcaption>
+    </figure>
+  </section>
+
+  <section class="flows-section" id="flows">
+    <div class="section-head">
+      <p class="eyebrow">PART 05 · KEY FLOWS</p>
+      <h2>Luồng hoạt động trọng yếu</h2>
+      <p>Mỗi luồng đều xác định rõ đối tượng, trạng thái trung gian, điều kiện chuyển tiếp và bằng chứng được lưu lại.</p>
+    </div>
+    <div class="flow-tabs">
+      <button data-flow="review" class="active">Review &amp; Publish</button>
+      <button data-flow="share">Chia sẻ có kiểm soát</button>
+      <button data-flow="conflict">Xử lý xung đột</button>
+    </div>
+    <figure class="figure-block" role="img" aria-label="Luồng hoạt động theo tab được chọn">
+      <div class="flow-diagram" data-flow-body="review">
+        <div class="flow-wrap"><article class="flow-step step-1"><span>01</span><h3>Working Draft v13</h3><p>Autosave, cộng tác tự do</p></article><div class="flow-arrow"><i>→</i><small>submit</small></div></div>
+        <div class="flow-wrap"><article class="flow-step step-2"><span>02</span><h3>Review Snapshot</h3><p>Snapshot bất biến + test evidence</p><small>Immutable</small></article><div class="flow-arrow"><i>→</i><small>approve</small></div></div>
+        <div class="flow-wrap"><article class="flow-step step-3"><span>03</span><h3>Approval</h3><p>Reviewer độc lập xác nhận</p></article><div class="flow-arrow"><i>→</i><small>deploy</small></div></div>
+        <div class="flow-wrap"><article class="flow-step step-4"><span>04</span><h3>Published Release v13</h3><p>Deploy có chủ đích</p><small>Auditable</small></article></div>
+      </div>
+      <div class="flow-diagram" data-flow-body="share" hidden>
+        <div class="flow-wrap"><article class="flow-step step-1"><span>01</span><h3>Chọn người / Team</h3><p>Internal member hoặc Guest</p></article><div class="flow-arrow"><i>→</i><small>submit</small></div></div>
+        <div class="flow-wrap"><article class="flow-step step-2"><span>02</span><h3>Chọn capability</h3><p>View · Comment · Edit · Test</p></article><div class="flow-arrow"><i>→</i><small>approve</small></div></div>
+        <div class="flow-wrap"><article class="flow-step step-3"><span>03</span><h3>Kiểm tra dependency</h3><p>Agent · Data · Credential</p></article><div class="flow-arrow"><i>→</i><small>deploy</small></div></div>
+        <div class="flow-wrap"><article class="flow-step step-4"><span>04</span><h3>Cấp quyền có thời hạn</h3><p>Audit được toàn bộ</p></article></div>
+      </div>
+      <div class="flow-diagram" data-flow-body="conflict" hidden>
+        <div class="flow-wrap"><article class="flow-step step-1"><span>01</span><h3>Hai Editor cùng sửa</h3><p>Presence ở node và field</p></article><div class="flow-arrow"><i>→</i><small>submit</small></div></div>
+        <div class="flow-wrap"><article class="flow-step step-2"><span>02</span><h3>Detect conflict</h3><p>Schema, prompt hoặc deletion</p></article><div class="flow-arrow"><i>→</i><small>approve</small></div></div>
+        <div class="flow-wrap"><article class="flow-step step-3"><span>03</span><h3>Resolve có ngữ nghĩa</h3><p>Merge · Restore · Copy</p></article><div class="flow-arrow"><i>→</i><small>deploy</small></div></div>
+        <div class="flow-wrap"><article class="flow-step step-4"><span>04</span><h3>Ghi Change History</h3><p>Không silent overwrite</p></article></div>
+      </div>
+      <div class="flow-rule"><b>Invariant — Bất biến hệ thống:</b><span>Autosave chỉ cập nhật Working Draft. Runtime channel chỉ đọc một Published Release đã được định danh.</span></div>
+      <figcaption><span>FIGURE 02</span><b>State transition, not checklist.</b> Mỗi bước tạo một trạng thái mới có danh tính, điều kiện chuyển tiếp và audit evidence.</figcaption>
+    </figure>
+
+    <div class="sub-head">
+      <span>05.1 · RELEASE LIFECYCLE</span>
+      <h3>Vòng đời một phiên bản, kể cả các đường quay lui</h3>
+      <p>Sơ đồ bốn ô ở trên chỉ mô tả đường đi thuận lợi. Trên thực tế, phần khó của review/approval nằm ở các cạnh quay lui: reviewer yêu cầu sửa, phê duyệt hết hiệu lực vì draft đã đổi, và release bị rollback sau khi đã phục vụ người dùng. Sơ đồ dưới đây vẽ đủ các cạnh đó.</p>
+    </div>
+    <figure class="figure-block">
+      <div class="diagram">
+        <svg viewBox="0 0 1120 350" role="img" aria-label="Máy trạng thái vòng đời release: Working Draft, Review Snapshot, In Review, Approved, Published Release, cùng các trạng thái Approval Void và Rolled Back và các cạnh quay lui">
+          <defs>
+            <marker id="f3a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah" /></marker>
+            <marker id="f3d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah-deny" /></marker>
+            <marker id="f3o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah-accent" /></marker>
+          </defs>
+
+          <text x="878" y="40" class="lbl-accent" text-anchor="middle">RELEASE BOUNDARY</text>
+          <path class="gate" d="M878,52 V86" />
+          <path class="gate" d="M878,130 V330" />
+
+          <rect x="12" y="76" width="170" height="64" rx="4" class="box" />
+          <text x="97" y="104" class="t" text-anchor="middle">Working Draft</text>
+          <text x="97" y="122" class="s" text-anchor="middle">autosave · multiplayer</text>
+
+          <rect x="224" y="76" width="170" height="64" rx="4" class="box" />
+          <text x="309" y="104" class="t" text-anchor="middle">Review Snapshot</text>
+          <text x="309" y="122" class="s" text-anchor="middle">immutable · v13-rc2</text>
+
+          <rect x="436" y="76" width="170" height="64" rx="4" class="box" />
+          <text x="521" y="104" class="t" text-anchor="middle">In Review</text>
+          <text x="521" y="122" class="s" text-anchor="middle">diff + test evidence</text>
+
+          <rect x="648" y="76" width="170" height="64" rx="4" class="box" />
+          <text x="733" y="104" class="t" text-anchor="middle">Approved</text>
+          <text x="733" y="122" class="s" text-anchor="middle">policy đã thoả</text>
+
+          <rect x="938" y="76" width="170" height="64" rx="4" class="box box-ok" />
+          <text x="1023" y="104" class="t" text-anchor="middle">Published Release</text>
+          <text x="1023" y="122" class="s" text-anchor="middle">runtime đọc bản này</text>
+
+          <rect x="648" y="248" width="170" height="64" rx="4" class="box box-warn" />
+          <text x="733" y="276" class="t-sm" text-anchor="middle">Approval Void</text>
+          <text x="733" y="294" class="s" text-anchor="middle">draft đã thay đổi</text>
+
+          <rect x="938" y="248" width="170" height="64" rx="4" class="box box-warn" />
+          <text x="1023" y="276" class="t-sm" text-anchor="middle">Rolled Back</text>
+          <text x="1023" y="294" class="s" text-anchor="middle">runtime về v12</text>
+
+          <path class="edge" marker-end="url(#f3a)" d="M182,108 H222" />
+          <text x="202" y="68" class="lbl" text-anchor="middle">submit</text>
+          <path class="edge" marker-end="url(#f3a)" d="M394,108 H434" />
+          <text x="414" y="68" class="lbl" text-anchor="middle">assign</text>
+          <path class="edge" marker-end="url(#f3a)" d="M606,108 H646" />
+          <text x="626" y="68" class="lbl" text-anchor="middle">approve</text>
+          <path class="edge-accent" marker-end="url(#f3o)" d="M818,108 H936" />
+          <text x="878" y="127" class="lbl-accent" text-anchor="middle">deploy</text>
+
+          <path class="edge-deny" marker-end="url(#f3d)" d="M521,72 V34 H97 V74" />
+          <text x="309" y="26" class="lbl-deny" text-anchor="middle">reviewer yêu cầu sửa</text>
+
+          <path class="edge-deny" marker-end="url(#f3d)" d="M733,142 V246" />
+          <text x="743" y="198" class="lbl-deny">draft đã đổi</text>
+
+          <path class="edge-deny" marker-end="url(#f3d)" d="M646,280 H309 V143" />
+          <text x="480" y="271" class="lbl-deny" text-anchor="middle">phải snapshot lại</text>
+
+          <path class="edge-deny" marker-end="url(#f3d)" d="M1000,142 V246" />
+          <text x="992" y="192" class="lbl-deny" text-anchor="end">incident</text>
+          <path class="edge" marker-end="url(#f3a)" d="M1046,246 V144" />
+          <text x="1054" y="192" class="lbl">pin v-1</text>
+        </svg>
+      </div>
+      <figcaption><span>FIGURE 03</span><b>Release lifecycle state machine.</b> Chỉ một cạnh duy nhất đi qua release boundary, và cạnh đó đòi hỏi trạng thái Approved còn hiệu lực. Mọi thay đổi draft sau khi phê duyệt sẽ vô hiệu hoá approval thay vì âm thầm đi kèm bản deploy.</figcaption>
+    </figure>
+
+    <div class="sub-head">
+      <span>05.2 · ROLE HANDOFF</span>
+      <h3>Ai làm gì, và thay đổi đổi tay ở đâu</h3>
+      <p>Cùng một luồng review/approval nhìn theo trục trách nhiệm. Mỗi lần mũi tên đi xuống một lane là một lần thẩm quyền chuyển chủ thể — đó cũng chính là các điểm cần audit record và cần chặn self-approval.</p>
+    </div>
+    <figure class="figure-block">
+      <div class="diagram">
+        <svg viewBox="0 0 1120 400" role="img" aria-label="Sơ đồ swimlane bốn vai trò Builder, Reviewer, Publisher, Operator với các bước và điểm chuyển giao thẩm quyền">
+          <defs>
+            <marker id="f4a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah" /></marker>
+            <marker id="f4d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah-deny" /></marker>
+          </defs>
+
+          <text x="291" y="30" class="lbl-accent" text-anchor="middle">01 · AUTHORING</text>
+          <path class="rule" d="M146,42 H436" />
+          <text x="607" y="30" class="lbl-accent" text-anchor="middle">02 · REVIEW</text>
+          <path class="rule" d="M462,42 H752" />
+          <text x="923" y="30" class="lbl-accent" text-anchor="middle">03 · RELEASE &amp; OPERATE</text>
+          <path class="rule" d="M778,42 H1068" />
+
+          <rect x="0" y="56" width="1108" height="76" class="lane-b" />
+          <rect x="0" y="132" width="1108" height="76" class="lane-a" />
+          <rect x="0" y="208" width="1108" height="76" class="lane-b" />
+          <rect x="0" y="284" width="1108" height="76" class="lane-a" />
+          <path class="rule" d="M0,56 H1108 M0,132 H1108 M0,208 H1108 M0,284 H1108 M0,360 H1108 M126,56 V360" />
+
+          <text x="14" y="98" class="lbl-lane">BUILDER</text>
+          <text x="14" y="174" class="lbl-lane">REVIEWER</text>
+          <text x="14" y="250" class="lbl-lane">PUBLISHER</text>
+          <text x="14" y="326" class="lbl-lane">OPERATOR</text>
+
+          <rect x="146" y="70" width="132" height="48" rx="4" class="box" />
+          <text x="212" y="90" class="t-sm" text-anchor="middle">Sửa Working Draft</text>
+          <text x="212" y="106" class="s" text-anchor="middle">autosave</text>
+
+          <rect x="304" y="70" width="132" height="48" rx="4" class="box" />
+          <text x="370" y="90" class="t-sm" text-anchor="middle">Tạo Snapshot</text>
+          <text x="370" y="106" class="s" text-anchor="middle">đóng băng v13-rc2</text>
+
+          <rect x="462" y="146" width="132" height="48" rx="4" class="box" />
+          <text x="528" y="166" class="t-sm" text-anchor="middle">Đọc Semantic Diff</text>
+          <text x="528" y="182" class="s" text-anchor="middle">+ test evidence</text>
+
+          <rect x="620" y="146" width="132" height="48" rx="4" class="box" />
+          <text x="686" y="166" class="t-sm" text-anchor="middle">Approve</text>
+          <text x="686" y="182" class="s" text-anchor="middle">không tự duyệt</text>
+
+          <rect x="778" y="222" width="132" height="48" rx="4" class="box box-accent" />
+          <text x="844" y="242" class="t-sm" text-anchor="middle">Publish v13</text>
+          <text x="844" y="258" class="s" text-anchor="middle">chọn channel</text>
+
+          <rect x="936" y="298" width="132" height="48" rx="4" class="box" />
+          <text x="1002" y="318" class="t-sm" text-anchor="middle">Giám sát</text>
+          <text x="1002" y="334" class="s" text-anchor="middle">pause · rollback</text>
+
+          <path class="edge" marker-end="url(#f4a)" d="M278,94 H302" />
+          <path class="edge" marker-end="url(#f4a)" d="M436,94 H449 V170 H460" />
+          <text x="455" y="136" class="lbl">gửi đi review</text>
+          <path class="edge" marker-end="url(#f4a)" d="M594,170 H618" />
+          <path class="edge" marker-end="url(#f4a)" d="M752,170 H765 V246 H776" />
+          <text x="771" y="212" class="lbl">approval hiệu lực</text>
+          <path class="edge" marker-end="url(#f4a)" d="M910,246 H923 V322 H934" />
+          <text x="929" y="288" class="lbl">release đã deploy</text>
+
+          <path class="edge-deny" marker-end="url(#f4d)" d="M686,196 V378 H212 V121" />
+          <text x="450" y="371" class="lbl-deny" text-anchor="middle">yêu cầu sửa — snapshot bị huỷ, quay lại Builder</text>
+        </svg>
+      </div>
+      <figcaption><span>FIGURE 04</span><b>Role handoff swimlane.</b> Ba lần chuyển lane là ba lần thẩm quyền thay đổi chủ thể. Cạnh đứt màu đỏ cho thấy đường quay lui đi thẳng về Builder, không dừng ở Publisher — nghĩa là bản bị từ chối không bao giờ tồn tại như một release ứng viên.</figcaption>
+    </figure>
+
+    <div class="sub-head">
+      <span>05.3 · SHARING</span>
+      <h3>Một lần chia sẻ kéo theo bốn quyết định phụ thuộc</h3>
+      <p>Workflow không phải một tài sản đơn lẻ. Nó tham chiếu agent, prompt library, bảng dữ liệu và credential. Vì thế hộp thoại “Chia sẻ” không thể chỉ hỏi một mức quyền: nó phải giải bao đóng phụ thuộc và cho người cấp thấy từng phần được kế thừa ra sao.</p>
+    </div>
+    <figure class="figure-block">
+      <div class="diagram">
+        <svg viewBox="0 0 1120 400" role="img" aria-label="Sơ đồ bao đóng phụ thuộc khi chia sẻ một workflow, gồm agent, prompt library, bảng dữ liệu và credential, với kết quả phân giải quyền cho từng phần">
+          <defs>
+            <marker id="f5a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah" /></marker>
+            <marker id="f5d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah-deny" /></marker>
+          </defs>
+
+          <rect x="20" y="160" width="210" height="90" rx="4" class="box box-navy" />
+          <text x="125" y="188" class="t-inv" text-anchor="middle">Grant gốc</text>
+          <text x="125" y="208" class="s-inv" text-anchor="middle">Guest · Comment</text>
+          <text x="125" y="226" class="s-inv" text-anchor="middle">TTL 14 ngày</text>
+
+          <path class="edge-bus" d="M232,205 H300" />
+          <path class="edge-bus" d="M300,52 V346" />
+
+          <path class="edge" marker-end="url(#f5a)" d="M300,52 H416" />
+          <text x="358" y="44" class="lbl" text-anchor="middle">kế thừa read</text>
+          <path class="edge" marker-end="url(#f5a)" d="M300,150 H416" />
+          <text x="358" y="142" class="lbl" text-anchor="middle">kế thừa read</text>
+          <path class="edge-deny" marker-end="url(#f5d)" d="M300,248 H416" />
+          <text x="358" y="240" class="lbl-deny" text-anchor="middle">bị mask</text>
+          <path class="edge-deny" marker-end="url(#f5d)" d="M300,346 H416" />
+          <text x="358" y="338" class="lbl-deny" text-anchor="middle">không kế thừa</text>
+
+          <rect x="420" y="21" width="280" height="62" rx="4" class="box" />
+          <text x="436" y="47" class="t-sm">Agent · Source Validator</text>
+          <text x="436" y="66" class="s">sub-asset của workflow</text>
+
+          <rect x="420" y="119" width="280" height="62" rx="4" class="box" />
+          <text x="436" y="145" class="t-sm">Prompt Library · Research Rubric</text>
+          <text x="436" y="164" class="s">shared asset của workspace</text>
+
+          <rect x="420" y="217" width="280" height="62" rx="4" class="box box-warn" />
+          <text x="436" y="243" class="t-sm">Data Table · CRM Customers</text>
+          <text x="436" y="262" class="s">chứa PII</text>
+
+          <rect x="420" y="315" width="280" height="62" rx="4" class="box box-warn" />
+          <text x="436" y="341" class="t-sm">Credential · CRM API Key</text>
+          <text x="436" y="360" class="s">production secret</text>
+
+          <path class="edge" marker-end="url(#f5a)" d="M702,52 H776" />
+          <path class="edge" marker-end="url(#f5a)" d="M702,150 H776" />
+          <path class="edge" marker-end="url(#f5a)" d="M702,248 H776" />
+          <path class="edge" marker-end="url(#f5a)" d="M702,346 H776" />
+
+          <rect x="780" y="21" width="320" height="62" rx="4" class="box box-soft" />
+          <text x="796" y="47" class="t-sm">Xem cấu hình node</text>
+          <text x="796" y="66" class="s">không xem prompt gốc</text>
+
+          <rect x="780" y="119" width="320" height="62" rx="4" class="box box-soft" />
+          <text x="796" y="145" class="t-sm">Xem bản đang được dùng</text>
+          <text x="796" y="164" class="s">pin theo snapshot</text>
+
+          <rect x="780" y="217" width="320" height="62" rx="4" class="box box-soft" />
+          <text x="796" y="243" class="t-sm">Chỉ field đã mask</text>
+          <text x="796" y="262" class="s">không export · không raw</text>
+
+          <rect x="780" y="315" width="320" height="62" rx="4" class="box box-soft" />
+          <text x="796" y="341" class="t-sm">Không cấp cho guest</text>
+          <text x="796" y="360" class="s">test run dùng credential chủ</text>
+        </svg>
+      </div>
+      <figcaption><span>FIGURE 05</span><b>Dependency closure của một grant.</b> Quyền không lan truyền đồng nhất: agent và prompt kế thừa read, dữ liệu PII bị mask, còn credential không bao giờ đi theo grant. Guest vẫn test được workflow vì run thực thi bằng credential của chủ sở hữu, không bằng quyền của guest.</figcaption>
+    </figure>
+
+    <div class="sub-head">
+      <span>05.4 · MULTIPLAYER EDITING</span>
+      <h3>Hai người cùng sửa một field, và không ai bị mất việc</h3>
+      <p>Real-time collaboration chỉ an toàn nếu hệ thống thừa nhận rằng xung đột sẽ xảy ra. Yêu cầu thiết kế ở đây không phải “khoá chặt để tránh xung đột”, mà là: mọi lần ghi đè phải trở thành một quyết định hiển thị, và mọi kết quả đều để lại vết trong Change History.</p>
+    </div>
+    <figure class="figure-block">
+      <div class="diagram">
+        <svg viewBox="0 0 1120 430" role="img" aria-label="Máy trạng thái cộng tác đa người dùng từ Idle qua Local Editing, Co-Editing, Conflict Detected đến ba cách giải quyết và bản ghi Change History">
+          <defs>
+            <marker id="f6a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah" /></marker>
+            <marker id="f6o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah-accent" /></marker>
+          </defs>
+
+          <rect x="30" y="48" width="190" height="62" rx="4" class="box" />
+          <text x="125" y="76" class="t" text-anchor="middle">Idle</text>
+          <text x="125" y="94" class="s" text-anchor="middle">không ai giữ field</text>
+
+          <rect x="296" y="48" width="190" height="62" rx="4" class="box" />
+          <text x="391" y="76" class="t" text-anchor="middle">Local Editing</text>
+          <text x="391" y="94" class="s" text-anchor="middle">soft lock 8 giây</text>
+
+          <rect x="562" y="48" width="190" height="62" rx="4" class="box" />
+          <text x="657" y="76" class="t" text-anchor="middle">Co-Editing</text>
+          <text x="657" y="94" class="s" text-anchor="middle">presence · 2 con trỏ</text>
+
+          <rect x="828" y="48" width="190" height="62" rx="4" class="box box-warn" />
+          <text x="923" y="76" class="t" text-anchor="middle">Conflict Detected</text>
+          <text x="923" y="94" class="s" text-anchor="middle">cùng field · cùng lúc</text>
+
+          <path class="edge" marker-end="url(#f6a)" d="M220,79 H294" />
+          <text x="257" y="36" class="lbl" text-anchor="middle">focus field</text>
+          <path class="edge" marker-end="url(#f6a)" d="M486,79 H560" />
+          <text x="523" y="36" class="lbl" text-anchor="middle">peer vào node</text>
+          <path class="edge" marker-end="url(#f6a)" d="M752,79 H826" />
+          <text x="789" y="36" class="lbl" text-anchor="middle">ghi cùng field</text>
+
+          <path class="edge-bus" d="M923,112 V160" />
+          <path class="edge-bus" d="M295,160 H923" />
+          <text x="600" y="152" class="lbl-accent" text-anchor="middle">bắt buộc resolve — không bao giờ tự ghi đè</text>
+          <path class="edge-accent" marker-end="url(#f6o)" d="M295,160 V204" />
+          <path class="edge-accent" marker-end="url(#f6o)" d="M570,160 V204" />
+          <path class="edge-accent" marker-end="url(#f6o)" d="M845,160 V204" />
+
+          <rect x="180" y="208" width="230" height="62" rx="4" class="box" />
+          <text x="295" y="236" class="t-sm" text-anchor="middle">Merge cả hai</text>
+          <text x="295" y="254" class="s" text-anchor="middle">field không giao nhau</text>
+
+          <rect x="455" y="208" width="230" height="62" rx="4" class="box" />
+          <text x="570" y="236" class="t-sm" text-anchor="middle">Giữ một bản</text>
+          <text x="570" y="254" class="s" text-anchor="middle">bản kia thành revision</text>
+
+          <rect x="730" y="208" width="230" height="62" rx="4" class="box" />
+          <text x="845" y="236" class="t-sm" text-anchor="middle">Tách nhánh Copy</text>
+          <text x="845" y="254" class="s" text-anchor="middle">quyết định để lại sau</text>
+
+          <path class="edge-bus" d="M295,270 V300" />
+          <path class="edge-bus" d="M570,270 V300" />
+          <path class="edge-bus" d="M845,270 V300" />
+          <path class="edge-bus" d="M295,300 H845" />
+          <path class="edge" marker-end="url(#f6a)" d="M570,300 V344" />
+
+          <rect x="320" y="348" width="500" height="62" rx="4" class="box box-navy" />
+          <text x="570" y="376" class="t-inv" text-anchor="middle">Change History Entry</text>
+          <text x="570" y="394" class="s-inv" text-anchor="middle">actor · thời điểm · before/after · lý do</text>
+
+          <path class="edge" marker-end="url(#f6a)" d="M318,379 H125 V114" />
+          <text x="222" y="371" class="lbl" text-anchor="middle">phiên tiếp tục</text>
+        </svg>
+      </div>
+      <figcaption><span>FIGURE 06</span><b>Multiplayer conflict state machine.</b> Cả ba nhánh giải quyết đều hội tụ về một bản ghi Change History — nghĩa là không có đường nào trong hệ thống dẫn tới việc mất thay đổi mà không để lại dấu vết. Mọi kết quả đều nằm trong Working Draft, chưa chạm tới release.</figcaption>
+    </figure>
+  </section>
+
+  <section class="permissions-section" id="permissions">
+    <div class="section-head">
+      <p class="eyebrow">PART 06 · PERMISSIONS MODEL</p>
+      <h2>Quyền hiệu lực là giao của Role, Scope, Capability và Policy</h2>
+      <p>Workspace Role được giữ để tương thích với PAL hiện tại; quyền chi tiết được thực thi trên từng resource và environment.</p>
+    </div>
+    <div class="design-decision"><span>DESIGN DECISION</span><p>Không thay bốn Workspace Roles hiện tại bằng một danh sách role dài hơn. PAL giữ role làm <b>default bundle</b>, sau đó tính quyền hiệu lực theo resource và environment.</p></div>
+    <div class="permission-formula"><div><span>Workspace Role</span><b>Editor</b></div><i>∩</i><div><span>Resource Scope</span><b>Marketing / Workflow A</b></div><i>∩</i><div><span>Capability</span><b>Edit Draft · Test</b></div><i>∩</i><div><span>Policy</span><b>No self-approval</b></div><i>=</i><strong>Effective Permission</strong></div>
+
+    <div class="sub-head">
+      <span>06.1 · RESOLUTION ORDER</span>
+      <h3>Thứ tự phân giải, và điều gì xảy ra khi một cổng nói không</h3>
+      <p>Công thức giao bốn tập ở trên không cho biết hệ thống kiểm tra theo trình tự nào, cũng không cho biết người dùng nhận lại thông tin gì khi bị chặn. Sơ đồ dưới đây cố định cả hai: bốn cổng tuần tự, và một nhánh từ chối duy nhất luôn kèm lý do cụ thể.</p>
+    </div>
+    <figure class="figure-block">
+      <div class="diagram">
+        <svg viewBox="0 0 1120 320" role="img" aria-label="Sơ đồ quyết định phân giải quyền qua bốn cổng Workspace Role, Resource Scope, Capability và Policy Guard, dẫn tới ALLOW hoặc một nhánh DENY duy nhất">
+          <defs>
+            <marker id="f7a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah" /></marker>
+            <marker id="f7d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah-deny" /></marker>
+          </defs>
+
+          <rect x="14" y="64" width="124" height="68" rx="4" class="box box-soft" />
+          <text x="76" y="92" class="t-sm" text-anchor="middle">Action request</text>
+          <text x="76" y="110" class="s" text-anchor="middle">actor+action</text>
+
+          <rect x="167" y="64" width="176" height="68" rx="4" class="box" />
+          <text x="255" y="92" class="t-sm" text-anchor="middle">1 · Workspace Role</text>
+          <text x="255" y="110" class="s" text-anchor="middle">Owner·Admin·Editor·User</text>
+
+          <rect x="372" y="64" width="176" height="68" rx="4" class="box" />
+          <text x="460" y="92" class="t-sm" text-anchor="middle">2 · Resource Scope</text>
+          <text x="460" y="110" class="s" text-anchor="middle">Team · Folder · Workflow</text>
+
+          <rect x="577" y="64" width="176" height="68" rx="4" class="box" />
+          <text x="665" y="92" class="t-sm" text-anchor="middle">3 · Capability</text>
+          <text x="665" y="110" class="s" text-anchor="middle">Edit·Approve·Publish</text>
+
+          <rect x="782" y="64" width="176" height="68" rx="4" class="box box-accent" />
+          <text x="870" y="92" class="t-sm" text-anchor="middle">4 · Policy Guard</text>
+          <text x="870" y="110" class="s" text-anchor="middle">SoD · budget · env</text>
+
+          <rect x="987" y="64" width="118" height="68" rx="4" class="box box-ok" />
+          <text x="1046" y="92" class="t-sm" text-anchor="middle">ALLOW</text>
+          <text x="1046" y="110" class="s" text-anchor="middle">ghi audit</text>
+
+          <path class="edge" marker-end="url(#f7a)" d="M138,98 H165" />
+          <path class="edge" marker-end="url(#f7a)" d="M343,98 H370" />
+          <text x="356" y="90" class="lbl" text-anchor="middle">có</text>
+          <path class="edge" marker-end="url(#f7a)" d="M548,98 H575" />
+          <text x="561" y="90" class="lbl" text-anchor="middle">có</text>
+          <path class="edge" marker-end="url(#f7a)" d="M753,98 H780" />
+          <text x="766" y="90" class="lbl" text-anchor="middle">có</text>
+          <path class="edge" marker-end="url(#f7a)" d="M958,98 H985" />
+          <text x="971" y="90" class="lbl" text-anchor="middle">có</text>
+
+          <path class="edge-deny" d="M255,134 V176" />
+          <path class="edge-deny" d="M460,134 V176" />
+          <path class="edge-deny" d="M665,134 V176" />
+          <path class="edge-deny" d="M870,134 V176" />
+          <path class="edge-deny" d="M255,176 H870" />
+          <text x="247" y="168" class="lbl-deny" text-anchor="end">bất kỳ cổng trả về KHÔNG</text>
+          <path class="edge-deny" marker-end="url(#f7d)" d="M562,176 V228" />
+
+          <rect x="372" y="234" width="380" height="62" rx="4" class="box box-warn" />
+          <text x="562" y="262" class="t-sm" text-anchor="middle">DENY</text>
+          <text x="562" y="280" class="s" text-anchor="middle">ghi audit log · trả về lý do cụ thể · không im lặng</text>
+        </svg>
+      </div>
+      <figcaption><span>FIGURE 07</span><b>Permission resolution order.</b> Role chỉ là cổng đầu tiên, không phải câu trả lời. Cổng 4 là nơi Separation of Duties được thực thi, nên một Admin vẫn có thể bị chặn tự duyệt snapshot do chính mình tạo — và luôn nhận được lý do, thay vì một nút bị vô hiệu hoá không giải thích.</figcaption>
+    </figure>
+
+    <div class="table-wrap"><table><thead><tr><th>Permission preset</th><th>View</th><th>Comment</th><th>Edit Draft</th><th>Test</th><th>Approve</th><th>Publish</th><th>Run Prod.</th></tr></thead><tbody>
+      <tr><td>Viewer</td><td class="yes">●</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+      <tr><td>Commenter</td><td class="yes">●</td><td class="yes">●</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+      <tr><td>Builder</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+      <tr><td>Reviewer</td><td class="yes">●</td><td class="yes">●</td><td class="no">—</td><td class="yes">●</td><td class="yes">●</td><td class="no">—</td><td class="no">—</td></tr>
+      <tr><td>Publisher</td><td class="yes">●</td><td class="yes">●</td><td class="no">—</td><td class="yes">●</td><td class="no">—</td><td class="yes">●</td><td class="yes">●</td></tr>
+      <tr><td>Operator</td><td class="yes">●</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">●</td></tr>
+      <tr><td>Maintainer</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td>Policy</td><td class="yes">●</td><td class="yes">●</td></tr>
+    </tbody></table></div>
+    <p class="table-note"><b>Separation of Duties:</b> khi policy yêu cầu kiểm soát độc lập, người tạo snapshot không được tự Approve; người Publish chỉ có thể chọn phiên bản còn hiệu lực phê duyệt.</p>
+  </section>
+
+  <section class="governance-section">
+    <div><p class="eyebrow light">PART 07 · RISK-BASED GOVERNANCE</p><h2>Không phải mọi thay đổi đều cần cùng một mức kiểm soát.</h2><p>PAL tự phân loại rủi ro dựa trên tác động ngữ nghĩa của thay đổi, thay vì buộc mọi team đi qua một quy trình cứng nhắc.</p></div>
+    <div class="risk-ladder">
+      <article><span class="risk-level low">LOW</span><div><b>Layout, tên node, ghi chú</b><p>Có thể direct publish theo workspace policy.</p></div><strong>0–1 reviewer</strong></article>
+      <article><span class="risk-level med">MEDIUM</span><div><b>Prompt, model, routing logic</b><p>Có thể thay đổi chất lượng, hành vi và chi phí.</p></div><strong>1 reviewer</strong></article>
+      <article><span class="risk-level high">HIGH</span><div><b>Data, Webhook, Payment, Trigger</b><p>Tạo external effect hoặc mở rộng quyền truy cập.</p></div><strong>Domain + Admin</strong></article>
+      <article><span class="risk-level critical">CRITICAL</span><div><b>Production credential, write action</b><p>Có thể thay đổi trạng thái hệ thống bên ngoài.</p></div><strong>Security + Publisher</strong></article>
+    </div>
+  </section>
+
+  <section class="roadmap-section" id="roadmap">
+    <div class="section-head">
+      <p class="eyebrow">PART 08 · DELIVERY STRATEGY</p>
+      <h2>Ưu tiên release safety trước multiplayer sophistication</h2>
+      <p>Giá trị cốt lõi xuất hiện ngay khi autosave không còn chạm production. Real-time collaboration được triển khai sau trên nền version model đã ổn định.</p>
+    </div>
+    <div class="roadmap"><article><span>PHASE 01</span><h3>Release Safety</h3><p>Draft/Published split · Immutable versions · Publish permission · Rollback · Audit log.</p><small>MVP · Tác động cao nhất</small></article><i>→</i><article><span>PHASE 02</span><h3>Review &amp; Governance</h3><p>Request Review · Semantic Diff · Approval Policy · Guest Review.</p><small>Organizational control</small></article><i>→</i><article><span>PHASE 03</span><h3>True Multiplayer</h3><p>Presence · Collaborative fields · Semantic conflict detection · Follow mode.</p><small>Collaboration velocity</small></article></div>
+    <div class="metric-card"><div><p class="eyebrow">NORTH-STAR METRIC</p><h3>Weekly Governed Releases</h3><p>Số workflow version được ít nhất hai người đóng góp hoặc review, Publish thành công và không cần rollback trong 24 giờ.</p></div><div class="metric-mini"><b>↑</b><span>Collaboration</span><small>Nhiều contributor hơn</small></div><div class="metric-mini"><b>↓</b><span>Change failure</span><small>Ít rollback hơn</small></div><div class="metric-mini"><b>✓</b><span>Accountability</span><small>Mỗi release có chủ thể</small></div></div>
+  </section>
+
+  <footer><div><span class="brand-mark">mp</span><b>PAL Team Workspace</b></div><p>Product design proposal · Permissions, review/approval &amp; real-time collaboration</p><a href="#top">Lên đầu trang ↑</a></footer>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* Role switcher */
+  var roleCopy = {
+    Builder: { action: "Yêu cầu review", detail: "Được sửa và test Working Draft; không thể tự Publish." },
+    Reviewer: { action: "Đánh giá thay đổi", detail: "Được xem Semantic Diff, chạy test và Approve." },
+    Publisher: { action: "Publish bản đã duyệt", detail: "Chỉ phát hành immutable version đã được Approve." },
+    Operator: { action: "Giám sát production", detail: "Được Pause, Rollback và xem runtime health." }
+  };
+  var roleButtons = document.querySelectorAll(".role-switcher button");
+  roleButtons.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var role = btn.dataset.role;
+      roleButtons.forEach(function (b) { b.classList.toggle("active", b === btn); });
+      $("roleAction").textContent = roleCopy[role].action;
+      $("sidePersonRole").textContent = role;
+      $("roleDetail").textContent = "Đã lưu 4 giây trước · " + roleCopy[role].detail;
+    });
+  });
+
+  /* Review panel tabs */
+  var panelButtons = document.querySelectorAll(".panel-tabs button");
+  panelButtons.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var name = btn.dataset.panel;
+      panelButtons.forEach(function (b) { b.classList.toggle("active", b === btn); });
+      document.querySelectorAll("[data-panel-body]").forEach(function (body) {
+        body.hidden = body.dataset.panelBody !== name;
+      });
+    });
+  });
+
+  /* Approve toggle */
+  var approved = false;
+  $("approveBtn").addEventListener("click", function () {
+    approved = !approved;
+    $("approveBtn").textContent = approved ? "Đã Approve ✓" : "Approve Snapshot";
+    $("releaseState").textContent = approved ? "Approved" : "In Review";
+  });
+
+  /* Key flow tabs */
+  var flowButtons = document.querySelectorAll(".flow-tabs button");
+  flowButtons.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var name = btn.dataset.flow;
+      flowButtons.forEach(function (b) { b.classList.toggle("active", b === btn); });
+      document.querySelectorAll("[data-flow-body]").forEach(function (body) {
+        body.hidden = body.dataset.flowBody !== name;
+      });
+    });
+  });
+
+  /* Research lab */
+  var riskPolicy = {
+    Low: { reviewers: "0–1 reviewer", gate: "Direct publish được phép", color: "low" },
+    Medium: { reviewers: "1 Domain Reviewer", gate: "Approval bắt buộc", color: "med" },
+    High: { reviewers: "Domain Reviewer + Admin", gate: "Two-person approval", color: "high" },
+    Critical: { reviewers: "Security + Publisher", gate: "Separation of Duties", color: "critical" }
+  };
+  var labText = {
+    current: ["Bắt đầu mô phỏng", "PAL autosave Working state", "Production đổi mà không có gate"],
+    proposed: ["Bắt đầu mô phỏng", "Draft được autosave", "Snapshot được đóng băng", "Approval hoàn tất", "Publisher deploy release"]
+  };
+  var mode = "current";
+  var step = 0;
+  var risk = "High";
+
+  function renderLab() {
+    var policy = riskPolicy[risk];
+    var maxStep = mode === "current" ? 2 : 4;
+    var proposed = mode === "proposed";
+
+    $("labConsole").className = "lab-console " + mode;
+    $("policyResult").className = "policy-result " + policy.color;
+    $("policyReviewers").textContent = policy.reviewers;
+    $("policyGate").textContent = policy.gate;
+    $("labCard3Reviewers").textContent = policy.reviewers;
+
+    $("labCard2").hidden = !proposed;
+    $("labCard3").hidden = !proposed;
+    $("labCard1").classList.toggle("reached", step >= 1);
+    $("labCard2").classList.toggle("reached", step >= 2);
+    $("labCard3").classList.toggle("reached", step >= 3);
+
+    $("labBoundaryText").textContent = proposed ? "CONTROLLED RELEASE BOUNDARY" : "NO RELEASE BOUNDARY";
+    $("labBoundaryIcon").textContent = proposed ? "◆" : "⚠";
+
+    var live = proposed ? step >= 4 : step >= 2;
+    $("labProdNum").textContent = proposed ? "04" : "02";
+    $("labProd").className = "event-card production" + (live ? " reached " + (proposed ? "safe" : "danger") : "");
+    $("labProdText").textContent = proposed
+      ? (live ? "Published Release v13" : "Vẫn pin ở v12")
+      : (live ? "Logic mới đã LIVE" : "Đang chạy logic cũ");
+
+    $("labStepLabel").textContent = "Bước " + step;
+    $("labStepText").textContent = labText[mode][step];
+    $("labPrev").disabled = step === 0;
+    $("labNext").disabled = step === maxStep;
+
+    $("labConclusion").textContent = proposed
+      ? "Production authority chỉ xuất hiện tại release boundary, sau khi policy được thỏa mãn."
+      : "Production authority xuất hiện như hệ quả ngầm của quyền Edit.";
+  }
+
+  document.querySelectorAll(".lab-toggle button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      mode = btn.dataset.mode;
+      step = 0;
+      document.querySelectorAll(".lab-toggle button").forEach(function (b) {
+        var on = b === btn;
+        b.className = on ? "active " + (b.dataset.mode === "current" ? "danger" : "safe") : "";
+        b.setAttribute("aria-selected", String(on));
+      });
+      renderLab();
+    });
+  });
+
+  document.querySelectorAll(".risk-picker button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      risk = btn.dataset.risk;
+      document.querySelectorAll(".risk-picker button").forEach(function (b) {
+        b.className = b === btn ? "active " + b.dataset.risk.toLowerCase() : "";
+      });
+      renderLab();
+    });
+  });
+
+  $("labPrev").addEventListener("click", function () { step = Math.max(0, step - 1); renderLab(); });
+  $("labNext").addEventListener("click", function () {
+    step = Math.min(mode === "current" ? 2 : 4, step + 1);
+    renderLab();
+  });
+  renderLab();
+
+  /* Contents rail scroll-spy */
+  var links = Array.prototype.slice.call(document.querySelectorAll(".reading-rail a"));
+  var targets = links
+    .map(function (a) { return document.getElementById(a.getAttribute("href").slice(1)); })
+    .filter(Boolean);
+
+  if ("IntersectionObserver" in window && targets.length) {
+    var visible = new Map();
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        visible.set(entry.target.id, entry.isIntersecting ? entry.intersectionRatio : 0);
+      });
+      var best = "";
+      var bestRatio = 0;
+      visible.forEach(function (ratio, id) {
+        if (ratio > bestRatio) { bestRatio = ratio; best = id; }
+      });
+      links.forEach(function (a) {
+        a.classList.toggle("active", a.getAttribute("href") === "#" + best);
+      });
+    }, { rootMargin: "-70px 0px -55% 0px", threshold: [0, 0.15, 0.4, 0.75, 1] });
+    targets.forEach(function (el) { observer.observe(el); });
+  }
+})();
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
+</body>
+</html>
