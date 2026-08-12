@@ -205,6 +205,7 @@
     show(0);
     const links=[...document.querySelectorAll('.toc a[href^="#p"]')],sections=links.map(a=>document.querySelector(a.getAttribute('href')));addEventListener('scroll',()=>{let active=0;sections.forEach((s,i)=>{if(s&&s.getBoundingClientRect().top<120)active=i});links.forEach((a,i)=>a.classList.toggle('active',i===active))},{passive:true});
   </script>
+<script defer src="/_vercel/insights/script.js"></script>
 <script defer src="/assets/comments.js" data-page="day17"></script>
 </body>
 </html>
