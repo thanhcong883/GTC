@@ -139,7 +139,8 @@ progress{vertical-align:baseline}
   .evidence-shot .shot-copy small{margin-top:16px}
   .sequence-shot .shot-copy{grid-template-columns:185px 1fr}
   .raw-evidence{gap:22px}
-  .evidence-grid{grid-template-columns:repeat(3,1fr)}
+  .evidence-grid{grid-template-columns:repeat(4,1fr)}
+  .evidence-grid article{padding:22px 20px}
   .evidence-grid .risk-card{grid-column:auto;min-height:0}
   .risk-card .equation{flex-wrap:wrap;gap:10px}
 }
@@ -147,6 +148,81 @@ progress{vertical-align:baseline}
 .shot-zoom:after{content:"\2922  M\1EDE \1EA2NH G\1ED0C 1:1";position:absolute;right:9px;bottom:9px;padding:6px 9px;border-radius:3px;background:rgba(16,26,46,.86);color:#fff;font:8px var(--font-geist-mono);letter-spacing:.1em;opacity:0;transition:opacity .2s}
 .shot-zoom:hover:after,.shot-zoom:focus-visible:after{opacity:1}
 .shot-zoom:focus-visible{outline:2px solid var(--research-orange);outline-offset:2px}
+
+/* ── Review corrections: scoped claims, two role tiers, deny semantics ── */
+/* Small type raised ~12%: captions, evidence limits, diagram labels and the
+   permission table were legible on a large display and cramped on a laptop. */
+/* figcaption was display:flex, so every inline child (code, em) became a flex
+   item with a 9px gap and the sentence broke into columns. Block flow instead. */
+.figure-block>figcaption{display:block;font-size:11.5px;line-height:1.65}
+.figure-block>figcaption>span{margin-right:9px}
+.figure-block>figcaption code{padding:1px 5px;border-radius:3px;background:#efeee9;color:var(--research-navy)}
+.hero-figure figcaption,.premise-figure figcaption{font-size:10.5px;line-height:1.6}
+.evidence-shot .shot-copy small{font-size:8.5px;line-height:1.7}
+.evidence-shot figcaption{font-size:9px}
+.diagram .s,.diagram .lbl,.diagram .lbl-accent,.diagram .lbl-deny,.diagram .lbl-lane{font-size:11.5px}
+.diagram .t{font-size:14px}.diagram .t-sm{font-size:12.5px}.diagram .t-inv{font-size:14px}.diagram .s-inv{font-size:11.5px}
+table{font-size:12.5px}th{font-size:10px}
+.table-note{font-size:12px}
+.muted{font-size:10px}
+.reading-rail b{font-size:8.5px}
+
+.limit-open{color:#f0a882!important;border-top-color:#5a4438!important}
+.pending-shot{border-style:dashed;border-color:#4d5f7c}
+.pending-shot .shot-copy>span{color:#8fb4e8}
+.protocol{margin:16px 0 0;display:grid;gap:8px}
+.protocol li{position:relative;padding-left:34px;font-size:11.5px;line-height:1.65;color:#c8cedb}
+.protocol li>span{position:absolute;left:0;top:2px;font:8.5px var(--font-geist-mono);color:#8fb4e8;letter-spacing:.06em}
+.protocol code,.formula-full code,.figure-block code{font-family:var(--font-geist-mono);font-size:.92em}
+.protocol code{padding:1px 5px;border-radius:3px;background:#22334d;color:#fff}
+.pending-card{position:relative;border-style:dashed!important}
+.pending-card>span{color:#8fb4e8!important}
+.pending-card strong{color:#8fb4e8!important}
+.lab-caveat{margin-top:14px;padding:11px 13px;border-left:2px solid #6b6ca8;background:#22233f;font-size:10px;line-height:1.65;color:#b6b7c9}
+.design-decision.correction{background:#fdece7;border-left-color:#d9553a}
+.design-decision.correction span{color:#a83a1f}
+
+.tier-split{display:grid;grid-template-columns:1fr 76px 1fr;align-items:stretch;margin:22px 0 0}
+.tier{padding:22px 24px;border:1px solid var(--line);border-radius:4px;background:#fff}
+.tier>span{font:8.5px var(--font-geist-mono);letter-spacing:.12em;color:var(--research-orange)}
+.tier>b{display:block;margin:13px 0 8px;font-size:19px;font-weight:560}
+.tier>p{font-size:12.5px;line-height:1.65;color:var(--muted)}
+.tier-chips{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 14px}
+.tier-chips i{padding:6px 9px;border:1px solid var(--line);border-radius:3px;background:var(--paper);font-style:normal;font:10.5px var(--font-geist-mono)}
+.tier>small{display:block;padding-top:12px;border-top:1px solid var(--line);font-size:10px;color:#8b8d99}
+.tier-vs{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.tier-vs i{font-style:normal;font-size:19px;color:#a9abb6}
+.tier-vs small{display:block;margin-top:6px;font:8px var(--font-geist-mono);color:#9a9ca7}
+.tier-example{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin:14px 0 30px;padding:16px 20px;border:1px solid var(--line);border-radius:4px;background:var(--paper)}
+.tier-example>span{font:8.5px var(--font-geist-mono);letter-spacing:.12em;color:var(--research-orange)}
+.tier-example>div{display:flex;align-items:center;gap:8px;font-size:11px}
+.tier-example code{padding:5px 8px;border-radius:3px;background:#fff;border:1px solid var(--line);font:10.5px var(--font-geist-mono);color:var(--research-navy)}
+.tier-example>p{flex:1 1 320px;margin:0;font-size:11.5px;line-height:1.6;color:var(--muted)}
+table caption{caption-side:top;padding:13px 16px;text-align:left;font-size:11px;line-height:1.55;color:#6c6e7b;background:#fbfaf7;border-bottom:1px solid var(--line)}
+.preset-wide td:first-child small{display:block;margin-top:4px;font:8.5px var(--font-geist-mono);color:#9a9ca7}
+
+.formula-full{margin:0 0 28px;padding:22px 24px;border:1px solid var(--line);border-left:3px solid var(--research-orange);border-radius:4px;background:var(--paper)}
+.formula-full>span{font:8.5px var(--font-geist-mono);letter-spacing:.12em;color:var(--research-orange)}
+.formula-full p{margin:12px 0 0;font-size:12.5px;line-height:1.7;color:#5c5e6a}
+.formula-full pre{margin:15px 0 0;padding:16px 18px;overflow-x:auto;border-radius:3px;background:var(--research-navy);color:#dfe4ee}
+.formula-full pre code{font-size:11.5px;line-height:1.75;white-space:pre}
+.rule-line{border-top:1px solid var(--line);padding-top:13px}
+.flow-rule.scope-rule{margin-top:9px;border-left-color:var(--research-navy);background:#f2f3f6}
+
+.guardrails{margin-top:20px}
+.guardrails>span{display:block;margin-bottom:12px;font:8.5px var(--font-geist-mono);letter-spacing:.12em;color:var(--research-orange)}
+.guard-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.guard-grid article{padding:18px 19px;border:1px solid var(--line);border-radius:4px;background:#fff}
+.guard-grid article>small{display:block;font:8.5px var(--font-geist-mono);letter-spacing:.1em;color:#9a9ca7}
+.guard-grid article>b{display:block;margin:11px 0 8px;font-size:13px}
+.guard-grid p{font-size:11.5px;line-height:1.6;color:var(--muted)}
+.guard-grid .zero-target{border-color:#e8b9a6;background:#fffaf7}
+@media(max-width:1050px){
+  .tier-split{grid-template-columns:1fr}
+  .tier-vs{padding:14px 0}
+  .guard-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:700px){.guard-grid{grid-template-columns:1fr}.tier-example{display:block}.tier-example>div{margin-top:8px}}
 </style>
 </head>
 <body>
@@ -159,7 +235,8 @@ progress{vertical-align:baseline}
     <a href="#prototype"><span>04</span><b>Builder</b></a>
     <a href="#flows"><span>05</span><b>Flows</b></a>
     <a href="#permissions"><span>06</span><b>Roles</b></a>
-    <a href="#roadmap"><span>07</span><b>Delivery</b></a>
+    <a href="#governance"><span>07</span><b>Risk</b></a>
+    <a href="#roadmap"><span>08</span><b>Delivery</b></a>
   </aside>
 
   <header class="topbar">
@@ -239,7 +316,7 @@ progress{vertical-align:baseline}
       <div class="evidence-label verified">VERIFIED PREMISE</div>
       <p class="scenario-kicker">Một thay đổi. Ba bề mặt chịu tác động.</p>
       <h2 id="premise-title">Editor chỉ định sửa một node.<br />Nhưng production cũng đổi theo.</h2>
-      <p>Workflow đang Published vẫn là cùng một live canvas. Khi Editor sửa và PAL báo <b>Synced</b>, Public Form lập tức dùng cấu hình mới—không có snapshot, review gate hay thao tác deploy độc lập.</p>
+      <p>Workflow đang Published vẫn là cùng một live canvas. Khi Editor sửa và PAL báo <b>Synced</b>, Public Form lập tức hiển thị theo bản vừa lưu—không có snapshot, review gate hay thao tác deploy độc lập. Người dùng thật gặp một bề mặt đã đổi mà không có sự kiện phát hành nào tương ứng.</p>
     </div>
     <figure class="premise-figure" role="img" aria-label="Luồng hiện tại từ Editor sửa node đến Public Form thay đổi trực tiếp">
       <div class="premise-actor"><span>EDITOR</span><b>Sửa prompt / node</b><small>Authoring action</small></div>
@@ -293,7 +370,8 @@ progress{vertical-align:baseline}
           <span>E2 · MEASURED SEQUENCE</span>
           <h3>Autosave đi thẳng vào public experience</h3>
           <p>Node được đổi thành “Test Requirements Collection2”; Builder báo <b>Synced</b>. Không bấm Publish lại, public form sau đó hiển thị đúng tên mới. Hai ảnh tạo thành một chuỗi before/after có thể kiểm tra.</p>
-          <small>KẾT LUẬN · Serving state đang đọc latest saved workflow, không phải published snapshot bất biến.</small>
+          <small>KẾT LUẬN CÓ PHẠM VI · Public form <b>presentation</b> đọc latest saved workflow metadata, không qua một republish nào. Tên node là nhãn field mà người dùng thật nhìn thấy, nên đây đã là một thay đổi user-facing.</small>
+          <small class="limit-open">CHƯA CHỨNG MINH · Hai ảnh này <b>không</b> chứng minh execution logic — prompt, model, webhook — cũng đọc latest save. Hệ thống hoàn toàn có thể render metadata live nhưng vẫn chạy cấu hình từ một snapshot khác. Claim mạnh hơn đó cần thí nghiệm E3 dưới đây.</small>
         </div>
         <div class="shot-pair">
           <figure>
@@ -311,11 +389,28 @@ progress{vertical-align:baseline}
           </figure>
         </div>
       </article>
+
+      <article class="evidence-shot pending-shot">
+        <div class="shot-copy">
+          <span>E3 · FALSIFIABLE TEST · CHƯA CHẠY</span>
+          <h3>Execution logic có đọc latest save hay không</h3>
+          <p>Đây là thí nghiệm quyết định ranh giới giữa hai claim. Nếu output đổi mà không republish, serving state thực sự đọc latest saved configuration. Nếu output giữ nguyên, PAL đang pin execution vào một snapshot và vấn đề thu hẹp lại còn presentation layer.</p>
+          <ol class="protocol">
+            <li><span>01</span>Publish workflow với prompt trả về đúng một chuỗi mốc: <code>VERSION_A_741</code>.</li>
+            <li><span>02</span>Chạy public form, lưu output và Run History entry.</li>
+            <li><span>03</span>Đổi prompt thành <code>VERSION_B_923</code>. Chờ Builder báo <b>Synced</b>.</li>
+            <li><span>04</span>Không bấm Publish. Không chạm công tắc public form.</li>
+            <li><span>05</span>Mở session public mới (incognito), chạy lại, so sánh output và Run History.</li>
+          </ol>
+          <small>QUY TẮC BÁO CÁO · Kết quả nào cũng được ghi. Nếu output vẫn là <code>VERSION_A_741</code>, phần E2 phải giữ nguyên phạm vi presentation và luận điểm release boundary được nêu lại cho đúng bề mặt bị ảnh hưởng.</small>
+        </div>
+      </article>
     </div>
     <div class="evidence-grid">
       <article><span>E1 · OBSERVED</span><h3>Editor có thể Publish</h3><p>Tài khoản Editor bật public form và nhận share link mà không qua reviewer độc lập.</p><strong>VERIFIED</strong></article>
-      <article><span>E2 · MEASURED</span><h3>Autosave thay đổi production</h3><p>Đổi tên node trên workflow Published; public form hiển thị tên mới mà không Publish lại.</p><strong>VERIFIED</strong></article>
-      <article class="risk-card"><span>HỆ QUẢ</span><h3>Save = Production change</h3><p>Working state và serving state chưa có release boundary rõ ràng.</p><div class="equation"><b>Edit</b><i>→</i><b>Synced</b><i>→</i><b>Live</b></div></article>
+      <article><span>E2 · MEASURED</span><h3>Autosave đổi bề mặt public</h3><p>Đổi tên node trên workflow Published; public form hiển thị tên mới mà không Publish lại. Phạm vi: presentation.</p><strong>VERIFIED</strong></article>
+      <article class="pending-card"><span>E3 · CHƯA CHẠY</span><h3>Execution có theo không</h3><p>Prompt/model/webhook có đọc latest save hay không thì chưa đo. Thí nghiệm chuỗi mốc ở trên sẽ trả lời.</p><strong>OPEN</strong></article>
+      <article class="risk-card"><span>HỆ QUẢ</span><h3>Save = user-facing change</h3><p>Ít nhất trên bề mặt public form, save boundary và release boundary đang trùng nhau.</p><div class="equation"><b>Edit</b><i>→</i><b>Synced</b><i>→</i><b>Public surface đổi</b></div></article>
     </div>
   </section>
 
@@ -336,6 +431,7 @@ progress{vertical-align:baseline}
         <span>SCENARIO 04</span>
         <h3>Editor thêm Webhook gửi dữ liệu khách hàng tới CRM.</h3>
         <p>Đây là thay đổi có external effect và sử dụng production credential.</p>
+        <p class="lab-caveat"><b>Phạm vi mô phỏng.</b> Nhánh “PAL hiện tại” giả định execution cũng đọc latest save — giả định này đang chờ thí nghiệm E3. Phần đã đo được là bề mặt presentation. Mô phỏng vẫn hợp lệ như một bài toán thiết kế: nếu execution không theo latest save thì luận điểm chỉ thu hẹp phạm vi, chứ ranh giới release vẫn cần được đặt.</p>
         <div class="risk-picker"><small>RISK CLASS</small>
           <button data-risk="Low">Low</button>
           <button data-risk="Medium">Medium</button>
@@ -392,8 +488,8 @@ progress{vertical-align:baseline}
       <h2>Một canvas để cùng xây dựng. Hai trạng thái để vận hành an toàn.</h2>
       <p>Working Draft tiếp tục autosave và đồng bộ theo thời gian thực; Published Release được giữ bất biến cho đến khi phiên bản mới hoàn tất review và được deploy có chủ đích.</p>
     </div>
-    <div class="role-switcher" role="tablist" aria-label="Xem theo vai trò">
-      <span>Xem giao diện với vai trò:</span>
+    <div class="role-switcher" role="tablist" aria-label="Xem theo assignment trên workflow này">
+      <span>Assignment trên workflow này:</span>
       <button data-role="Builder" class="active">Builder</button>
       <button data-role="Reviewer">Reviewer</button>
       <button data-role="Publisher">Publisher</button>
@@ -503,17 +599,18 @@ progress{vertical-align:baseline}
         <div class="flow-wrap"><article class="flow-step step-4"><span>04</span><h3>Ghi Change History</h3><p>Không silent overwrite</p></article></div>
       </div>
       <div class="flow-rule"><b>Invariant — Bất biến hệ thống:</b><span>Autosave chỉ cập nhật Working Draft. Runtime channel chỉ đọc một Published Release đã được định danh.</span></div>
+      <div class="flow-rule scope-rule"><b>Phạm vi của approval:</b><span>Release approval diễn ra trên <b>một workflow version</b>, không diễn ra trên mỗi run. Một release được duyệt một lần rồi phục vụ 10.000 run được pin vào nó — reviewer không duyệt 10.000 lần. <b>Per-run approval là một cơ chế khác</b>: đó là Human-in-the-loop cho từng lượt thực thi, chỉ bật cho những node có side effect cần xác nhận từng lần, và nó không thay thế release gate.</span></div>
       <figcaption><span>FIGURE 02</span><b>State transition, not checklist.</b> Mỗi bước tạo một trạng thái mới có danh tính, điều kiện chuyển tiếp và audit evidence.</figcaption>
     </figure>
 
     <div class="sub-head">
       <span>05.1 · RELEASE LIFECYCLE</span>
       <h3>Vòng đời một phiên bản, kể cả các đường quay lui</h3>
-      <p>Sơ đồ bốn ô ở trên chỉ mô tả đường đi thuận lợi. Trên thực tế, phần khó của review/approval nằm ở các cạnh quay lui: reviewer yêu cầu sửa, phê duyệt hết hiệu lực vì draft đã đổi, và release bị rollback sau khi đã phục vụ người dùng. Sơ đồ dưới đây vẽ đủ các cạnh đó.</p>
+      <p>Sơ đồ bốn ô ở trên chỉ mô tả đường đi thuận lợi. Trên thực tế, phần khó của review/approval nằm ở các cạnh quay lui: reviewer yêu cầu sửa, phê duyệt bị thu hồi, và release bị rollback sau khi đã phục vụ người dùng. Một điểm đáng nói: vì snapshot bất biến, việc sửa draft <b>không</b> phải một cạnh trong sơ đồ này — nó khai sinh một ứng viên khác, chứ không tác động lên ứng viên đã duyệt.</p>
     </div>
     <figure class="figure-block">
       <div class="diagram">
-        <svg viewBox="0 0 1120 350" role="img" aria-label="Máy trạng thái vòng đời release: Working Draft, Review Snapshot, In Review, Approved, Published Release, cùng các trạng thái Approval Void và Rolled Back và các cạnh quay lui">
+        <svg viewBox="0 0 1120 388" role="img" aria-label="Máy trạng thái vòng đời release: Working Draft, Review Snapshot, In Review, Approved, Published Release, cùng các trạng thái Approval Revoked và Rolled Back và các cạnh quay lui">
           <defs>
             <marker id="f3a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah" /></marker>
             <marker id="f3d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah-deny" /></marker>
@@ -545,8 +642,8 @@ progress{vertical-align:baseline}
           <text x="1023" y="122" class="s" text-anchor="middle">runtime đọc bản này</text>
 
           <rect x="648" y="248" width="170" height="64" rx="4" class="box box-warn" />
-          <text x="733" y="276" class="t-sm" text-anchor="middle">Approval Void</text>
-          <text x="733" y="294" class="s" text-anchor="middle">draft đã thay đổi</text>
+          <text x="733" y="276" class="t-sm" text-anchor="middle">Approval Revoked</text>
+          <text x="733" y="294" class="s" text-anchor="middle">policy · scope · TTL</text>
 
           <rect x="938" y="248" width="170" height="64" rx="4" class="box box-warn" />
           <text x="1023" y="276" class="t-sm" text-anchor="middle">Rolled Back</text>
@@ -565,10 +662,12 @@ progress{vertical-align:baseline}
           <text x="309" y="26" class="lbl-deny" text-anchor="middle">reviewer yêu cầu sửa</text>
 
           <path class="edge-deny" marker-end="url(#f3d)" d="M733,142 V246" />
-          <text x="743" y="198" class="lbl-deny">draft đã đổi</text>
+          <text x="743" y="198" class="lbl-deny">policy/scope/TTL đổi</text>
 
           <path class="edge-deny" marker-end="url(#f3d)" d="M646,280 H309 V143" />
-          <text x="480" y="271" class="lbl-deny" text-anchor="middle">phải snapshot lại</text>
+          <text x="480" y="271" class="lbl-deny" text-anchor="middle">cần snapshot + duyệt mới</text>
+          <text x="12" y="352" class="lbl">approval.subject = snapshot_id · approval.hash = sha256(snapshot + dependency set)</text>
+          <text x="12" y="372" class="lbl-accent">Sửa draft KHÔNG làm mất hiệu lực bản đã duyệt — nó tạo một ứng viên mới, nên không có cạnh nào cho việc đó.</text>
 
           <path class="edge-deny" marker-end="url(#f3d)" d="M1000,142 V246" />
           <text x="992" y="192" class="lbl-deny" text-anchor="end">incident</text>
@@ -576,7 +675,7 @@ progress{vertical-align:baseline}
           <text x="1054" y="192" class="lbl">pin v-1</text>
         </svg>
       </div>
-      <figcaption><span>FIGURE 03</span><b>Release lifecycle state machine.</b> Chỉ một cạnh duy nhất đi qua release boundary, và cạnh đó đòi hỏi trạng thái Approved còn hiệu lực. Mọi thay đổi draft sau khi phê duyệt sẽ vô hiệu hoá approval thay vì âm thầm đi kèm bản deploy.</figcaption>
+      <figcaption><span>FIGURE 03</span><b>Release lifecycle state machine.</b> Chỉ một cạnh duy nhất đi qua release boundary, và cạnh đó đòi hỏi một Approved còn hiệu lực. Vì snapshot là bất biến, approval gắn vào <code>snapshot_id</code> và hash của nó — nên sửa draft <em>không</em> vô hiệu hoá bản đã duyệt, mà chỉ tạo một ứng viên mới chưa được duyệt. Approval chỉ mất hiệu lực khi hash phụ thuộc, policy, data/credential scope, TTL hoặc thẩm quyền reviewer thay đổi.</figcaption>
     </figure>
 
     <div class="sub-head">
@@ -647,17 +746,18 @@ progress{vertical-align:baseline}
           <text x="450" y="371" class="lbl-deny" text-anchor="middle">yêu cầu sửa — snapshot bị huỷ, quay lại Builder</text>
         </svg>
       </div>
-      <figcaption><span>FIGURE 04</span><b>Role handoff swimlane.</b> Ba lần chuyển lane là ba lần thẩm quyền thay đổi chủ thể. Cạnh đứt màu đỏ cho thấy đường quay lui đi thẳng về Builder, không dừng ở Publisher — nghĩa là bản bị từ chối không bao giờ tồn tại như một release ứng viên.</figcaption>
+      <figcaption><span>FIGURE 04</span><b>Assignment handoff swimlane.</b> Bốn lane là <em>assignment trên workflow này</em> (tầng 2), không phải Workspace Role — cùng một Member có thể là Builder ở đây và Reviewer ở workflow khác. Ba lần chuyển lane là ba lần thẩm quyền thay đổi chủ thể. Cạnh đứt màu đỏ cho thấy đường quay lui đi thẳng về Builder, không dừng ở Publisher — nghĩa là bản bị từ chối không bao giờ tồn tại như một release ứng viên.</figcaption>
     </figure>
 
     <div class="sub-head">
       <span>05.3 · SHARING</span>
       <h3>Một lần chia sẻ kéo theo bốn quyết định phụ thuộc</h3>
       <p>Workflow không phải một tài sản đơn lẻ. Nó tham chiếu agent, prompt library, bảng dữ liệu và credential. Vì thế hộp thoại “Chia sẻ” không thể chỉ hỏi một mức quyền: nó phải giải bao đóng phụ thuộc và cho người cấp thấy từng phần được kế thừa ra sao.</p>
+      <div class="design-decision correction"><span>CORRECTION</span><p><b>Không giữ secret là chưa đủ; phải không cho mượn thẩm quyền.</b> Một thiết kế “guest không thấy credential nhưng run bằng quyền của Owner” vẫn là <b>confused deputy</b>: guest kiểm soát input, còn hệ thống hành động ra bên ngoài bằng authority cao hơn — ghi vào CRM thật, gửi email thật, tiêu quota của Owner. Vì thế test run của guest thực thi trong sandbox dưới service principal có scope riêng, và mọi external write mặc định chuyển sang dry-run cho tới khi policy cho phép.</p></div>
     </div>
     <figure class="figure-block">
       <div class="diagram">
-        <svg viewBox="0 0 1120 400" role="img" aria-label="Sơ đồ bao đóng phụ thuộc khi chia sẻ một workflow, gồm agent, prompt library, bảng dữ liệu và credential, với kết quả phân giải quyền cho từng phần">
+        <svg viewBox="0 0 1120 494" role="img" aria-label="Sơ đồ bao đóng phụ thuộc khi chia sẻ một workflow, gồm agent, prompt library, bảng dữ liệu và credential, với kết quả phân giải quyền cho từng phần, và sandbox execution context thay cho việc mượn danh tính Owner">
           <defs>
             <marker id="f5a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah" /></marker>
             <marker id="f5d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah-deny" /></marker>
@@ -713,12 +813,18 @@ progress{vertical-align:baseline}
           <text x="796" y="243" class="t-sm">Chỉ field đã mask</text>
           <text x="796" y="262" class="s">không export · không raw</text>
 
-          <rect x="780" y="315" width="320" height="62" rx="4" class="box box-soft" />
-          <text x="796" y="341" class="t-sm">Không cấp cho guest</text>
-          <text x="796" y="360" class="s">test run dùng credential chủ</text>
+          <rect x="780" y="315" width="320" height="62" rx="4" class="box box-warn" />
+          <text x="796" y="341" class="t-sm">Không cấp · và không mượn quyền</text>
+          <text x="796" y="360" class="s">sandbox + external write dry-run</text>
+
+          <path class="edge-deny" marker-end="url(#f5d)" d="M940,381 V416" />
+          <rect x="700" y="420" width="400" height="56" rx="4" class="box box-navy" />
+          <text x="900" y="444" class="t-inv" text-anchor="middle">Sandbox Execution Context</text>
+          <text x="900" y="462" class="s-inv" text-anchor="middle">service principal · policy-scoped · budget riêng</text>
+          <text x="930" y="403" class="lbl-deny" text-anchor="end">không dùng danh tính Owner</text>
         </svg>
       </div>
-      <figcaption><span>FIGURE 05</span><b>Dependency closure của một grant.</b> Quyền không lan truyền đồng nhất: agent và prompt kế thừa read, dữ liệu PII bị mask, còn credential không bao giờ đi theo grant. Guest vẫn test được workflow vì run thực thi bằng credential của chủ sở hữu, không bằng quyền của guest.</figcaption>
+      <figcaption><span>FIGURE 05</span><b>Dependency closure của một grant.</b> Quyền không lan truyền đồng nhất: agent và prompt kế thừa read, dữ liệu PII bị mask, còn credential thì không đi theo grant <em>và cũng không được mượn ngầm</em>. Guest test được workflow, nhưng run diễn ra trong sandbox dưới một service principal có scope riêng — không phải dưới danh tính Owner.</figcaption>
     </figure>
 
     <div class="sub-head">
@@ -798,10 +904,48 @@ progress{vertical-align:baseline}
     <div class="section-head">
       <p class="eyebrow">PART 06 · PERMISSIONS MODEL</p>
       <h2>Quyền hiệu lực là giao của Role, Scope, Capability và Policy</h2>
-      <p>Workspace Role được giữ để tương thích với PAL hiện tại; quyền chi tiết được thực thi trên từng resource và environment.</p>
+      <p>Một Workspace Role không còn mang thông tin về quyền trên workflow cụ thể. Quyền đó nằm ở assignment, và được thực thi theo từng resource và environment.</p>
     </div>
-    <div class="design-decision"><span>DESIGN DECISION</span><p>Không thay bốn Workspace Roles hiện tại bằng một danh sách role dài hơn. PAL giữ role làm <b>default bundle</b>, sau đó tính quyền hiệu lực theo resource và environment.</p></div>
-    <div class="permission-formula"><div><span>Workspace Role</span><b>Editor</b></div><i>∩</i><div><span>Resource Scope</span><b>Marketing / Workflow A</b></div><i>∩</i><div><span>Capability</span><b>Edit Draft · Test</b></div><i>∩</i><div><span>Policy</span><b>No self-approval</b></div><i>=</i><strong>Effective Permission</strong></div>
+    <div class="design-decision"><span>DESIGN DECISION</span><p>Không trả lời bằng một danh sách role dài hơn. Cách sửa là <b>tách thành hai tầng</b>: một tầng tổ chức nhỏ và ổn định, một tầng gán quyền trên từng tài nguyên. Danh sách role dài ra chỉ vì hai tầng đang bị nhồi vào một chỗ.</p></div>
+
+    <div class="tier-split">
+      <div class="tier">
+        <span>TẦNG 1 · WORKSPACE ROLE</span>
+        <b>Quản trị tổ chức</b>
+        <p>Billing, mời và loại thành viên, cấu hình workspace, đặt policy. Mỗi người có <b>đúng một</b> giá trị.</p>
+        <div class="tier-chips"><i>Owner</i><i>Admin</i><i>Member</i></div>
+        <small>PAL hiện có bốn giá trị ở tầng này: Owner, Admin, <b>Editor</b>, <b>User</b>. Nhưng khác biệt giữa Editor và User không phải khác biệt tổ chức — nó là khác biệt về quyền trên tài nguyên. Vì thế cả hai gộp lại thành <b>Member</b>, và phần chúng từng biểu đạt được chuyển xuống tầng 2, nơi nó vốn thuộc về.</small>
+      </div>
+      <div class="tier-vs"><i>×</i><small>độc lập</small></div>
+      <div class="tier">
+        <span>TẦNG 2 · RESOURCE ASSIGNMENT</span>
+        <b>Quyền trên từng workflow</b>
+        <p>Gán theo từng workflow hoặc folder. Một người có <b>nhiều</b> assignment khác nhau cùng lúc.</p>
+        <div class="tier-chips"><i>Viewer</i><i>Commenter</i><i>Builder</i><i>Reviewer</i><i>Publisher</i><i>Operator</i></div>
+        <small>Đây là tầng thiết kế này bổ sung.</small>
+      </div>
+    </div>
+    <div class="tier-example">
+      <span>VÍ DỤ</span>
+      <div><b>Workspace Role</b><code>Member</code></div>
+      <div><b>Workflow A</b><code>Builder</code></div>
+      <div><b>Workflow B</b><code>Reviewer</code></div>
+      <div><b>Workflow C</b><code>Viewer</code></div>
+      <p>Không ai phải trở thành “Reviewer của cả workspace” chỉ để duyệt một workflow. Đó là lý do hai tầng phải tách rời.</p>
+    </div>
+    <div class="permission-formula"><div><span>Workspace Role</span><b>Member</b></div><i>∩</i><div><span>Resource Scope</span><b>Marketing / Workflow A</b></div><i>∩</i><div><span>Capability</span><b>Edit Draft · Test</b></div><i>∩</i><div><span>Policy</span><b>No self-approval</b></div><i>=</i><strong>Effective Permission</strong></div>
+    <div class="formula-full">
+      <span>DẠNG ĐỦ ĐỂ TRIỂN KHAI</span>
+      <p>Giao bốn tập ở trên dễ nhớ nhưng chưa cài được: nó không nói các grant từ nhiều nguồn hợp lại thế nào, và không biểu diễn được <b>deny tường minh</b>. Dạng đủ là hợp rồi giao rồi trừ:</p>
+      <pre><code>Candidate Grants  = Role Grants ∪ Team Grants ∪ Resource Grants
+
+Effective Permission
+    = Candidate Grants
+    ∩ Resource Scope
+    ∩ Environment Policy
+    − Explicit Denies</code></pre>
+      <p class="rule-line"><b>Quy tắc quyết định:</b> Explicit Deny thắng mọi Allow kế thừa, bất kể grant đến từ tầng nào. Không có quy tắc này, một team grant và một resource grant có thể tạo ra kết quả không đoán được — và người vận hành sẽ mất niềm tin vào chính bảng phân quyền.</p>
+    </div>
 
     <div class="sub-head">
       <span>06.1 · RESOLUTION ORDER</span>
@@ -822,7 +966,7 @@ progress{vertical-align:baseline}
 
           <rect x="167" y="64" width="176" height="68" rx="4" class="box" />
           <text x="255" y="92" class="t-sm" text-anchor="middle">1 · Workspace Role</text>
-          <text x="255" y="110" class="s" text-anchor="middle">Owner·Admin·Editor·User</text>
+          <text x="255" y="110" class="s" text-anchor="middle">Owner · Admin · Member</text>
 
           <rect x="372" y="64" width="176" height="68" rx="4" class="box" />
           <text x="460" y="92" class="t-sm" text-anchor="middle">2 · Resource Scope</text>
@@ -861,24 +1005,34 @@ progress{vertical-align:baseline}
           <rect x="372" y="234" width="380" height="62" rx="4" class="box box-warn" />
           <text x="562" y="262" class="t-sm" text-anchor="middle">DENY</text>
           <text x="562" y="280" class="s" text-anchor="middle">ghi audit log · trả về lý do cụ thể · không im lặng</text>
+
+          <rect x="14" y="234" width="176" height="62" rx="4" class="box box-navy" />
+          <text x="102" y="262" class="t-inv" text-anchor="middle">Explicit Deny</text>
+          <text x="102" y="280" class="s-inv" text-anchor="middle">gán trực tiếp</text>
+          <path class="edge-deny" marker-end="url(#f7d)" d="M190,265 H370" />
+          <text x="280" y="257" class="lbl-deny" text-anchor="middle">bỏ qua mọi gate</text>
+
+          <text x="782" y="262" class="lbl-deny">Deny thắng mọi Allow kế thừa,</text>
+          <text x="782" y="278" class="lbl-deny">kể cả grant từ Team hay Role.</text>
         </svg>
       </div>
-      <figcaption><span>FIGURE 07</span><b>Permission resolution order.</b> Role chỉ là cổng đầu tiên, không phải câu trả lời. Cổng 4 là nơi Separation of Duties được thực thi, nên một Admin vẫn có thể bị chặn tự duyệt snapshot do chính mình tạo — và luôn nhận được lý do, thay vì một nút bị vô hiệu hoá không giải thích.</figcaption>
+      <figcaption><span>FIGURE 07</span><b>Permission resolution order.</b> Role chỉ là cổng đầu tiên, không phải câu trả lời. Cổng 4 là nơi Separation of Duties được thực thi, nên một Admin vẫn có thể bị chặn tự duyệt snapshot do chính mình tạo — và luôn nhận được lý do, thay vì một nút bị vô hiệu hoá không giải thích. Explicit Deny nằm ngoài chuỗi cổng vì nó không tham gia phép giao: nó short-circuit thẳng tới DENY, kể cả khi cả bốn cổng đều nói có.</figcaption>
     </figure>
 
-    <div class="table-wrap"><table><thead><tr><th>Permission preset</th><th>View</th><th>Comment</th><th>Edit Draft</th><th>Test</th><th>Approve</th><th>Publish</th><th>Run Prod.</th></tr></thead><tbody>
+    <div class="table-wrap"><table><caption>Tầng 2 — Resource assignment preset, gán trên từng workflow. Đây <b>không</b> phải Workspace Role.</caption><thead><tr><th>Assignment preset</th><th>View</th><th>Comment</th><th>Edit Draft</th><th>Test</th><th>Approve</th><th>Publish</th><th>Run Prod.</th></tr></thead><tbody>
       <tr><td>Viewer</td><td class="yes">●</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
       <tr><td>Commenter</td><td class="yes">●</td><td class="yes">●</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
       <tr><td>Builder</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
       <tr><td>Reviewer</td><td class="yes">●</td><td class="yes">●</td><td class="no">—</td><td class="yes">●</td><td class="yes">●</td><td class="no">—</td><td class="no">—</td></tr>
       <tr><td>Publisher</td><td class="yes">●</td><td class="yes">●</td><td class="no">—</td><td class="yes">●</td><td class="no">—</td><td class="yes">●</td><td class="yes">●</td></tr>
       <tr><td>Operator</td><td class="yes">●</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">●</td></tr>
-      <tr><td>Maintainer</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td>Policy</td><td class="yes">●</td><td class="yes">●</td></tr>
+      <tr class="preset-wide"><td>Maintainer <small>preset gộp</small></td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td>SoD</td><td class="yes">●</td><td class="yes">●</td></tr>
     </tbody></table></div>
+    <p class="table-note"><b>Maintainer không phải một organizational role.</b> Nó chỉ là preset gộp cho workflow nhỏ do một người phụ trách. Cột Approve của nó ghi <em>SoD</em> chứ không phải ●: preset cấp khả năng approve, nhưng Policy Guard vẫn chặn tự duyệt snapshot do chính người đó tạo. Nghĩa là trên một workflow chỉ có một Maintainer, không tồn tại đường nào để publish mà không có người thứ hai.</p>
     <p class="table-note"><b>Separation of Duties:</b> khi policy yêu cầu kiểm soát độc lập, người tạo snapshot không được tự Approve; người Publish chỉ có thể chọn phiên bản còn hiệu lực phê duyệt.</p>
   </section>
 
-  <section class="governance-section">
+  <section class="governance-section" id="governance">
     <div><p class="eyebrow light">PART 07 · RISK-BASED GOVERNANCE</p><h2>Không phải mọi thay đổi đều cần cùng một mức kiểm soát.</h2><p>PAL tự phân loại rủi ro dựa trên tác động ngữ nghĩa của thay đổi, thay vì buộc mọi team đi qua một quy trình cứng nhắc.</p></div>
     <div class="risk-ladder">
       <article><span class="risk-level low">LOW</span><div><b>Layout, tên node, ghi chú</b><p>Có thể direct publish theo workspace policy.</p></div><strong>0–1 reviewer</strong></article>
@@ -895,7 +1049,16 @@ progress{vertical-align:baseline}
       <p>Giá trị cốt lõi xuất hiện ngay khi autosave không còn chạm production. Real-time collaboration được triển khai sau trên nền version model đã ổn định.</p>
     </div>
     <div class="roadmap"><article><span>PHASE 01</span><h3>Release Safety</h3><p>Draft/Published split · Immutable versions · Publish permission · Rollback · Audit log.</p><small>MVP · Tác động cao nhất</small></article><i>→</i><article><span>PHASE 02</span><h3>Review &amp; Governance</h3><p>Request Review · Semantic Diff · Approval Policy · Guest Review.</p><small>Organizational control</small></article><i>→</i><article><span>PHASE 03</span><h3>True Multiplayer</h3><p>Presence · Collaborative fields · Semantic conflict detection · Follow mode.</p><small>Collaboration velocity</small></article></div>
-    <div class="metric-card"><div><p class="eyebrow">NORTH-STAR METRIC</p><h3>Weekly Governed Releases</h3><p>Số workflow version được ít nhất hai người đóng góp hoặc review, Publish thành công và không cần rollback trong 24 giờ.</p></div><div class="metric-mini"><b>↑</b><span>Collaboration</span><small>Nhiều contributor hơn</small></div><div class="metric-mini"><b>↓</b><span>Change failure</span><small>Ít rollback hơn</small></div><div class="metric-mini"><b>✓</b><span>Accountability</span><small>Mỗi release có chủ thể</small></div></div>
+    <div class="metric-card"><div><p class="eyebrow">NORTH-STAR METRIC</p><h3>Governed Release Adoption Rate</h3><p><b>governed releases ÷ tổng production releases.</b> Là một tỷ lệ, không phải số đếm. Một số đếm như “Weekly Governed Releases” tự mời team chia nhỏ release để tăng con số; tỷ lệ thì không thưởng cho hành vi đó, vì cả tử số và mẫu số đều tăng.</p></div><div class="metric-mini"><b>↑</b><span>Adoption</span><small>Tỷ lệ release đi qua gate</small></div><div class="metric-mini"><b>↓</b><span>Change failure</span><small>Rollback rate</small></div><div class="metric-mini"><b>=0</b><span>Silent overwrite</span><small>Mục tiêu tuyệt đối</small></div></div>
+    <div class="guardrails">
+      <span>GUARDRAIL SET · một metric đơn lẻ luôn bị lách</span>
+      <div class="guard-grid">
+        <article><small>VELOCITY</small><b>Median Review Lead Time</b><p>Nếu governance làm review chậm lại, adoption tăng nhưng team sẽ tìm đường vòng.</p></article>
+        <article><small>SAFETY</small><b>Change Failure Rate · Rollback Rate</b><p>Đo xem gate có thực sự bắt được lỗi, hay chỉ thêm một bước bấm nút.</p></article>
+        <article><small>COLLABORATION</small><b>Multi-contributor Release Rate</b><p>Phân biệt cộng tác thật với một người tự làm rồi tự bấm qua quy trình.</p></article>
+        <article class="zero-target"><small>MULTIPLAYER</small><b>Silent Overwrite Rate</b><p>Mục tiêu là đúng <b>0%</b>. Đây là metric duy nhất trong bộ không có ngưỡng chấp nhận được khác 0 — vì FIGURE 06 khẳng định không tồn tại đường nào làm mất việc mà không để lại vết.</p></article>
+      </div>
+    </div>
   </section>
 
   <footer><div><span class="brand-mark">mp</span><b>PAL Team Workspace</b></div><p>Product design proposal · Permissions, review/approval &amp; real-time collaboration</p><a href="#top">Lên đầu trang ↑</a></footer>
