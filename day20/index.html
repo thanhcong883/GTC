@@ -829,7 +829,7 @@ footer.end a{color:var(--navy-soft)}
 
       <figure>
         <div class="fb">
-          <svg viewBox="0 0 760 336" role="img" aria-label="State machine của một plugin node. Running đi thẳng tới Completed nếu server trả kết quả ngay, hoặc sang TaskPolling nếu server tạo task. TaskPolling có thể sang InputRequired rồi WaitingForAuthority. WaitingForAuthority quá hạn thì sang Expired, và Expired rẽ hai nhánh: chạy lại prepare nếu PAL cưỡng chế được tính side-effect-free, còn không thì ReconciliationRequired. CancelRequested cũng rẽ hai nhánh: Cancelled khi server xác nhận và đã đối chiếu, ReconciliationRequired khi không chắc side effect đã dừng.">
+          <svg viewBox="0 0 760 360" role="img" aria-label="State machine của một plugin node. Running đi thẳng tới Completed nếu server trả kết quả ngay, hoặc sang TaskPolling nếu server tạo task. TaskPolling có thể sang InputRequired rồi WaitingForAuthority. WaitingForAuthority quá hạn thì sang Expired, và Expired rẽ hai nhánh: chạy lại prepare nếu PAL cưỡng chế được tính side-effect-free, còn không thì ReconciliationRequired. CancelRequested cũng rẽ hai nhánh: Cancelled khi server xác nhận và đã đối chiếu, ReconciliationRequired khi không chắc side effect đã dừng.">
             <defs>
               <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                 <path d="M0 0 L10 5 L0 10 z" fill="#8b95b5"/>
@@ -846,8 +846,13 @@ footer.end a{color:var(--navy-soft)}
                 <path d="M534 228 L 582 219"/>
                 <path d="M534 250 L 582 274"/>
                 <path d="M82 70 L 82 124"/>
-                <path d="M148 143 C 320 138, 460 138, 592 145"/>
-                <path d="M140 170 C 300 208, 420 262, 582 282"/>
+                <!-- CancelRequested -> Cancelled: routed through the open band between
+                     the top row (bottom edge y70) and InputRequired (top edge y114),
+                     not through InputRequired itself. -->
+                <path d="M148 135 C 230 95, 500 95, 592 138"/>
+                <!-- CancelRequested -> ReconciliationRequired: routed well below
+                     WaitingForAuthority and Expired (both end by y266), not across them. -->
+                <path d="M140 172 C 190 340, 430 340, 586 300"/>
               </g>
               <g>
                 <rect x="30" y="36" width="104" height="34" rx="8" fill="#e2ecfd" stroke="#2f6fed"/>
@@ -886,10 +891,10 @@ footer.end a{color:var(--navy-soft)}
                 <text x="661" y="295" fill="#c64b3e" font-size="9.5">Required</text>
               </g>
               <g font-size="8.5" fill="#8b95b5">
-                <text x="390" y="24">server trả kết quả ngay — không phải call nào cũng thành task</text>
-                <text x="366" y="145" text-anchor="start">server xác nhận đã dừng</text>
-                <text x="366" y="156" text-anchor="start">và trạng thái đã đối chiếu</text>
-                <text x="300" y="290" text-anchor="start">không chắc side effect đã dừng</text>
+                <text x="390" y="33">server trả kết quả ngay — không phải call nào cũng thành task</text>
+                <text x="430" y="76" text-anchor="middle">server xác nhận đã dừng</text>
+                <text x="430" y="87" text-anchor="middle">và trạng thái đã đối chiếu</text>
+                <text x="308" y="349" text-anchor="middle">không chắc side effect đã dừng</text>
                 <text x="556" y="196" text-anchor="end">PAL cưỡng chế được</text>
                 <text x="556" y="206" text-anchor="end">prepare side-effect-free</text>
                 <text x="556" y="268" text-anchor="end">không bảo đảm được</text>
