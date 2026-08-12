@@ -125,6 +125,28 @@ progress{vertical-align:baseline}
 .diagram .gate{stroke:var(--research-orange);stroke-width:1.4;stroke-dasharray:6 5;fill:none}
 .figure-block>.diagram+figcaption{border-radius:0 0 5px 5px}
 @media(max-width:760px){.sub-head{margin-top:48px}.sub-head h3{font-size:21px}.diagram{padding:16px 14px}}
+
+/* ── Evidence register: a raw screenshot is only evidence if it can be read ──
+   The shots are 1466–1859px wide. Squeezed into a side column they rendered at
+   roughly 27% scale, which is unreadable, so the band stacks and hands the full
+   content width to the image. Each shot also links to its own file at 1:1. */
+.evidence-shot img{max-height:none}
+@media(min-width:901px){
+  .evidence-band{grid-template-columns:1fr;gap:46px}
+  .evidence-band .band-intro{max-width:780px}
+  .evidence-shot{grid-template-columns:1fr;gap:16px;padding:22px}
+  .evidence-shot .shot-copy{max-width:940px;padding:0 2px}
+  .evidence-shot .shot-copy small{margin-top:16px}
+  .sequence-shot .shot-copy{grid-template-columns:185px 1fr}
+  .raw-evidence{gap:22px}
+  .evidence-grid{grid-template-columns:repeat(3,1fr)}
+  .evidence-grid .risk-card{grid-column:auto;min-height:0}
+  .risk-card .equation{flex-wrap:wrap;gap:10px}
+}
+.shot-zoom{display:block;position:relative}
+.shot-zoom:after{content:"\2922  M\1EDE \1EA2NH G\1ED0C 1:1";position:absolute;right:9px;bottom:9px;padding:6px 9px;border-radius:3px;background:rgba(16,26,46,.86);color:#fff;font:8px var(--font-geist-mono);letter-spacing:.1em;opacity:0;transition:opacity .2s}
+.shot-zoom:hover:after,.shot-zoom:focus-visible:after{opacity:1}
+.shot-zoom:focus-visible{outline:2px solid var(--research-orange);outline-offset:2px}
 </style>
 </head>
 <body>
@@ -244,8 +266,10 @@ progress{vertical-align:baseline}
           <small>GIỚI HẠN SUY LUẬN · Chỉ xác nhận cấu trúc role hiện hữu.</small>
         </div>
         <figure>
-          <img src="evidence/e0-members-roles.png" alt="Trang Members của PAL hiển thị Owner, Admin, Editor, User và Access Control Tags" />
-          <figcaption><b>RAW EVIDENCE E0.</b> Workspace Settings → Members.</figcaption>
+          <a class="shot-zoom" href="evidence/e0-members-roles.png" target="_blank" rel="noopener" aria-label="Mở ảnh gốc E0 ở kích thước đầy đủ">
+            <img src="evidence/e0-members-roles.png" alt="Trang Members của PAL hiển thị Owner, Admin, Editor, User và Access Control Tags" />
+          </a>
+          <figcaption><b>RAW EVIDENCE E0.</b> Workspace Settings → Members. 1855×833.</figcaption>
         </figure>
       </article>
 
@@ -257,8 +281,10 @@ progress{vertical-align:baseline}
           <small>GIỚI HẠN SUY LUẬN · Không kết luận về mọi plan hoặc mọi cấu hình tag.</small>
         </div>
         <figure>
-          <img src="evidence/e1-editor-publish.png" alt="Tài khoản Editor trên PAL bật Published as AI-powered form và nhận đường dẫn chia sẻ" />
-          <figcaption><b>RAW EVIDENCE E1.</b> Editor session → Published form.</figcaption>
+          <a class="shot-zoom" href="evidence/e1-editor-publish.png" target="_blank" rel="noopener" aria-label="Mở ảnh gốc E1 ở kích thước đầy đủ">
+            <img src="evidence/e1-editor-publish.png" alt="Tài khoản Editor trên PAL bật Published as AI-powered form và nhận đường dẫn chia sẻ" />
+          </a>
+          <figcaption><b>RAW EVIDENCE E1.</b> Editor session → Published form. 1859×882.</figcaption>
         </figure>
       </article>
 
@@ -271,12 +297,16 @@ progress{vertical-align:baseline}
         </div>
         <div class="shot-pair">
           <figure>
-            <img src="evidence/e2a-synced-change.png" alt="PAL Builder báo Synced sau khi tên node được đổi thành Test Requirements Collection2" />
+            <a class="shot-zoom" href="evidence/e2a-synced-change.png" target="_blank" rel="noopener" aria-label="Mở ảnh gốc E2-A ở kích thước đầy đủ">
+              <img src="evidence/e2a-synced-change.png" alt="PAL Builder báo Synced sau khi tên node được đổi thành Test Requirements Collection2" />
+            </a>
             <figcaption><b>E2-A · AUTHORING.</b> Đổi node → Synced.</figcaption>
           </figure>
           <div class="sequence-arrow" aria-hidden="true"><span>NO REPUBLISH</span>→</div>
           <figure>
-            <img src="evidence/e2b-public-form-change.png" alt="Public form hiển thị tên node Test Requirements Collection2 sau khi Builder tự đồng bộ" />
+            <a class="shot-zoom" href="evidence/e2b-public-form-change.png" target="_blank" rel="noopener" aria-label="Mở ảnh gốc E2-B ở kích thước đầy đủ">
+              <img src="evidence/e2b-public-form-change.png" alt="Public form hiển thị tên node Test Requirements Collection2 sau khi Builder tự đồng bộ" />
+            </a>
             <figcaption><b>E2-B · SERVING.</b> Public Form nhận thay đổi.</figcaption>
           </figure>
         </div>
