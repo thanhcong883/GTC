@@ -139,8 +139,8 @@ progress{vertical-align:baseline}
   .evidence-shot .shot-copy small{margin-top:16px}
   .sequence-shot .shot-copy{grid-template-columns:185px 1fr}
   .raw-evidence{gap:22px}
-  .evidence-grid{grid-template-columns:repeat(4,1fr)}
-  .evidence-grid article{padding:22px 20px}
+  .evidence-grid{grid-template-columns:repeat(3,1fr)}
+  .evidence-grid article{padding:24px 22px}
   .evidence-grid .risk-card{grid-column:auto;min-height:0}
   .risk-card .equation{flex-wrap:wrap;gap:10px}
 }
@@ -168,16 +168,7 @@ table{font-size:12.5px}th{font-size:10px}
 .reading-rail b{font-size:8.5px}
 
 .limit-open{color:#f0a882!important;border-top-color:#5a4438!important}
-.pending-shot{border-style:dashed;border-color:#4d5f7c}
-.pending-shot .shot-copy>span{color:#8fb4e8}
-.protocol{margin:16px 0 0;display:grid;gap:8px}
-.protocol li{position:relative;padding-left:34px;font-size:11.5px;line-height:1.65;color:#c8cedb}
-.protocol li>span{position:absolute;left:0;top:2px;font:8.5px var(--font-geist-mono);color:#8fb4e8;letter-spacing:.06em}
-.protocol code,.formula-full code,.figure-block code{font-family:var(--font-geist-mono);font-size:.92em}
-.protocol code{padding:1px 5px;border-radius:3px;background:#22334d;color:#fff}
-.pending-card{position:relative;border-style:dashed!important}
-.pending-card>span{color:#8fb4e8!important}
-.pending-card strong{color:#8fb4e8!important}
+.formula-full code,.figure-block code{font-family:var(--font-geist-mono);font-size:.92em}
 .lab-caveat{margin-top:14px;padding:11px 13px;border-left:2px solid #6b6ca8;background:#22233f;font-size:10px;line-height:1.65;color:#b6b7c9}
 .design-decision.correction{background:#fdece7;border-left-color:#d9553a}
 .design-decision.correction span{color:#a83a1f}
@@ -371,7 +362,7 @@ table caption{caption-side:top;padding:13px 16px;text-align:left;font-size:11px;
           <h3>Autosave đi thẳng vào public experience</h3>
           <p>Node được đổi thành “Test Requirements Collection2”; Builder báo <b>Synced</b>. Không bấm Publish lại, public form sau đó hiển thị đúng tên mới. Hai ảnh tạo thành một chuỗi before/after có thể kiểm tra.</p>
           <small>KẾT LUẬN CÓ PHẠM VI · Public form <b>presentation</b> đọc latest saved workflow metadata, không qua một republish nào. Tên node là nhãn field mà người dùng thật nhìn thấy, nên đây đã là một thay đổi user-facing.</small>
-          <small class="limit-open">CHƯA CHỨNG MINH · Hai ảnh này <b>không</b> chứng minh execution logic — prompt, model, webhook — cũng đọc latest save. Hệ thống hoàn toàn có thể render metadata live nhưng vẫn chạy cấu hình từ một snapshot khác. Claim mạnh hơn đó cần thí nghiệm E3 dưới đây.</small>
+          <small class="limit-open">GIỚI HẠN SUY LUẬN · Hai ảnh này <b>không</b> chứng minh execution logic — prompt, model, webhook — cũng đọc latest save. Hệ thống hoàn toàn có thể render metadata live nhưng vẫn chạy cấu hình từ một snapshot khác. Kết luận ở đây dừng lại ở bề mặt quan sát được.</small>
         </div>
         <div class="shot-pair">
           <figure>
@@ -390,26 +381,10 @@ table caption{caption-side:top;padding:13px 16px;text-align:left;font-size:11px;
         </div>
       </article>
 
-      <article class="evidence-shot pending-shot">
-        <div class="shot-copy">
-          <span>E3 · FALSIFIABLE TEST · CHƯA CHẠY</span>
-          <h3>Execution logic có đọc latest save hay không</h3>
-          <p>Đây là thí nghiệm quyết định ranh giới giữa hai claim. Nếu output đổi mà không republish, serving state thực sự đọc latest saved configuration. Nếu output giữ nguyên, PAL đang pin execution vào một snapshot và vấn đề thu hẹp lại còn presentation layer.</p>
-          <ol class="protocol">
-            <li><span>01</span>Publish workflow với prompt trả về đúng một chuỗi mốc: <code>VERSION_A_741</code>.</li>
-            <li><span>02</span>Chạy public form, lưu output và Run History entry.</li>
-            <li><span>03</span>Đổi prompt thành <code>VERSION_B_923</code>. Chờ Builder báo <b>Synced</b>.</li>
-            <li><span>04</span>Không bấm Publish. Không chạm công tắc public form.</li>
-            <li><span>05</span>Mở session public mới (incognito), chạy lại, so sánh output và Run History.</li>
-          </ol>
-          <small>QUY TẮC BÁO CÁO · Kết quả nào cũng được ghi. Nếu output vẫn là <code>VERSION_A_741</code>, phần E2 phải giữ nguyên phạm vi presentation và luận điểm release boundary được nêu lại cho đúng bề mặt bị ảnh hưởng.</small>
-        </div>
-      </article>
     </div>
     <div class="evidence-grid">
       <article><span>E1 · OBSERVED</span><h3>Editor có thể Publish</h3><p>Tài khoản Editor bật public form và nhận share link mà không qua reviewer độc lập.</p><strong>VERIFIED</strong></article>
       <article><span>E2 · MEASURED</span><h3>Autosave đổi bề mặt public</h3><p>Đổi tên node trên workflow Published; public form hiển thị tên mới mà không Publish lại. Phạm vi: presentation.</p><strong>VERIFIED</strong></article>
-      <article class="pending-card"><span>E3 · CHƯA CHẠY</span><h3>Execution có theo không</h3><p>Prompt/model/webhook có đọc latest save hay không thì chưa đo. Thí nghiệm chuỗi mốc ở trên sẽ trả lời.</p><strong>OPEN</strong></article>
       <article class="risk-card"><span>HỆ QUẢ</span><h3>Save = user-facing change</h3><p>Ít nhất trên bề mặt public form, save boundary và release boundary đang trùng nhau.</p><div class="equation"><b>Edit</b><i>→</i><b>Synced</b><i>→</i><b>Public surface đổi</b></div></article>
     </div>
   </section>
@@ -431,7 +406,7 @@ table caption{caption-side:top;padding:13px 16px;text-align:left;font-size:11px;
         <span>SCENARIO 04</span>
         <h3>Editor thêm Webhook gửi dữ liệu khách hàng tới CRM.</h3>
         <p>Đây là thay đổi có external effect và sử dụng production credential.</p>
-        <p class="lab-caveat"><b>Phạm vi mô phỏng.</b> Nhánh “PAL hiện tại” giả định execution cũng đọc latest save — giả định này đang chờ thí nghiệm E3. Phần đã đo được là bề mặt presentation. Mô phỏng vẫn hợp lệ như một bài toán thiết kế: nếu execution không theo latest save thì luận điểm chỉ thu hẹp phạm vi, chứ ranh giới release vẫn cần được đặt.</p>
+        <p class="lab-caveat"><b>Phạm vi mô phỏng.</b> Phần đã đo trực tiếp là bề mặt presentation; nhánh “PAL hiện tại” mở rộng sang execution như một giả định thiết kế, không phải một phép đo. Giả định đó không làm thay đổi kết luận: dù execution có theo latest save hay không, ranh giới release vẫn cần được đặt — chỉ khác ở chỗ nó phải bảo vệ bao nhiêu bề mặt.</p>
         <div class="risk-picker"><small>RISK CLASS</small>
           <button data-risk="Low">Low</button>
           <button data-risk="Medium">Medium</button>
