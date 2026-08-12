@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Day 18 — A self-extending agent runtime | Giang Thanh Cong</title>
-  <meta name="description" content="A minimal but real agent runtime — orchestration loop, tool-calling, two-layer memory — that also writes new tools for itself mid-task. One line makes self-extension work. Day 18 of a 30-day build challenge." />
-  <meta property="og:title" content="Day 18 — A self-extending agent runtime" />
-  <meta property="og:description" content="The loop, the tool interface, memory, and the one line — schemas recomputed every iteration — that lets an agent write and immediately use its own tools." />
+  <title>Day 18 — Agent runtime tự mở rộng | Giang Thanh Cong</title>
+  <meta name="description" content="Một agent runtime tối giản nhưng chạy thật — orchestration loop, tool-calling, memory hai lớp — và tự viết tool mới cho chính mình giữa task. Một dòng quyết định self-extension có chạy được hay không. Day 18 trong chuỗi 30 ngày build." />
+  <meta property="og:title" content="Day 18 — Agent runtime tự mở rộng" />
+  <meta property="og:description" content="Vòng lặp, tool interface, memory, và một dòng — recompute schema ở mọi iteration — cho phép agent viết và dùng ngay tool của chính nó." />
   <meta property="og:type" content="article" />
   <meta name="theme-color" content="#f4f5f7" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛠️</text></svg>" />
@@ -120,82 +120,83 @@
 
   <header class="top">
     <div class="bar">
-      <a class="back" href="/">← Home</a>
+      <a class="back" href="/">← Trang chủ</a>
       <div class="meta">
         <span class="tag">Agent · Day 18</span>
-        <h1>A self-extending agent runtime</h1>
+        <h1>Agent runtime tự mở rộng</h1>
       </div>
-      <a class="src" href="/day18/agent-runtime/README.md" target="_blank" rel="noopener"><span>View</span> code →</a>
+      <a class="src" href="/day18/agent-runtime/README.md" target="_blank" rel="noopener"><span>Xem</span> code →</a>
     </div>
   </header>
 
   <section class="hero">
     <div class="wrap">
-      <p class="eyebrow"><span class="dot"></span> Minimal but real · loop, tools, memory</p>
-      <h2>An agent's memory shouldn't only hold facts. It should hold skills.</h2>
-      <p class="lede">The brief: build a minimal but real agent runtime — an orchestration loop, tool-calling, and memory,
-        enough to complete a multi-step task. Built one, then pushed it one step further: when the built-in tools can't
-        do what a task needs, the agent <strong>writes a new tool for itself</strong>, uses it on the very next step,
-        and keeps it for future sessions. One line in the loop is the entire difference between that working and the
-        tool being permanently invisible.</p>
+      <p class="eyebrow"><span class="dot"></span> Tối giản nhưng chạy thật · loop, tools, memory</p>
+      <h2>Memory của agent không chỉ nên lưu sự kiện. Nó nên lưu cả kỹ năng.</h2>
+      <p class="lede">Đề bài: build một agent runtime tối giản nhưng chạy thật — orchestration loop, tool-calling, và
+        memory — đủ để hoàn thành một task nhiều bước. Đã build xong, rồi đẩy thêm một bước: khi tool có sẵn không làm
+        được việc task cần, agent <strong>tự viết một tool mới cho chính nó</strong>, dùng ngay ở bước kế tiếp, và giữ
+        lại cho các session sau. Một dòng trong loop là toàn bộ khác biệt giữa việc đó chạy được và tool đó vĩnh viễn
+        vô hình.</p>
       <div class="stats">
-        <div class="stat"><b>39</b><span>offline tests, no key</span></div>
-        <div class="stat"><b>1</b><span>line that makes self-extension work</span></div>
-        <div class="stat"><b>2</b><span>swappable backends: OpenAI + scripted</span></div>
-        <div class="stat"><b>0</b><span>frameworks</span></div>
+        <div class="stat"><b>39</b><span>offline test, không cần key</span></div>
+        <div class="stat"><b>1</b><span>dòng quyết định self-extension chạy được</span></div>
+        <div class="stat"><b>2</b><span>backend hoán đổi được: OpenAI + scripted</span></div>
+        <div class="stat"><b>0</b><span>framework</span></div>
       </div>
     </div>
   </section>
 
   <section>
     <div class="wrap">
-      <p class="kicker">01 — The Loop</p>
-      <h2 class="h">A stateless API, turned into something that finishes a task on its own</h2>
-      <p>An LLM API is stateless: you send messages, you get one reply. The runtime is the thin layer that turns that
-        single reply into autonomous, multi-step work — call the model, and if it asks for a tool, run it, feed the
-        result back, and call again. Repeat until the model stops asking for tools or a step cap is hit.</p>
-      <pre>add the user's task to working memory
-repeat up to max_steps:
+      <p class="kicker">01 — Vòng lặp</p>
+      <h2 class="h">Một API stateless, biến thành thứ tự hoàn thành một task</h2>
+      <p>LLM API là stateless: gửi messages, nhận về một reply. Runtime là lớp mỏng biến một reply đơn lẻ đó thành công
+        việc tự động, nhiều bước — gọi model, nếu nó yêu cầu một tool thì chạy tool đó, đưa kết quả trở lại, rồi gọi
+        tiếp. Lặp lại tới khi model không còn yêu cầu tool nào nữa hoặc chạm step cap.</p>
+      <pre>thêm task của user vào working memory
+lặp tối đa max_steps lần:
     response = model(system, messages, tools)
-    append the response to working memory        <span class="c"># BEFORE acting on it</span>
-    if response is not asking for tools:
-        return its text                          <span class="c"># the model is done</span>
-    for each tool the model asked for:
-        result = run it
-        collect a tool_result (carrying the tool's id)
-    append ALL results as ONE user message
-stop: hit max_steps                               <span class="c"># guaranteed termination</span></pre>
-      <p>The pivot is the model's <code class="inline">stop_reason</code>. <code class="inline">"tool_use"</code> means
-        the model paused to ask for something; anything else means it produced its final answer. That loop is written
-        by hand rather than through a vendor SDK's tool-runner — the whole point of the exercise is showing the harness
-        is understood, and owning the loop is what makes a step cap, per-step tracing, and total control over tool
-        errors possible.</p>
+    append response vào working memory            <span class="c"># TRƯỚC KHI hành động theo nó</span>
+    nếu response không yêu cầu tool nào:
+        return text của nó                        <span class="c"># model đã xong</span>
+    với mỗi tool model yêu cầu:
+        result = chạy tool đó
+        gom một tool_result (mang theo id của tool)
+    append TẤT CẢ result thành MỘT user message
+dừng: chạm max_steps                               <span class="c"># đảm bảo có điểm dừng</span></pre>
+      <p>Điểm xoay là <code class="inline">stop_reason</code> của model. <code class="inline">"tool_use"</code> nghĩa
+        là model dừng lại để yêu cầu một thứ gì đó; bất kỳ giá trị nào khác nghĩa là nó đã đưa ra câu trả lời cuối
+        cùng. Loop này được viết tay thay vì dùng tool-runner có sẵn của SDK nhà cung cấp — mục đích của bài tập là
+        chứng minh harness được hiểu tới nơi tới chốn, và tự sở hữu loop mới cho phép có step cap, trace từng bước, và
+        kiểm soát hoàn toàn lỗi tool.</p>
     </div>
   </section>
 
   <section>
     <div class="wrap">
-      <p class="kicker">02 — The Tool Interface</p>
-      <h2 class="h">Four fields, and failures that never crash the loop</h2>
-      <p>A tool is a name, a description (the field the model actually reads to decide when to call it), a JSON Schema
-        for its arguments, and the Python function that does the work. A registry turns registered tools into the
-        schema list an API expects and dispatches calls by name.</p>
+      <p class="kicker">02 — Tool Interface</p>
+      <h2 class="h">Bốn field, và lỗi không bao giờ làm sập loop</h2>
+      <p>Một tool gồm một name, một description (field mà model thực sự đọc để quyết định khi nào gọi), một JSON
+        Schema cho argument, và hàm Python thực hiện công việc. Một registry biến các tool đã đăng ký thành schema
+        list mà API cần, và dispatch lời gọi theo tên.</p>
       <div class="grid-2">
         <div class="card">
-          <span class="k">Failures are data</span>
-          <b>Never an exception into the loop</b>
-          <p>A missing file, bad arguments, an unknown tool name, a raised exception — all become
-            <code class="inline">ToolResult(is_error=True)</code>, fed back as a normal tool result the model can read
-            and recover from.</p>
+          <span class="k">Lỗi là data</span>
+          <b>Không bao giờ có exception lọt vào loop</b>
+          <p>File không tồn tại, argument sai, tên tool không rõ, một exception bị raise — tất cả trở thành
+            <code class="inline">ToolResult(is_error=True)</code>, đưa trở lại như một tool result bình thường mà
+            model đọc được và tự phục hồi.</p>
         </div>
         <div class="card">
-          <span class="k">Sandboxed at one choke point</span>
-          <b>No path escapes the workspace</b>
-          <p>Every file tool resolves the model-supplied path against a fixed root and rejects anything that escapes
-            it. The calculator is a whitelist-only AST evaluator — no names, no builtins, no <code class="inline">__import__</code>.</p>
+          <span class="k">Sandbox tại một điểm nghẽn duy nhất</span>
+          <b>Không path nào thoát khỏi workspace</b>
+          <p>Mọi file tool resolve path do model cung cấp so với một root cố định và từ chối bất cứ thứ gì thoát ra
+            khỏi đó. Calculator là một AST evaluator chỉ whitelist — không name, không builtin, không
+            <code class="inline">__import__</code>.</p>
         </div>
       </div>
-      <p class="tight">Adding a tool by hand is one decorator:</p>
+      <p class="tight">Thêm một tool bằng tay chỉ cần một decorator:</p>
       <pre>@registry.add("weather", "Get current weather for a city.",
               {"type": "object", "properties": {"city": {"type": "string"}},
                "required": ["city"]})
@@ -206,59 +207,59 @@ def weather(city): ...</pre>
   <section>
     <div class="wrap">
       <p class="kicker">03 — Memory</p>
-      <h2 class="h">Working memory is context. Long-term memory is knowledge.</h2>
-      <p>Conflating the two is a common mistake, so they're kept apart. <strong>Working memory</strong> is the running
-        transcript of this task — user turn, assistant turns, tool results, in order. Because the API is stateless,
-        this list <em>is</em> the conversation; it's large, ephemeral, and rebuilt each task.</p>
-      <p><strong>Long-term memory</strong> is a small key/value store persisted to JSON on disk, curated by the model
-        itself through <code class="inline">remember</code> / <code class="inline">recall</code> tools, and rendered
-        into the system prompt at startup — so the agent begins each session already aware of what it learned before.
-        A fact saved in one session is recallable by a brand-new <code class="inline">Memory</code> instance in the
-        next; that's tested, not assumed.</p>
+      <h2 class="h">Working memory là context. Long-term memory là knowledge.</h2>
+      <p>Gộp chung hai khái niệm này là một lỗi thường gặp, nên chúng được tách riêng. <strong>Working memory</strong>
+        là transcript đang chạy của task này — lượt của user, lượt của assistant, tool result, theo đúng thứ tự. Vì
+        API là stateless, list này <em>chính là</em> cuộc hội thoại; nó lớn, ngắn hạn, và được build lại cho mỗi task.</p>
+      <p><strong>Long-term memory</strong> là một key/value store nhỏ, lưu xuống JSON trên đĩa, do chính model quản lý
+        qua hai tool <code class="inline">remember</code> / <code class="inline">recall</code>, và được render vào
+        system prompt lúc khởi động — nên agent bắt đầu mỗi session đã sẵn biết những gì nó học được trước đó. Một
+        fact lưu ở session này recall được bởi một instance <code class="inline">Memory</code> hoàn toàn mới ở session
+        sau; điều này đã được test, không phải giả định suông.</p>
     </div>
   </section>
 
   <section>
     <div class="wrap">
       <p class="kicker">04 — Self-Extension</p>
-      <h2 class="h">The tool surface grows mid-task — and one line is why</h2>
-      <p>A meta-tool, <code class="inline">create_tool(name, description, input_schema, code)</code>, lets the agent
-        supply a tool definition <em>and its own Python implementation</em>. The runtime screens the code, executes it,
-        registers the result into the live registry, and writes it to disk so it's still there next session.</p>
+      <h2 class="h">Tool surface lớn dần giữa task — và lý do nằm ở một dòng</h2>
+      <p>Một meta-tool, <code class="inline">create_tool(name, description, input_schema, code)</code>, cho phép agent
+        cung cấp một định nghĩa tool cùng <em>chính phần code Python triển khai nó</em>. Runtime kiểm tra code, thực
+        thi nó, đăng ký kết quả vào registry đang chạy, và ghi xuống đĩa để nó vẫn còn ở session sau.</p>
       <div class="box centerpiece">
-        <span class="label">The line that makes or breaks it</span>
-        <p>The obvious way to write the loop computes the tool schema list once, before the loop starts. That is
-          subtly, permanently broken here: a tool the agent creates at step 2 would never appear in the schema list
-          sent to the model, so it could never call the thing it just wrote. The fix is
-          <code class="inline">self.tools.schemas()</code> recomputed on <strong>every</strong> iteration — one line,
-          and it's the entire feature. The honest cost: tools sit at the front of the prompt in most vendor APIs, so
-          changing them mid-conversation can invalidate a prompt cache from that point on. Stated plainly rather than
-          hidden.</p>
+        <span class="label">Dòng code quyết định thành bại</span>
+        <p>Cách viết loop hiển nhiên nhất là compute tool schema list một lần, trước khi loop bắt đầu. Đó là chỗ hỏng
+          âm thầm và vĩnh viễn ở đây: một tool agent tạo ra ở bước 2 sẽ không bao giờ xuất hiện trong schema list gửi
+          cho model, nên nó không bao giờ gọi được thứ nó vừa viết. Cách sửa là
+          <code class="inline">self.tools.schemas()</code> được recompute ở <strong>mọi</strong> iteration — một
+          dòng, và đó là toàn bộ tính năng. Chi phí thật: tool nằm ở đầu prompt trong hầu hết API của các nhà cung
+          cấp, nên đổi chúng giữa chừng hội thoại có thể làm mất hiệu lực prompt cache từ điểm đó trở đi. Nói thẳng ra
+          thay vì giấu đi.</p>
       </div>
-      <p>Executing model-authored code is the genuinely dangerous part. The screening is layered — an AST pre-scan
-        rejects imports outside a small pure-computation allowlist, dunder attribute access (the classic
-        <code class="inline">().__class__.__bases__[0].__subclasses__()</code> escape), and
-        <code class="inline">eval</code>/<code class="inline">exec</code>/<code class="inline">open</code>; execution
-        then runs with a stripped <code class="inline">__builtins__</code>. That raises the cost of an escape
-        considerably and is <strong>not a security boundary</strong> — in-process execution of untrusted Python has too
-        many reachable paths for a static screen to be airtight. A production version needs real isolation: a
-        subprocess, seccomp/gVisor, or a container per call. Saying otherwise would be the one dishonest line in this
-        page.</p>
+      <p>Thực thi code do model viết ra mới là phần thực sự nguy hiểm. Việc kiểm tra được phân lớp — một AST pre-scan
+        từ chối import nằm ngoài một allowlist nhỏ chỉ gồm pure-computation, từ chối truy cập dunder attribute (đường
+        thoát kinh điển <code class="inline">().__class__.__bases__[0].__subclasses__()</code>), và từ chối
+        <code class="inline">eval</code>/<code class="inline">exec</code>/<code class="inline">open</code>; sau đó
+        việc thực thi chạy với <code class="inline">__builtins__</code> đã bị tước bớt. Điều đó nâng đáng kể chi phí
+        để thoát ra ngoài, nhưng <strong>không phải là một security boundary</strong> — thực thi Python không tin cậy
+        trong cùng process có quá nhiều đường có thể chạm tới để một lớp kiểm tra tĩnh trở nên kín tuyệt đối. Bản
+        production cần cách ly thật sự: một subprocess, seccomp/gVisor, hoặc một container cho mỗi lần gọi. Nói khác
+        đi sẽ là câu duy nhất không trung thực trên trang này.</p>
     </div>
   </section>
 
   <section>
     <div class="wrap">
-      <p class="kicker">05 — Watch It Happen</p>
-      <h2 class="h">A real, offline run — step through it</h2>
-      <p>The panel below is the actual output of <code class="inline">python -m agent_runtime --demo --trace</code>:
-        the agent reads a file, finds no word-counting tool, writes one, calls it, and remembers the result. Step with
-        the arrows — the tool-surface panel visibly grows the moment the new tool is registered.</p>
+      <p class="kicker">05 — Trace một run thật</p>
+      <h2 class="h">Một run thật, chạy offline — xem qua từng bước</h2>
+      <p>Panel bên dưới là output thật của <code class="inline">python -m agent_runtime --demo --trace</code>: agent
+        đọc một file, không tìm thấy tool đếm từ, tự viết một cái, gọi nó, rồi remember lại kết quả. Dùng mũi tên để
+        đi qua từng bước — panel tool-surface phình to ngay thời điểm tool mới được đăng ký.</p>
       <div class="trace-frame">
         <iframe src="/day18/trace.html" title="Agent run trace replay" loading="lazy"></iframe>
         <div class="trace-caption">
-          <span>Runs entirely in this frame — no network, no key.</span>
-          <a href="/day18/trace.html" target="_blank" rel="noopener">Open full-screen →</a>
+          <span>Chạy hoàn toàn trong frame này — không network, không key.</span>
+          <a href="/day18/trace.html" target="_blank" rel="noopener">Mở toàn màn hình →</a>
         </div>
       </div>
     </div>
@@ -266,53 +267,55 @@ def weather(city): ...</pre>
 
   <section>
     <div class="wrap">
-      <p class="kicker">06 — The Provider Boundary</p>
-      <h2 class="h">OpenAI as a translation layer, not a rewrite</h2>
-      <p>The loop, tools, memory, and trace recorder never see any vendor's wire format — only the runtime's own
-        block-shaped internal representation. <code class="inline">OpenAILLM</code> converts in both directions on
-        every call, and the conversion surfaces two real contract differences worth knowing about, not one:</p>
+      <p class="kicker">06 — Ranh giới với Provider</p>
+      <h2 class="h">OpenAI là một lớp translation, không phải một bản viết lại</h2>
+      <p>Loop, tool, memory, và trace recorder không bao giờ nhìn thấy wire format của bất kỳ nhà cung cấp nào — chỉ
+        thấy internal representation dạng block của riêng runtime. <code class="inline">OpenAILLM</code> convert theo
+        cả hai chiều ở mọi lần gọi, và việc convert đó lộ ra hai khác biệt hợp đồng có thật đáng biết, không chỉ một:</p>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>What</th><th>This runtime's internal shape</th><th>OpenAI's actual wire format</th></tr></thead>
+          <thead><tr><th>Cái gì</th><th>Internal shape của runtime này</th><th>Wire format thật của OpenAI</th></tr></thead>
           <tbody>
-            <tr><td>System prompt</td><td>its own parameter</td><td><code>{"role":"system",...}</code> as <code>messages[0]</code></td></tr>
-            <tr><td>Tool results for one turn</td><td>batched into <strong>one</strong> user message</td><td><strong>one message per result</strong>, <code>role:"tool"</code> + <code>tool_call_id</code></td></tr>
-            <tr><td>"Model wants a tool" signal</td><td><code>stop_reason == "tool_use"</code></td><td><code>finish_reason == "tool_calls"</code>, normalized at the boundary</td></tr>
+            <tr><td>System prompt</td><td>tham số riêng của nó</td><td><code>{"role":"system",...}</code> làm <code>messages[0]</code></td></tr>
+            <tr><td>Tool result cho một turn</td><td>gộp vào <strong>một</strong> user message duy nhất</td><td><strong>một message cho mỗi result</strong>, <code>role:"tool"</code> + <code>tool_call_id</code></td></tr>
+            <tr><td>Tín hiệu "model muốn dùng tool"</td><td><code>stop_reason == "tool_use"</code></td><td><code>finish_reason == "tool_calls"</code>, được chuẩn hóa ngay tại ranh giới</td></tr>
           </tbody>
         </table>
       </div>
-      <p>Get the tool-result direction backwards and the API returns a 400 — an explicit rejection, not a quiet failure.
-        That's what "true understanding of the harness" has to mean once the harness isn't one vendor's document: the loop's
-        contract is the invariant; the bytes on the wire that satisfy it are not, and are worth getting exactly right
-        in both directions.</p>
+      <p>Đảo ngược chiều của tool-result và API trả về 400 — một sự từ chối rõ ràng, không phải một lỗi âm thầm. Đó
+        chính là ý nghĩa của "hiểu thật sự về harness" một khi harness không còn là tài liệu của riêng một nhà cung
+        cấp: contract của loop là bất biến; các byte trên wire thỏa mãn contract đó thì không, và đáng để làm cho
+        đúng tuyệt đối ở cả hai chiều.</p>
     </div>
   </section>
 
   <section>
     <div class="wrap">
-      <p class="kicker">What Was Left Out</p>
-      <h2 class="h">On purpose</h2>
-      <p>Streaming, context compaction, concurrency, and subagents are all real harness concerns — and all beyond
-        "minimal." The transcript is serializable for compaction, and <code class="inline">on_event</code> is where
-        a streaming UI would hook in, but adding them would trade the one virtue asked for — minimal — for breadth
-        that wasn't. And one thing self-extension invites and doesn't solve: an agent that writes tools will eventually
-        write <em>bad</em> ones. Nothing here evaluates, benchmarks, or retires a learned skill — the surface only
-        grows. That's a real problem, and it's outside this scope on purpose.</p>
+      <p class="kicker">Những gì bị bỏ qua</p>
+      <h2 class="h">Có chủ đích</h2>
+      <p>Streaming, context compaction, concurrency, và subagent đều là những mối bận tâm thật của harness — và đều
+        vượt ra ngoài "tối giản". Transcript serialize được để phục vụ compaction, và <code class="inline">on_event</code>
+        là chỗ một streaming UI sẽ hook vào, nhưng thêm chúng vào sẽ đánh đổi đúng cái đức tính được yêu cầu — tối
+        giản — lấy một độ rộng không được yêu cầu. Và một điều self-extension mời gọi nhưng không giải quyết: một
+        agent viết tool rồi sớm muộn cũng sẽ viết ra tool tồi. Không có gì ở đây đánh giá, benchmark, hay loại bỏ một
+        skill đã học — surface chỉ có lớn thêm. Đó là một vấn đề thật, và nó nằm ngoài phạm vi này một cách có chủ
+        đích.</p>
     </div>
   </section>
 
   <footer>
     <div class="wrap">
       <div class="links">
-        <a href="/day18/agent-runtime/README.md" target="_blank" rel="noopener">📖 README (start here)</a>
+        <a href="/day18/agent-runtime/README.md" target="_blank" rel="noopener">📖 README (bắt đầu từ đây)</a>
         <a href="/day18/agent-runtime/DESIGN.md" target="_blank" rel="noopener">📄 DESIGN.md</a>
-        <a href="/day18/trace.html" target="_blank" rel="noopener">▶ Trace replay</a>
-        <a href="/">← All days</a>
+        <a href="/day18/trace.html" target="_blank" rel="noopener">▶ Xem lại trace</a>
+        <a href="/">← Tất cả các ngày</a>
       </div>
-      <p class="fine">Day 18 of a 30-day build challenge. Built with <a href="https://claude.com/claude-code" style="color:var(--indigo)">Claude Code</a>.</p>
+      <p class="fine">Day 18 trong chuỗi 30 ngày build. Được build với <a href="https://claude.com/claude-code" style="color:var(--indigo)">Claude Code</a>.</p>
     </div>
   </footer>
 
+<script defer src="/_vercel/insights/script.js"></script>
 <script defer src="/assets/comments.js" data-page="day18"></script>
 </body>
 </html>
